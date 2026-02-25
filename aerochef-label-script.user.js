@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V9)
 // @namespace    http://tampermonkey.net/
-// @version      9.8.4
+// @version      9.8.5
 // @description  Local HTML preview, aircraft-type items config (Meals/Beverages/Breads), Zebra ZT411 ZPL print.
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -470,7 +470,7 @@
             const txtClr = isRed ? '#fff' : '#111';
             const borClr = isRed ? '#991b1b' : '#1e3a8a';
             const divClr = isRed ? 'rgba(255,255,255,.35)' : '#c7d2e6';
-            const logoUrl = gs(SK.LOGO_URL, SK.DEFAULT_LOGO);
+            const logoUrl = SK.DEFAULT_LOGO;
             // Dynamic font for item name
             const nlen = (item.name || '').length;
             const nameFz = nlen > 18 ? '9px' : nlen > 12 ? '11px' : '14px';
@@ -569,7 +569,7 @@
             return;
         }
 
-        const logoUrl = gs(SK.LOGO_URL, SK.DEFAULT_LOGO);
+        const logoUrl = SK.DEFAULT_LOGO;
         const logoHtmlBP = logoUrl
             ? `<img src="${logoUrl}" style="max-height:28px;max-width:90%;object-fit:contain;display:block;margin:0 auto;" onerror="this.style.display='none'">`
             : `<div class="logo-name">AZERBAIJAN</div><div class="logo-sub">&#8211; AIRLINES &#8211;</div>`;
@@ -759,11 +759,7 @@
                 <label>Print Classes <span style="font-size:9px;color:#9ca3af;font-weight:400;">(comma-separated, e.g. BC,EC)</span></label>
                 <input type="text" id="acf8-print-classes" value="${gs(SK.PRINT_CLASSES, 'BC,EC')}" placeholder="BC,EC" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:12px;width:100%;">
               </div>
-              <!-- Logo URL -->
-              <div class="acf8-fg full">
-                <label>Logo URL <span style="font-size:9px;color:#9ca3af;font-weight:400;">(raw GitHub link, e.g. https://raw.githubusercontent.com/USER/REPO/main/logo.png)</span></label>
-                <input type="text" id="acf8-logo-url" value="${gs(SK.LOGO_URL, '')}" placeholder="https://raw.githubusercontent.com/..." style="padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:11px;width:100%;">
-              </div>
+
               <div class="acf8-fg full" id="acf8-ip-group" style="${curMethod !== 'network' ? 'opacity:.4;pointer-events:none' : ''}">
                 <label>Zebra Printer IP</label>
                 <div class="acf8-ip-row">
@@ -1023,9 +1019,6 @@
                 // Print classes
                 const pcEl = overlay.querySelector('#acf8-print-classes');
                 if (pcEl) ss(SK.PRINT_CLASSES, pcEl.value.trim());
-                // Logo URL
-                const luEl = overlay.querySelector('#acf8-logo-url');
-                if (luEl) ss(SK.LOGO_URL, luEl.value.trim());
                 // Save current acItems to config
                 const key = overlay.querySelector('#acf8-ac-type-sel')?.value || acCfg.key;
                 const cfgs = getAcConfigs();
@@ -1058,25 +1051,48 @@
                 return;
             }
 
-            // Network ZPL – send all item labels at once
+            // Network ZPL – send labels ONE BY ONE to printer
             if (!IP_REGEX.test(ip)) { toast('Əvvəlcə Settings-də Printer IP daxil edin', 'error'); return; }
 
-            actionBtn.disabled = true;
-            ftrStatus.textContent = 'Göndərilir…';
-            const allZpl = buildAllLabelsZPL(flightData, paxData, acItems, acItemQtys);
-            const totalLbls = (paxData.length || 1) * acItemQtys.reduce((s, q) => s + (q || 0), 0);
-            sendZplToZebra(ip, allZpl,
-                () => {
-                    toast(`✓ ${totalLbls} label ZT411-ə göndərildi (${ip})`, 'success');
-                    close();
-                },
-                (err) => {
-                    toast('ZPL xətası: ' + err + ' → Browser print açılır', 'error');
-                    browserPrint(flightData, paxData, galley, cnt, acItems);
-                    actionBtn.disabled = false;
-                    ftrStatus.textContent = 'Xəta: ' + err;
+            // Build a flat array of individual ZPL strings
+            const printCls2 = getPrintClasses(paxData);
+            const zplList = [];
+            for (const cls of printCls2) {
+                const paxCnt = paxData.find(p => p.class === cls)?.value ?? '';
+                for (let i = 0; i < acItems.length; i++) {
+                    const qty = (acItemQtys && acItemQtys[i] != null) ? acItemQtys[i] : 1;
+                    for (let c = 0; c < qty; c++) {
+                        zplList.push(buildItemLabelZPL(flightData, acItems[i], cls, paxCnt));
+                    }
                 }
-            );
+            }
+
+            if (!zplList.length) { toast('Göndəriləcək label yoxdur', 'error'); return; }
+
+            actionBtn.disabled = true;
+            let sent = 0;
+            let failed = 0;
+
+            function sendNext() {
+                if (sent + failed >= zplList.length) {
+                    actionBtn.disabled = false;
+                    if (failed === 0) {
+                        toast(`✓ ${sent}/${zplList.length} label ZT411-ə göndərildi (${ip})`, 'success');
+                        close();
+                    } else {
+                        ftrStatus.textContent = `${sent} ok, ${failed} xəta`;
+                        toast(`${failed} label göndərilmədi`, 'error');
+                    }
+                    return;
+                }
+                const idx = sent + failed;
+                ftrStatus.textContent = `Göndərilir: ${idx + 1} / ${zplList.length}…`;
+                sendZplToZebra(ip, zplList[idx],
+                    () => { sent++; sendNext(); },
+                    (err) => { failed++; console.warn('ZPL err:', err); sendNext(); }
+                );
+            }
+            sendNext();
         };
 
         // Initial preview
