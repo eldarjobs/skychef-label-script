@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V9)
 // @namespace    http://tampermonkey.net/
-// @version      9.0
+// @version      9.1
 // @description  Local HTML preview, aircraft-type items config (Meals/Beverages/Breads), Zebra ZT411 ZPL print.
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -44,52 +44,73 @@
        AIRCRAFT ITEM CONFIGS  (uçuş tipinə görə items)
        Hər config: { label, items: [ {name, unit} ] }
     ════════════════════════════════════════ */
+    // bgColor: 'red' = qırmızı label kağızı / dark ZPL fill; 'white' = normal
     const DEFAULT_AC_CONFIGS = {
         'A320': {
             label: 'Airbus A320',
             items: [
-                { name: 'Meals', unit: 'pcs' },
-                { name: 'Beverages', unit: 'pcs' },
-                { name: 'Breads', unit: 'pcs' },
-                { name: 'Snacks', unit: 'pcs' },
+                { name: 'Equipment', bgColor: 'white' },
+                { name: 'Tea, Coffee, Lemon', bgColor: 'white' },
+                { name: 'Kettle', bgColor: 'white' },
+                { name: 'Extension drawers', bgColor: 'red' },
+                { name: 'Water', bgColor: 'red' },
+                { name: 'Soft Drinks', bgColor: 'red' },
+                { name: 'Alcohol, Packet Juices', bgColor: 'red' },
             ]
         },
         'B737': {
             label: 'Boeing 737',
             items: [
-                { name: 'Meals', unit: 'pcs' },
-                { name: 'Beverages', unit: 'pcs' },
-                { name: 'Breads', unit: 'pcs' },
-                { name: 'Desserts', unit: 'pcs' },
-                { name: 'Hot Towels', unit: 'pcs' },
+                { name: 'Equipment', bgColor: 'white' },
+                { name: 'Cold Meal', bgColor: 'white' },
+                { name: 'Tea, Coffee, Lemon', bgColor: 'white' },
+                { name: 'Kettle', bgColor: 'white' },
+                { name: 'Water', bgColor: 'red' },
+                { name: 'Soft Drinks', bgColor: 'red' },
+                { name: 'Alcohol, Packet Juices', bgColor: 'red' },
             ]
         },
         'B767': {
             label: 'Boeing 767',
             items: [
-                { name: 'Meals', unit: 'pcs' },
-                { name: 'Beverages', unit: 'pcs' },
-                { name: 'Breads', unit: 'pcs' },
-                { name: 'Desserts', unit: 'pcs' },
-                { name: 'Hot Towels', unit: 'pcs' },
-                { name: 'Amenity Kits', unit: 'pcs' },
+                { name: 'Equipment', bgColor: 'white' },
+                { name: 'Cold Meal', bgColor: 'white' },
+                { name: 'Tea, Coffee, Lemon', bgColor: 'white' },
+                { name: 'Kettle', bgColor: 'white' },
+                { name: 'Water', bgColor: 'red' },
+                { name: 'Soft Drinks', bgColor: 'red' },
+                { name: 'Alcohol, Packet Juices', bgColor: 'red' },
             ]
         },
         'A321': {
             label: 'Airbus A321',
             items: [
-                { name: 'Meals', unit: 'pcs' },
-                { name: 'Beverages', unit: 'pcs' },
-                { name: 'Breads', unit: 'pcs' },
-                { name: 'Snacks', unit: 'pcs' },
-                { name: 'Water', unit: 'btl' },
+                { name: 'Equipment', bgColor: 'white' },
+                { name: 'Cold Meal', bgColor: 'white' },
+                { name: 'Tea, Coffee, Lemon', bgColor: 'white' },
+                { name: 'Kettle', bgColor: 'white' },
+                { name: 'Extension drawers', bgColor: 'red' },
+                { name: 'Water', bgColor: 'red' },
+                { name: 'Soft Drinks', bgColor: 'red' },
+                { name: 'Alcohol, Packet Juices', bgColor: 'red' },
+            ]
+        },
+        'E190': {
+            label: 'Embraer E190/195',
+            items: [
+                { name: 'Equipment', bgColor: 'white' },
+                { name: 'Tea, Coffee, Lemon', bgColor: 'white' },
+                { name: 'Kettle', bgColor: 'white' },
+                { name: 'Water', bgColor: 'red' },
+                { name: 'Soft Drinks', bgColor: 'red' },
+                { name: 'Alcohol, Packet Juices', bgColor: 'red' },
             ]
         },
         'CUSTOM': {
             label: 'Custom',
             items: [
-                { name: 'Meals', unit: 'pcs' },
-                { name: 'Beverages', unit: 'pcs' },
+                { name: 'Equipment', bgColor: 'white' },
+                { name: 'Water', bgColor: 'red' },
             ]
         },
     };
@@ -299,99 +320,150 @@
     document.head.appendChild(style);
 
     /* ════════════════════════════════════════
-       6. ZPL GENERATOR  (35mm × 80mm @ 203dpi = 276 × 638 dots)
+       6.  ZPL GENERATOR  – Azerbaijan Airlines format
+           Label: 57mm × 83mm @ 203dpi ≈ 455 × 662 dots
+           One label per ITEM per PAX-CLASS.
+           Red items: fill black + ^FR (reverse = white text on black)
     ════════════════════════════════════════ */
-    function buildZPL(flight, paxData, galley, labelCount, boxNum, acItems) {
-        const paxLine = paxData.map(p => `${p.class}:${p.value}`).join('  ');
-        const total = paxData.reduce((s, p) => s + p.value, 0);
-        const qrItems = acItems.map(item => ({ name: item.name, unit: item.unit })); // Only name and unit for QR
-        const qr = JSON.stringify({ order: flight.orderNo, flight: flight.flightNo, route: flight.route, date: flight.date, galley, box: `${boxNum}/${labelCount}`, pax: paxData.reduce((o, p) => { o[p.class] = p.value; return o; }, {}), items: qrItems });
+    const LW = 455;   // dots wide  ≈57mm
+    const LH = 662;   // dots tall  ≈83mm
 
-        let zplItems = '';
-        let currentY = 174; // Starting Y position after total line
-        if (acItems && acItems.length > 0) {
-            zplItems += `^FO18,${currentY}^A0N,14,14^FDItems:^FS\n`;
-            currentY += 18;
-            acItems.forEach(item => {
-                zplItems += `^FO25,${currentY}^A0N,14,14^FD${item.name}^FS\n`;
-                zplItems += `^FO200,${currentY}^A0N,14,14^FD${item.unit}^FS\n`;
-                zplItems += `^FO400,${currentY}^A0N,14,14^FD___^FS\n`; // Placeholder for quantity
-                currentY += 18;
-            });
-            zplItems += `^FO18,${currentY}^GB600,1,1^FS\n`; // Separator after items
-            currentY += 8;
-        } else {
-            currentY += 8; // Add some space if no items
+    function _dateFmt(raw) {
+        // "25-Feb-2026" or "2026-02-25" → "25 / Feb / 2026"
+        if (!raw) return '________';
+        const p = raw.split(/[-\/\s]+/);
+        return p.length === 3 ? `${p[0]} / ${p[1]} / ${p[2]}` : raw;
+    }
+
+    /* Build ONE ZPL label for a single item+class */
+    function buildItemLabelZPL(flight, item, classCode) {
+        const route = flight.route || '';
+        const parts = route.split('-');
+        const from = parts[0] || '';
+        const to = parts[1] || '';
+        const isRed = (item.bgColor || 'white') === 'red';
+        const FR = isRed ? '^FR' : '';   // field-reverse = white on black
+        const date = _dateFmt(flight.date);
+        const fno = flight.flightNo || '-';
+
+        // Dynamic font size for long item names
+        const nameLen = (item.name || '').length;
+        const nameFz = nameLen > 18 ? 34 : nameLen > 12 ? 42 : 50;
+
+        let z = `^XA
+^CI28
+^PW${LW}
+^LL${LH}
+^LH0,0
+`;
+        // ── Red fill ──
+        if (isRed) z += `^FO0,0^GB${LW},${LH},${LH}^FS
+`;
+
+        // ── Logo border box ──
+        z += `^FO4,4^GB${LW - 8},72,2^FS
+`;
+        // Logo text  (centered approx)
+        z += `^FO50,9^A0N,24,24${FR}^FDAZERBAIJAN^FS
+`;
+        z += `^FO110,36${FR}^A0N,18,18^FD- AIRLINES -^FS
+`;
+
+        // ── Divider ──
+        z += `^FO4,79^GB${LW - 8},2,2^FS
+`;
+
+        // ── Flight info block ──
+        z += `^FO8,88${FR}^A0N,17,17^FDDate: ${date}^FS
+`;
+        z += `^FO8,110${FR}^A0N,17,17^FDFlight No. : ${fno}^FS
+`;
+        z += `^FO8,132${FR}^A0N,17,17^FD${from} -^FS
+`;
+        z += `^FO240,132${FR}^A0N,17,17^FD- ${to}^FS
+`;
+        z += `^FO8,154${FR}^A0N,17,17^FD${classCode} -^FS
+`;
+
+        // ── Divider before item name ──
+        z += `^FO4,580^GB${LW - 8},2,2^FS
+`;
+
+        // ── Item name (large, bold, italic via FI) ──
+        z += `^FO8,595^FI${FR}^A0N,${nameFz},${nameFz}^FD${item.name}^FS
+`;
+
+        z += `^XZ\n`;
+        return z;
+    }
+
+    /* Build ALL labels: each item × each pax class × labelCount copies */
+    function buildAllLabelsZPL(flight, paxData, acItems, labelCount) {
+        let all = '';
+        const classes = paxData.length ? paxData.map(p => p.class) : ['Y'];
+        for (const cls of classes) {
+            for (const item of (acItems || [])) {
+                for (let c = 0; c < labelCount; c++) {
+                    all += buildItemLabelZPL(flight, item, cls);
+                }
+            }
         }
-
-        return `^XA\n^CI28\n^PW638\n^LL276\n^LH0,0\n^FO10,10^GB618,256,2^FS\n^FO18,18^A0N,22,22^FD${flight.route}^FS\n^FO200,18^A0N,22,22^FD${flight.flightNo}^FS\n^FO420,18^A0N,18,18^FD${flight.date}^FS\n^FO18,46^GB600,1,1^FS\n^FO18,55^A0N,17,17^FDOrder: ${flight.orderNo}^FS\n^FO18,76^A0N,17,17^FDGalley: ${galley}^FS\n^FO18,97^A0N,17,17^FDBox: ${boxNum}/${labelCount}^FS\n^FO18,118^GB600,1,1^FS\n^FO18,128^A0N,19,19^FD${paxLine}^FS\n^FO18,152^A0N,19,19^FDTotal: ${total}^FS\n^FO18,174^GB600,1,1^FS\n${zplItems}^FO440,10^BQN,2,4^FDMA,${qr}^FS\n^FO18,${currentY}^A0N,14,14^FDPrinted: ${new Date().toLocaleTimeString()}^FS\n^XZ`;
+        return all;
     }
 
     /* ════════════════════════════════════════
-       7. LOCAL HTML LABEL PREVIEW (No external API)
-       Renders a realistic label card directly in the modal.
+       7. LOCAL HTML LABEL PREVIEW
+       Shows per-item miniature cards (AzAL format).
     ════════════════════════════════════════ */
     function renderLocalPreview(previewBox, flight, paxData, galley, labelCount, acItems) {
-        const total = paxData.reduce((s, p) => s + p.value, 0);
-        const now = new Date().toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' });
+        const route = flight.route || '';
+        const parts = route.split('-');
+        const from = parts[0] || 'GYD';
+        const to = parts[1] || '---';
+        const cls = paxData.length ? paxData[0].class : 'Y';
+        const date = _dateFmt(flight.date);
+        const fno = flight.flightNo || '-';
 
-        const classChips = paxData.map(p => {
-            const bg = CLASS_COLORS[p.class] || DEFAULT_COLOR;
-            return `<span style="background:${bg};color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;">${p.class} ${p.value}</span>`;
-        }).join('');
+        previewBox.innerHTML = '';
+        previewBox.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;padding:8px;align-items:flex-start;justify-content:flex-start;overflow-y:auto;';
 
-        const itemRows = (acItems || []).map(item =>
-            `<tr>
-                <td style="padding:2px 4px;font-size:10px;color:#374151;border-bottom:1px solid #f3f4f6;">${item.name}</td>
-                <td style="padding:2px 4px;font-size:10px;color:#6b7280;border-bottom:1px solid #f3f4f6;text-align:right;">${item.unit}</td>
-                <td style="padding:2px 8px;font-size:10px;font-weight:700;border-bottom:1px solid #f3f4f6;text-align:right;">___</td>
-            </tr>`
-        ).join('');
+        const items = (acItems && acItems.length) ? acItems : [{ name: '(no items)', bgColor: 'white' }];
+        items.forEach(item => {
+            const isRed = (item.bgColor || 'white') === 'red';
+            const bg = isRed ? '#dc2626' : '#ffffff';
+            const txtClr = isRed ? '#fff' : '#111';
+            const borClr = isRed ? '#b91c1c' : '#374151';
+            const divClr = isRed ? 'rgba(255,255,255,.4)' : '#ccc';
 
-        previewBox.innerHTML = `
-        <div style="width:100%;max-width:340px;border:1.5px solid #374151;border-radius:6px;overflow:hidden;font-family:'Courier New',monospace;background:#fff;font-size:11px;">
+            const card = document.createElement('div');
+            card.style.cssText = `width:140px;min-height:200px;border:1.5px solid ${borClr};border-radius:4px;` +
+                `overflow:hidden;font-family:'Courier New',monospace;background:${bg};color:${txtClr};` +
+                `display:flex;flex-direction:column;flex-shrink:0;`;
 
-          <!-- Header row -->
-          <div style="background:#1e3a8a;color:#fff;padding:6px 10px;display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:14px;font-weight:900;letter-spacing:1px;">${flight.route || 'GYD-TBS'}</span>
-            <span style="font-size:12px;font-weight:700;">${flight.flightNo || 'J2 8239'}</span>
-            <span style="font-size:10px;opacity:.8;">${flight.date || ''}</span>
-          </div>
+            card.innerHTML = `
+              <div style="border:1.5px solid ${borClr};margin:3px;padding:4px 3px;text-align:center;font-size:9.5px;font-weight:900;line-height:1.3;">
+                AZERBAIJAN<br><span style="font-size:8px;font-weight:600;letter-spacing:1px;">─ AIRLINES ─</span>
+              </div>
+              <div style="padding:5px 5px 0;font-size:8.5px;line-height:1.7;flex:1;">
+                <div>Date: ${date}</div>
+                <div>Flight No.: ${fno}</div>
+                <div>${from} &ndash;</div>
+                <div style="text-align:right">&ndash; ${to}</div>
+                <div>${cls} &ndash;</div>
+              </div>
+              <div style="border-top:1px solid ${divClr};margin:3px 3px 3px;padding:5px 3px;text-align:center;font-size:${(item.name || '').length > 14 ? 10 : 12}px;font-weight:900;font-style:italic;">
+                ${item.name}
+              </div>`;
 
-          <!-- Order / Galley / Box -->
-          <div style="padding:5px 10px;background:#f0f4ff;display:flex;gap:14px;font-size:10px;color:#1e3a8a;border-bottom:1px solid #dbeafe;">
-            <span>📋 ${flight.orderNo || '—'}</span>
-            <span>🗄 ${galley}</span>
-            <span>📦 Box 1/${labelCount}</span>
-          </div>
+            previewBox.appendChild(card);
+        });
 
-          <!-- Pax chips -->
-          <div style="padding:5px 10px;background:#fff;border-bottom:1.5px dashed #d1d5db;display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
-            <span style="font-size:9px;color:#6b7280;margin-right:4px;font-family:system-ui;">PAX:</span>
-            ${classChips}
-            <span style="margin-left:auto;font-size:10px;font-weight:900;">Total ${total}</span>
-          </div>
-
-          <!-- Items table -->
-          ${acItems && acItems.length ? `
-          <div style="padding:4px 6px;">
-            <div style="font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;font-family:system-ui;">Items</div>
-            <table style="width:100%;border-collapse:collapse;">
-              <thead><tr>
-                <th style="font-size:9px;font-weight:600;color:#9ca3af;text-align:left;padding:1px 4px;">Item</th>
-                <th style="font-size:9px;font-weight:600;color:#9ca3af;text-align:right;padding:1px 4px;">Unit</th>
-                <th style="font-size:9px;font-weight:600;color:#9ca3af;text-align:right;padding:1px 8px;">Qty</th>
-              </tr></thead>
-              <tbody>${itemRows}</tbody>
-            </table>
-          </div>` : ''}
-
-          <!-- Footer -->
-          <div style="padding:3px 10px;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:9px;color:#9ca3af;display:flex;justify-content:space-between;font-family:system-ui;">
-            <span>🖨 ${now}</span>
-            <span>AeroChef · ZT411</span>
-          </div>
-        </div>`;
+        if (items.length > 6) {
+            const note = document.createElement('div');
+            note.style.cssText = 'font-size:10px;color:#6b7280;padding:4px;width:100%;text-align:center;';
+            note.textContent = `Göstərilən: ${Math.min(items.length, 6)} / ${items.length} label (hər class üçün)`;
+            previewBox.appendChild(note);
+        }
     }
 
     /* ════════════════════════════════════════
@@ -411,45 +483,70 @@
     }
 
     /* ════════════════════════════════════════
-       9. BROWSER PRINT FALLBACK
+       9. BROWSER PRINT FALLBACK  – AzAL format
+          One <div> per item × per pax-class × labelCount copies.
     ════════════════════════════════════════ */
     function browserPrint(flight, paxData, galley, labelCount, acItems) {
-        const total = paxData.reduce((s, p) => s + p.value, 0);
+        const route = flight.route || '';
+        const parts = route.split('-');
+        const from = parts[0] || '';
+        const to = parts[1] || '';
+        const date = _dateFmt(flight.date);
+        const fno = flight.flightNo || '-';
+        const classes = paxData.length ? paxData.map(p => p.class) : ['Y'];
+        const items = (acItems && acItems.length) ? acItems : [];
+
         let cards = '';
-        const itemsHtml = (acItems && acItems.length)
-            ? `<table class="itbl">${acItems.map(it => `<tr><td>${it.name}</td><td class="iunit">${it.unit}</td><td class="iqty">___</td></tr>`).join('')}</table>`
-            : '';
-        for (let i = 1; i <= labelCount; i++) {
-            cards += `<div class="lc">
-                <div class="lt"><span class="lr">${flight.route}</span><span class="lf">${flight.flightNo}</span><span class="ld">${flight.date}</span></div>
-                <hr>
-                <div class="lm">Order: <b>${flight.orderNo}</b> &nbsp;|&nbsp; Galley: <b>${galley}</b> &nbsp;|&nbsp; Box: <b>${i}/${labelCount}</b></div>
-                <div class="lp">${paxData.map(p => `<span>${p.class}: <b>${p.value}</b></span>`).join('')}<span class="lt2">Total: <b>${total}</b></span></div>
-                ${itemsHtml}
-            </div>`;
+        for (const cls of classes) {
+            for (const item of items) {
+                const isRed = (item.bgColor || 'white') === 'red';
+                const bg = isRed ? '#dc2626' : '#ffffff';
+                const clr = isRed ? '#ffffff' : '#000000';
+                for (let c = 0; c < labelCount; c++) {
+                    const nameFs = (item.name || '').length > 18 ? '16px' : (item.name || '').length > 12 ? '20px' : '24px';
+                    cards += `<div class="lc" style="background:${bg};color:${clr};border-color:${isRed ? '#b91c1c' : '#222'}">
+                      <div class="logo-box" style="border-color:${isRed ? 'rgba(255,255,255,.6)' : '#222'}">
+                        <div class="logo-name">AZERBAIJAN</div>
+                        <div class="logo-sub">&#8211; AIRLINES &#8211;</div>
+                      </div>
+                      <div class="info">
+                        <div>Date: ${date}</div>
+                        <div>Flight No. : ${fno}</div>
+                        <div>${from} &#8211;</div>
+                        <div style="text-align:right">&#8211; ${to}</div>
+                        <div>${cls} &#8211;</div>
+                      </div>
+                      <div class="item-name" style="border-top:1px solid ${isRed ? 'rgba(255,255,255,.5)' : '#ccc'};font-size:${nameFs}">
+                        ${item.name}
+                      </div>
+                    </div>`;
+                }
+            }
         }
-        const pw = window.open('', '_blank', 'width=560,height=820');
-        pw.document.write(`<!DOCTYPE html><html><head><title>Labels – ${flight.flightNo}</title><style>
-            *{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Courier New',monospace;padding:10px;background:#fff;}
-            .lc{border:2px solid #222;border-radius:6px;padding:12px 16px;margin:8px 0;page-break-inside:avoid;}
-            .lt{display:flex;gap:12px;align-items:center;margin-bottom:6px;}
-            .lr{font-size:22px;font-weight:900;letter-spacing:2px;}
-            .lf{font-size:14px;font-weight:700;color:#333;}
-            .ld{font-size:11px;color:#888;margin-left:auto;}
-            hr{border:none;border-top:1px dashed #ccc;margin:6px 0;}
-            .lm{font-size:11px;color:#444;margin:4px 0;}
-            .lp{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;font-size:12px;}
-            .lp span{background:#f3f4f6;padding:2px 8px;border-radius:12px;border:1px solid #d1d5db;}
-            .lt2{background:#dbeafe!important;border-color:#93c5fd!important;font-weight:700;}
-            .itbl{width:100%;border-collapse:collapse;margin-top:8px;font-size:11px;}
-            .itbl td{padding:2px 4px;border-bottom:1px solid #e5e7eb;}
-            .iunit{color:#6b7280;text-align:right;width:60px;}
-            .iqty{font-weight:700;text-align:right;width:50px;}
-            .np{text-align:right;margin-bottom:8px;}
-            @media print{.np{display:none;}}
+
+        const totalLabels = classes.length * items.length * labelCount;
+        const pw = window.open('', '_blank', 'width=700,height=900');
+        pw.document.write(`<!DOCTYPE html><html><head><title>Labels &#8211; ${flight.flightNo}</title><style>
+            *{margin:0;padding:0;box-sizing:border-box;}
+            body{font-family:'Courier New',monospace;padding:10px;background:#e5e7eb;}
+            .wrap{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-start;}
+            .lc{width:200px;min-height:290px;border:2px solid #222;border-radius:4px;
+                overflow:hidden;display:flex;flex-direction:column;page-break-inside:avoid;
+                background:#fff;color:#000;}
+            .logo-box{border:1.5px solid #222;margin:5px;padding:5px 4px;text-align:center;}
+            .logo-name{font-size:14px;font-weight:900;letter-spacing:1px;}
+            .logo-sub{font-size:10px;letter-spacing:2px;}
+            .info{padding:6px 8px;font-size:11px;line-height:1.8;flex:1;}
+            .item-name{padding:8px 6px;text-align:center;font-weight:900;font-style:italic;
+                        border-top:1px solid #ccc;font-size:22px;}
+            .np{grid-column:1/-1;text-align:right;margin-bottom:10px;}
+            @media print{.np{display:none;}body{background:#fff;}}
         </style></head><body>
-        <div class="np"><button onclick="window.print()" style="padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">&#128424; Print</button></div>
-        ${cards}</body></html>`);
+        <div class="np">
+          <b>${totalLabels} label</b> (${classes.join('+')} class × ${items.length} item × ${labelCount} kopya)&nbsp;&nbsp;
+          <button onclick="window.print()" style="padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">&#128424; Print</button>
+        </div>
+        <div class="wrap">${cards}</div></body></html>`);
         pw.document.close();
     }
 
@@ -815,30 +912,25 @@
                 return;
             }
 
-            // Network ZPL
+            // Network ZPL – send all item labels at once
             if (!IP_REGEX.test(ip)) { toast('Əvvəlcə Settings-də Printer IP daxil edin', 'error'); return; }
 
             actionBtn.disabled = true;
             ftrStatus.textContent = 'Göndərilir…';
-            let sent = 0;
-
-            function sendNext() {
-                if (sent >= cnt) {
-                    toast(`✓ ${cnt} label ZT411-ə göndərildi (${ip})`, 'success');
+            const allZpl = buildAllLabelsZPL(flightData, paxData, acItems, cnt);
+            const totalLbls = (paxData.length || 1) * (acItems.length || 0) * cnt;
+            sendZplToZebra(ip, allZpl,
+                () => {
+                    toast(`✓ ${totalLbls} label ZT411-ə göndərildi (${ip})`, 'success');
                     close();
-                    return;
-                }
-                sent++;
-                const zpl = buildZPL(flightData, paxData, galley, cnt, sent, acItems);
-                ftrStatus.textContent = `Göndərilir… ${sent}/${cnt}`;
-                sendZplToZebra(ip, zpl, sendNext, (err) => {
+                },
+                (err) => {
                     toast('ZPL xətası: ' + err + ' → Browser print açılır', 'error');
                     browserPrint(flightData, paxData, galley, cnt, acItems);
                     actionBtn.disabled = false;
                     ftrStatus.textContent = 'Xəta: ' + err;
-                });
-            }
-            sendNext();
+                }
+            );
         };
 
         // Initial preview
