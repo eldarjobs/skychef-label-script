@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V11.0)
 // @namespace    http://tampermonkey.net/
-// @version      11.2
+// @version      11.3
 // @description  V11: Custom colors, auto-update, batch ZPL, label layout editor, version check
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -355,11 +355,16 @@
     .acf8-btn-save{background:#10b981;color:#fff;}
     .acf8-btn-save:hover{background:#059669;}
 
-    .acf8-layout-row{display:flex;align-items:center;gap:6px;padding:4px 8px;background:#f8fafc;border-radius:5px;border:1px solid #e5e7eb;}
-    .acf8-layout-row b{min-width:72px;font-size:11px;color:#1e3a8a;}
-    .acf8-layout-row label{font-size:9px!important;color:#9ca3af!important;font-weight:600!important;text-transform:none!important;letter-spacing:0!important;margin:0!important;padding:0!important;}
-    .acf8-layout-row input[type=number]{width:50px!important;padding:3px 5px!important;border:1px solid #d1d5db!important;border-radius:4px!important;font-size:11px!important;color:#374151!important;background:#fff!important;text-align:center!important;}
-    .acf8-layout-row input[type=number]:focus{border-color:#3b82f6!important;box-shadow:0 0 0 2px rgba(59,130,246,.15)!important;outline:none!important;}
+    .acf8-layout-section{border-top:1px solid #e5e7eb;padding-top:10px;grid-column:1/-1;}
+    .acf8-layout-section .acf8-ls-title{display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:700;color:#374151;margin-bottom:6px;}
+    .acf8-layout-section .acf8-ls-title span{color:#9ca3af;font-weight:400;font-size:9px;}
+    .acf8-layout-editor{display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;padding:2px 0;}
+    .acf8-layout-row{display:flex;align-items:center;gap:5px;padding:4px 8px;background:#f8fafc;border-radius:5px;border:1px solid #e5e7eb;flex-wrap:nowrap;}
+    .acf8-layout-row b{min-width:78px;font-size:10px;color:#1e3a8a;flex-shrink:0;}
+    .acf8-layout-lbl{font-size:9px;color:#9ca3af;font-weight:700;flex-shrink:0;}
+    .acf8-layout-inp{width:48px;padding:3px 4px;border:1px solid #d1d5db;border-radius:4px;font-size:11px;color:#374151;background:#fff;text-align:center;flex-shrink:0;}
+    .acf8-layout-inp:focus{border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,.15);outline:none;}
+    .acf8-layout-reset-btn{padding:3px 10px;background:#ef4444;color:#fff;border:none;border-radius:5px;font-size:10px;cursor:pointer;font-weight:600;flex-shrink:0;}
     `;
     document.head.appendChild(style);
 
@@ -597,7 +602,9 @@
             url: 'https://raw.githubusercontent.com/eldarjobs/skychef-label-script/master/version.txt',
             timeout: 5000,
             onload: (r) => {
+                if (r.status !== 200) return; /* file doesn't exist yet – silent */
                 const latestVer = r.responseText.trim();
+                if (!/^\d+(\.\d+)+$/.test(latestVer)) return; /* not a real version */
                 const currentVer = (typeof GM_info !== 'undefined' && GM_info.script) ? GM_info.script.version : '11.0';
                 if (latestVer !== currentVer && latestVer > currentVer) {
                     toast(`🆕 Yeni versiya mövcuddur: v${latestVer} (hazırki: v${currentVer})`, 'info', 10000);
@@ -1180,12 +1187,12 @@
                     onclick="const c=this.previousElementSibling;c.checked=!c.checked;this.style.background=c.checked?'#2563eb':'#d1d5db'"></span>
                 </label>
               </div>
-              <div class="acf8-fg full" style="border-top:1px solid #e5e7eb;padding-top:10px;">
-                <label style="display:flex;align-items:center;justify-content:space-between;">
-                  <span>📐 Label Layout Editor <span style="font-size:9px;color:#9ca3af;font-weight:400;">(ZPL koordinatları, dots)</span></span>
-                  <button id="acf8-layout-reset" style="padding:3px 10px;background:#ef4444;color:#fff;border:none;border-radius:5px;font-size:10px;cursor:pointer;font-weight:600;">↺ Reset</button>
-                </label>
-                <div id="acf8-layout-editor" style="display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;padding:4px 0;"></div>
+              <div class="acf8-layout-section">
+                <div class="acf8-ls-title">
+                  <span style="font-size:11px;font-weight:700;color:#374151;">📐 Label Layout Editor <span>(ZPL koordinatları, dots)</span></span>
+                  <button id="acf8-layout-reset" class="acf8-layout-reset-btn">↺ Reset</button>
+                </div>
+                <div id="acf8-layout-editor" class="acf8-layout-editor"></div>
               </div>
               <div class="acf8-fg full" style="border-top:1px solid #e5e7eb;padding-top:10px;">
                 <label>🔄 Versiya Yoxlaması</label>
@@ -1503,11 +1510,11 @@
                 const row = document.createElement('div');
                 row.className = 'acf8-layout-row';
                 let html = `<b>${fieldLabels[key] || key}</b>`;
-                html += `<label>X</label><input type="number" data-lk="${key}" data-lp="x" value="${item.x ?? 0}">`;
-                html += `<label>Y</label><input type="number" data-lk="${key}" data-lp="y" value="${item.y ?? 0}">`;
-                if (def.fz != null) html += `<label>Fz</label><input type="number" data-lk="${key}" data-lp="fz" value="${item.fz ?? def.fz}">`;
-                if (def.w != null) html += `<label>W</label><input type="number" data-lk="${key}" data-lp="w" value="${item.w ?? def.w}">`;
-                if (def.h != null) html += `<label>H</label><input type="number" data-lk="${key}" data-lp="h" value="${item.h ?? def.h}">`;
+                html += `<span class="acf8-layout-lbl">X</span><input class="acf8-layout-inp" type="number" data-lk="${key}" data-lp="x" value="${item.x ?? 0}">`;
+                html += `<span class="acf8-layout-lbl">Y</span><input class="acf8-layout-inp" type="number" data-lk="${key}" data-lp="y" value="${item.y ?? 0}">`;
+                if (def.fz != null) html += `<span class="acf8-layout-lbl">Fz</span><input class="acf8-layout-inp" type="number" data-lk="${key}" data-lp="fz" value="${item.fz ?? def.fz}">`;
+                if (def.w != null) html += `<span class="acf8-layout-lbl">W</span><input class="acf8-layout-inp" type="number" data-lk="${key}" data-lp="w" value="${item.w ?? def.w}">`;
+                if (def.h != null) html += `<span class="acf8-layout-lbl">H</span><input class="acf8-layout-inp" type="number" data-lk="${key}" data-lp="h" value="${item.h ?? def.h}">`;
                 row.innerHTML = html;
                 el.appendChild(row);
             });
@@ -1545,7 +1552,7 @@
                 const layoutEd = overlay.querySelector('#acf8-layout-editor');
                 if (layoutEd) {
                     const layout = getLabelLayout();
-                    layoutEd.querySelectorAll('input[data-lk]').forEach(inp => {
+                    layoutEd.querySelectorAll('.acf8-layout-inp[data-lk]').forEach(inp => {
                         const k = inp.dataset.lk;
                         const p = inp.dataset.lp;
                         if (!layout[k]) layout[k] = {};
