@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V11.0)
 // @namespace    http://tampermonkey.net/
-// @version      11.7
+// @version      11.8
 // @description  V11: Custom colors, auto-update, batch ZPL, label layout editor, version check
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -1486,7 +1486,12 @@
         const pw = window.open('', '_blank', 'width=800,height=900');
         pw.document.write(`<!DOCTYPE html><html><head><title>Labels - ${flight.flightNo}</title><style>
             *{margin:0;padding:0;box-sizing:border-box;}
-            body{font-family:'Courier New',monospace;padding:20px;background:#e5e7eb;}
+            body{
+                font-family:'Courier New',monospace;padding:20px;background:#e5e7eb;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
             .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-start;}
             .np{text-align:right;margin-bottom:15px;width:100%;}
             @media print{
@@ -2674,7 +2679,12 @@
                         <title>Batch Labels</title>
                         <style>
                             *{margin:0;padding:0;box-sizing:border-box;}
-                            body{font-family:'Courier New',monospace;padding:20px;background:#e5e7eb;}
+                            body{
+                                font-family:'Courier New',monospace;padding:20px;background:#e5e7eb;
+                                -webkit-print-color-adjust: exact !important;
+                                print-color-adjust: exact !important;
+                                color-adjust: exact !important;
+                            }
                             .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-start;}
                             .np{text-align:right;margin-bottom:15px;width:100%;}
                             @media print{
