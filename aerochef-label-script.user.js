@@ -338,7 +338,7 @@
     }
 
     /* Build ONE ZPL label for a single item+class */
-    function buildItemLabelZPL(flight, item, classCode) {
+    function buildItemLabelZPL(flight, item, classCode, paxCount) {
         const route = flight.route || '';
         const parts = route.split('-');
         const from = parts[0] || '';
@@ -384,7 +384,7 @@
 `;
         z += `^FO8,152${FR}^A0N,17,17^FD${to} - ${from}^FS
 `;
-        z += `^FO8,174${FR}^A0N,17,17^FD${classCode} -^FS
+        z += `^FO8,174${FR}^A0N,17,17^FD${classCode} ${paxCount || ''} -^FS
 `;
 
         // ── Divider before item name ──
@@ -404,11 +404,12 @@
         let all = '';
         const classes = paxData.length ? paxData.map(p => p.class) : ['Y'];
         for (const cls of classes) {
+            const paxCount = paxData.find(p => p.class === cls)?.value ?? '';
             for (let i = 0; i < (acItems || []).length; i++) {
                 const item = acItems[i];
                 const qty = (itemQtys && itemQtys[i] != null) ? itemQtys[i] : 1;
                 for (let c = 0; c < qty; c++) {
-                    all += buildItemLabelZPL(flight, item, cls);
+                    all += buildItemLabelZPL(flight, item, cls, paxCount);
                 }
             }
         }
@@ -425,6 +426,7 @@
         const from = parts[0] || 'GYD';
         const to = parts[1] || '---';
         const cls = paxData.length ? paxData[0].class : 'Y';
+        const paxCount = paxData.length ? paxData[0].value : '';
         const date = _dateFmt(flight.date);
         const fno = flight.flightNo || '-';
 
@@ -453,7 +455,7 @@
                 <div>Flight No.: ${fno}</div>
                 <div>${from} ${to}</div>
                 <div>${to} – ${from}</div>
-                <div>${cls} –</div>
+                <div>${cls} ${paxCount} –</div>
               </div>
               <div style="border-top:1px solid ${divClr};margin:3px 3px 3px;padding:5px 3px;text-align:center;font-size:${(item.name || '').length > 14 ? 10 : 12}px;font-weight:900;font-style:italic;display:flex;align-items:center;justify-content:center;gap:4px;">
                 <span>${item.name}</span>
@@ -503,6 +505,7 @@
 
         let cards = '';
         for (const cls of classes) {
+            const paxCount = paxData.find(p => p.class === cls)?.value ?? '';
             for (let i = 0; i < items.length; i++) {
                 const item = items[i];
                 const qty = (acItemQtys && acItemQtys[i] != null) ? acItemQtys[i] : 1;
@@ -522,7 +525,7 @@
                         <div>Flight No. : ${fno}</div>
                         <div>${from} ${to}</div>
                         <div>${to} &#8211; ${from}</div>
-                        <div>${cls} &#8211;</div>
+                        <div>${cls} ${paxCount} &#8211;</div>
                       </div>
                       <div class="item-name" style="border-top:1px solid ${isRed ? 'rgba(255,255,255,.5)' : '#ccc'};font-size:${nameFs}">
                         ${item.name}
@@ -641,7 +644,7 @@
                   ${buildSelect('acf8-sel-printtype', DEFAULT_PRINT_TYPES, gs(SK.PRINT_TYPE, ''), 'Select Print Type')}
                 </div>
                 <div class="acf8-fg">
-                  <label>Item Quantities <span style="font-size:9px;color:#9ca3af;font-weight:400;">(per class)</span></label>
+                  <label>Label Qty <span style="font-size:9px;color:#9ca3af;font-weight:400;">(per class)</span></label>
                   <div id="acf8-item-qtys-list" style="display:flex;flex-direction:column;gap:2px;max-height:110px;overflow-y:auto;"></div>
                 </div>
                 <div class="acf8-fg">
@@ -1138,4 +1141,5 @@
     }, 2000);
 
 })();
+
 
