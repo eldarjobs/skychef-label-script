@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload â€“ Print Labels (V9)
 // @namespace    http://tampermonkey.net/
-// @version      10.1
+// @version      10.1.1
 // @description  Local HTML preview, aircraft-type items config (Meals/Beverages/Breads), Zebra ZT411 ZPL print.
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -1284,7 +1284,7 @@
                     } else if (loadCount > 1) {
                         clearTimeout(tmr); iframe.remove(); if (formEl) formEl.remove(); resolve([]);
                     }
-                } catch (ex) { console.warn('[batch pax]', ex); }
+                } catch (ex) { console.warn('[batch pax]', ex);  resolve([]); }
             };
             const mainForm = document.forms[0];
             if (!mainForm) { clearTimeout(tmr); iframe.remove(); resolve([]); return; }
@@ -1684,16 +1684,20 @@
 
                 // Fetch pax for each flight
                 let fetched = 0;
-                for (const { editBtn, printBtn, flightData } of selected) {
-                    statusEl.textContent = `â³ PAX yÃ¼klÉ™nir: ${fetched + 1} / ${selected.length}`;
-                    try {
-                        const origClass = printBtn.className;
-                        printBtn.classList.add('loading');
-                        flightData.paxData = await fetchPaxForFlight(editBtn);
-                        printBtn.className = origClass;
-                    } catch (ex) { console.warn(ex); }
-                    fetched++;
-                }
+             for (const { editBtn, printBtn, flightData } of selected) {
+    statusEl.textContent = `⏳ PAX yüklənir: ${fetched + 1} / ${selected.length}`;
+    try {
+        const origClass = printBtn.className;
+        printBtn.classList.add('loading');
+        const paxData = await fetchPaxForFlight(editBtn); 
+        flightData.paxData = paxData;                      
+        printBtn.className = origClass;
+    } catch (ex) { 
+        console.warn(ex); 
+        flightData.paxData = []; // xəta olsa da boş array
+    }
+    fetched++;
+}
 
 statusEl.textContent = 'ðŸ–¨ GÃ¶ndÉ™rilirâ€¦';
 
@@ -1720,6 +1724,8 @@ if (bmMethod === 'browser') {
     pw.document.close();
     toast(`âœ“ ${selected.length} uÃ§uÅŸ Ã¼Ã§Ã¼n browser print aÃ§Ä±ldÄ±`, 'success');
     closeModal();
+	selectedRows.clear();    // ✅ əlavə et
+
     batchBtn.disabled = false; updateBatchBtn();
 } else {
     // ZPL one by one
@@ -1746,6 +1752,8 @@ if (bmMethod === 'browser') {
         if (sent2 + fail2 >= zplList.length) {
             batchBtn.disabled = false; updateBatchBtn();
             toast(`âœ“ ${sent2}/${zplList.length} label ZT411-É™ gÃ¶ndÉ™rildi`, 'success');
+			selectedRows.clear();    // ✅ əlavə et
+
             closeModal(); return;
         }
         statusEl.textContent = `ðŸ–¨ ${sent2 + fail2 + 1} / ${zplList.length} gÃ¶ndÉ™rilirâ€¦`;
