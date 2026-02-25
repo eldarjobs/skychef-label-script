@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V9)
 // @namespace    http://tampermonkey.net/
-// @version      9.5
+// @version      9.6
 // @description  Local HTML preview, aircraft-type items config (Meals/Beverages/Breads), Zebra ZT411 ZPL print.
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -380,11 +380,11 @@
 `;
         z += `^FO8,110${FR}^A0N,17,17^FDFlight No. : ${fno}^FS
 `;
-        z += `^FO8,132${FR}^A0N,17,17^FD${from} -^FS
+        z += `^FO8,132${FR}^A0N,17,17^FD${from}  ${to}^FS
 `;
-        z += `^FO240,132${FR}^A0N,17,17^FD- ${to}^FS
+        z += `^FO8,152${FR}^A0N,17,17^FD${to} - ${from}^FS
 `;
-        z += `^FO8,154${FR}^A0N,17,17^FD${classCode} -^FS
+        z += `^FO8,174${FR}^A0N,17,17^FD${classCode} -^FS
 `;
 
         // ── Divider before item name ──
@@ -399,13 +399,15 @@
         return z;
     }
 
-    /* Build ALL labels: each item × each pax class × labelCount copies */
-    function buildAllLabelsZPL(flight, paxData, acItems, labelCount) {
+    /* Build ALL labels: each item × each pax class × per-item qty */
+    function buildAllLabelsZPL(flight, paxData, acItems, itemQtys) {
         let all = '';
         const classes = paxData.length ? paxData.map(p => p.class) : ['Y'];
         for (const cls of classes) {
-            for (const item of (acItems || [])) {
-                for (let c = 0; c < labelCount; c++) {
+            for (let i = 0; i < (acItems || []).length; i++) {
+                const item = acItems[i];
+                const qty = (itemQtys && itemQtys[i] != null) ? itemQtys[i] : 1;
+                for (let c = 0; c < qty; c++) {
                     all += buildItemLabelZPL(flight, item, cls);
                 }
             }
@@ -430,7 +432,7 @@
         previewBox.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;padding:8px;align-items:flex-start;justify-content:flex-start;overflow-y:auto;';
 
         const items = (acItems && acItems.length) ? acItems : [{ name: '(no items)', bgColor: 'white' }];
-        items.forEach(item => {
+        items.forEach((item, idx) => {
             const isRed = (item.bgColor || 'white') === 'red';
             const bg = isRed ? '#dc2626' : '#ffffff';
             const txtClr = isRed ? '#fff' : '#111';
@@ -449,12 +451,13 @@
               <div style="padding:5px 5px 0;font-size:8.5px;line-height:1.7;flex:1;">
                 <div>Date: ${date}</div>
                 <div>Flight No.: ${fno}</div>
-                <div>${from} &ndash;</div>
-                <div style="text-align:right">&ndash; ${to}</div>
-                <div>${cls} &ndash;</div>
+                <div>${from} ${to}</div>
+                <div>${to} – ${from}</div>
+                <div>${cls} –</div>
               </div>
-              <div style="border-top:1px solid ${divClr};margin:3px 3px 3px;padding:5px 3px;text-align:center;font-size:${(item.name || '').length > 14 ? 10 : 12}px;font-weight:900;font-style:italic;">
-                ${item.name}
+              <div style="border-top:1px solid ${divClr};margin:3px 3px 3px;padding:5px 3px;text-align:center;font-size:${(item.name || '').length > 14 ? 10 : 12}px;font-weight:900;font-style:italic;display:flex;align-items:center;justify-content:center;gap:4px;">
+                <span>${item.name}</span>
+                ${(item._qty > 1) ? `<span style="font-size:9px;opacity:.7;">×${item._qty}</span>` : ''}
               </div>`;
 
             previewBox.appendChild(card);
@@ -488,7 +491,7 @@
        9. BROWSER PRINT FALLBACK  – AzAL format
           One <div> per item × per pax-class × labelCount copies.
     ════════════════════════════════════════ */
-    function browserPrint(flight, paxData, galley, labelCount, acItems) {
+    function browserPrint(flight, paxData, acItemQtys, acItems) {
         const route = flight.route || '';
         const parts = route.split('-');
         const from = parts[0] || '';
@@ -500,12 +503,15 @@
 
         let cards = '';
         for (const cls of classes) {
-            for (const item of items) {
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                const qty = (acItemQtys && acItemQtys[i] != null) ? acItemQtys[i] : 1;
+                if (qty < 1) continue;
                 const isRed = (item.bgColor || 'white') === 'red';
                 const bg = isRed ? '#dc2626' : '#ffffff';
                 const clr = isRed ? '#ffffff' : '#000000';
-                for (let c = 0; c < labelCount; c++) {
-                    const nameFs = (item.name || '').length > 18 ? '16px' : (item.name || '').length > 12 ? '20px' : '24px';
+                const nameFs = (item.name || '').length > 18 ? '16px' : (item.name || '').length > 12 ? '20px' : '24px';
+                for (let c = 0; c < qty; c++) {
                     cards += `<div class="lc" style="background:${bg};color:${clr};border-color:${isRed ? '#b91c1c' : '#222'}">
                       <div class="logo-box" style="border-color:${isRed ? 'rgba(255,255,255,.6)' : '#222'}">
                         <div class="logo-name">AZERBAIJAN</div>
@@ -514,8 +520,8 @@
                       <div class="info">
                         <div>Date: ${date}</div>
                         <div>Flight No. : ${fno}</div>
-                        <div>${from} &#8211;</div>
-                        <div style="text-align:right">&#8211; ${to}</div>
+                        <div>${from} ${to}</div>
+                        <div>${to} &#8211; ${from}</div>
                         <div>${cls} &#8211;</div>
                       </div>
                       <div class="item-name" style="border-top:1px solid ${isRed ? 'rgba(255,255,255,.5)' : '#ccc'};font-size:${nameFs}">
@@ -526,7 +532,8 @@
             }
         }
 
-        const totalLabels = classes.length * items.length * labelCount;
+        const totalLabels = classes.reduce((s, _) => s + (acItemQtys ? acItemQtys.reduce((a, q) => a + (q || 0), 0) : items.length), 0);
+        const qtyList = items.map((it, i) => `${it.name}×${acItemQtys?.[i] ?? 1}`).join(', ');
         const pw = window.open('', '_blank', 'width=700,height=900');
         pw.document.write(`<!DOCTYPE html><html><head><title>Labels &#8211; ${flight.flightNo}</title><style>
             *{margin:0;padding:0;box-sizing:border-box;}
@@ -545,7 +552,7 @@
             @media print{.np{display:none;}body{background:#fff;}}
         </style></head><body>
         <div class="np">
-          <b>${totalLabels} label</b> (${classes.join('+')} class × ${items.length} item × ${labelCount} kopya)&nbsp;&nbsp;
+          <b>${totalLabels} label</b> (${classes.join('+')} × ${qtyList})&nbsp;&nbsp;
           <button onclick="window.print()" style="padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">&#128424; Print</button>
         </div>
         <div class="wrap">${cards}</div></body></html>`);
@@ -573,10 +580,10 @@
         // Auto-detect aircraft config from row data
         const acCfg = matchAcConfig(flightData.aircraftSeries, flightData.aircraftType);
         let acItems = acCfg.items || [];
+        let acItemQtys = acItems.map(() => 1);   // per-item print count
 
         const galleys = getGalleys();
         const selGalley = gs(SK.GALLEY, galleys[0]);
-        const labelCnt = parseInt(gs(SK.LABEL_COUNT, '1')) || 1;
 
         const chipsHtml = paxData.map(p => {
             const bg = CLASS_COLORS[p.class] || DEFAULT_COLOR;
@@ -634,12 +641,8 @@
                   ${buildSelect('acf8-sel-printtype', DEFAULT_PRINT_TYPES, gs(SK.PRINT_TYPE, ''), 'Select Print Type')}
                 </div>
                 <div class="acf8-fg">
-                  <label>Label Count</label>
-                  <div class="acf8-counter">
-                    <button id="acf8-cnt-m">−</button>
-                    <input type="number" id="acf8-cnt" min="1" max="50" value="${labelCnt}">
-                    <button id="acf8-cnt-p">+</button>
-                  </div>
+                  <label>Item Quantities <span style="font-size:9px;color:#9ca3af;font-weight:400;">(per class)</span></label>
+                  <div id="acf8-item-qtys-list" style="display:flex;flex-direction:column;gap:2px;max-height:110px;overflow-y:auto;"></div>
                 </div>
                 <div class="acf8-fg">
                   <label>Pax by Class</label>
@@ -709,7 +712,6 @@
 
         /* ── Refs ── */
         const prevBox = overlay.querySelector('#acf8-prev-box');
-        const cntInput = overlay.querySelector('#acf8-cnt');
         const ftrStatus = overlay.querySelector('#acf8-ftr-status');
         const actionBtn = overlay.querySelector('#acf8-btn-action');
 
@@ -718,8 +720,9 @@
             clearTimeout(prevTimer);
             prevTimer = setTimeout(() => {
                 const galley = overlay.querySelector('#acf8-sel-galley').value || 'Galley 1';
-                const cnt = parseInt(cntInput.value) || 1;
-                renderLocalPreview(prevBox, flightData, paxData, galley, cnt, acItems);
+                // Tag items with their qty for preview badge
+                const tagged = acItems.map((it, i) => ({ ...it, _qty: acItemQtys[i] ?? 1 }));
+                renderLocalPreview(prevBox, flightData, paxData, galley, 1, tagged);
             }, 300);
         }
 
@@ -752,10 +755,12 @@
             acItems.forEach((item, idx) => {
                 const row = document.createElement('div');
                 row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:3px 6px;background:#f3f4f6;border-radius:5px;font-size:12px;';
-                row.innerHTML = `<span style="flex:1">${item.name}</span><span style="color:#6b7280;width:50px;text-align:right">${item.unit}</span><button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:14px;line-height:1">&times;</button>`;
+                row.innerHTML = `<span style="flex:1">${item.name}</span><span style="color:#6b7280;width:50px;text-align:right">${item.unit || ''}</span><button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:14px;line-height:1">&times;</button>`;
                 row.querySelector('button').onclick = () => {
                     acItems.splice(idx, 1);
+                    acItemQtys.splice(idx, 1);
                     renderAcItemsList();
+                    renderItemQtys();
                     schedulePreview();
                 };
                 el.appendChild(row);
@@ -771,9 +776,11 @@
                 const cfg = cfgs[key];
                 if (cfg) {
                     acItems = [...(cfg.items || [])];
+                    acItemQtys = acItems.map(() => 1);
                     const badge = overlay.querySelector('#acf8-ac-cfg-key');
                     if (badge) badge.textContent = key;
                     renderAcItemsList();
+                    renderItemQtys();
                     schedulePreview();
                 }
             };
@@ -788,16 +795,52 @@
                 const name = nameI.value.trim();
                 const unit = unitI.value.trim() || 'pcs';
                 if (!name) { toast('Item adı daxil edin', 'error'); return; }
-                acItems.push({ name, unit });
+                acItems.push({ name, bgColor: 'white' });
+                acItemQtys.push(1);
                 nameI.value = '';
                 unitI.value = '';
                 renderAcItemsList();
+                renderItemQtys();
                 schedulePreview();
-                toast(`✅ ${name} əlavə edildi`, 'success');
+                toast(`➕ ${name} əlavə edildi`, 'success');
             };
         }
 
         renderAcItemsList();
+
+        /* ── Item qty counters (Print tab) ── */
+        function renderItemQtys() {
+            const el = overlay.querySelector('#acf8-item-qtys-list');
+            if (!el) return;
+            el.innerHTML = '';
+            acItems.forEach((item, i) => {
+                const isRed = (item.bgColor || 'white') === 'red';
+                const dot = isRed ? '#dc2626' : '#9ca3af';
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex;align-items:center;gap:5px;padding:2px 3px;';
+                row.innerHTML = `
+                    <span style="width:8px;height:8px;border-radius:50%;background:${dot};flex-shrink:0;"></span>
+                    <span style="flex:1;font-size:11px;">${item.name}</span>
+                    <button style="width:22px;height:22px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:15px;line-height:1;color:#374151;">&#8722;</button>
+                    <span id="acf8-iq-v-${i}" style="min-width:24px;text-align:center;font-size:12px;font-weight:700;">${acItemQtys[i] ?? 1}</span>
+                    <button style="width:22px;height:22px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:15px;line-height:1;color:#374151;">+</button>`;
+                const [minBtn, plusBtn] = row.querySelectorAll('button');
+                minBtn.onclick = () => {
+                    acItemQtys[i] = Math.max(0, (acItemQtys[i] ?? 1) - 1);
+                    const sp = overlay.querySelector(`#acf8-iq-v-${i}`);
+                    if (sp) sp.textContent = acItemQtys[i];
+                    schedulePreview();
+                };
+                plusBtn.onclick = () => {
+                    acItemQtys[i] = Math.min(20, (acItemQtys[i] ?? 1) + 1);
+                    const sp = overlay.querySelector(`#acf8-iq-v-${i}`);
+                    if (sp) sp.textContent = acItemQtys[i];
+                    schedulePreview();
+                };
+                el.appendChild(row);
+            });
+        }
+        renderItemQtys();
 
         /* ── Close ── */
         const close = () => { clearTimeout(prevTimer); overlay.remove(); document.removeEventListener('keydown', kbH); };
@@ -865,11 +908,6 @@
             toast('Galley added: ' + name, 'success');
         };
 
-        /* ── Counter ── */
-        overlay.querySelector('#acf8-cnt-m').onclick = () => { cntInput.value = Math.max(1, parseInt(cntInput.value || 1) - 1); schedulePreview(); };
-        overlay.querySelector('#acf8-cnt-p').onclick = () => { cntInput.value = Math.min(50, parseInt(cntInput.value || 1) + 1); schedulePreview(); };
-        cntInput.oninput = schedulePreview;
-
         /* ── Galley + select changes ── */
         overlay.querySelector('#acf8-sel-galley').onchange = () => {
             ss(SK.GALLEY, overlay.querySelector('#acf8-sel-galley').value);
@@ -895,20 +933,18 @@
             if (!paxData.length) { toast('Pax data yoxdur', 'error'); return; }
 
             const galley = overlay.querySelector('#acf8-sel-galley').value || 'Galley 1';
-            const cnt = parseInt(cntInput.value) || 1;
             const method = gs(SK.PRINT_METHOD, 'network');
             const ip = gs(SK.PRINTER_IP, '');
 
             // Persist selections
             ss(SK.GALLEY, galley);
-            ss(SK.LABEL_COUNT, String(cnt));
             ss(SK.ETAT, overlay.querySelector('#acf8-sel-etat').value);
             ss(SK.EXCHANGE, overlay.querySelector('#acf8-sel-exchange').value);
             ss(SK.PRINT_TYPE, printType);
 
             // Browser print
             if (method === 'browser') {
-                browserPrint(flightData, paxData, galley, cnt, acItems);
+                browserPrint(flightData, paxData, acItemQtys, acItems);
                 close();
                 toast('Browser print açıldı', 'success');
                 return;
@@ -919,8 +955,8 @@
 
             actionBtn.disabled = true;
             ftrStatus.textContent = 'Göndərilir…';
-            const allZpl = buildAllLabelsZPL(flightData, paxData, acItems, cnt);
-            const totalLbls = (paxData.length || 1) * (acItems.length || 0) * cnt;
+            const allZpl = buildAllLabelsZPL(flightData, paxData, acItems, acItemQtys);
+            const totalLbls = (paxData.length || 1) * acItemQtys.reduce((s, q) => s + (q || 0), 0);
             sendZplToZebra(ip, allZpl,
                 () => {
                     toast(`✓ ${totalLbls} label ZT411-ə göndərildi (${ip})`, 'success');
@@ -1102,3 +1138,4 @@
     }, 2000);
 
 })();
+
