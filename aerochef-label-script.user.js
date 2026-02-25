@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V11.0)
 // @namespace    http://tampermonkey.net/
-// @version      11.1
+// @version      11.2
 // @description  V11: Custom colors, auto-update, batch ZPL, label layout editor, version check
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -406,7 +406,7 @@
 
         const nameLen = (item.name || '').length;
         const autoFz = nameLen > 18 ? 34 : nameLen > 12 ? 42 : 50;
-        const nameFz = (L.itemName.fz != null && L.itemName.fz !== 50) ? L.itemName.fz : autoFz;
+        const nameFz = (L.itemName && L.itemName.fz != null) ? L.itemName.fz : autoFz;
 
         let z = `^XA
 ^CI28
@@ -625,8 +625,17 @@
     function getLabelLayout() {
         try {
             const s = gs(SK.LABEL_LAYOUT, '');
-            return s ? { ...DEFAULT_LABEL_LAYOUT, ...JSON.parse(s) } : { ...DEFAULT_LABEL_LAYOUT };
-        } catch { return { ...DEFAULT_LABEL_LAYOUT }; }
+            if (!s) return JSON.parse(JSON.stringify(DEFAULT_LABEL_LAYOUT));
+            const parsed = JSON.parse(s);
+            const merged = {};
+            for (const key in DEFAULT_LABEL_LAYOUT) {
+                merged[key] = { ...DEFAULT_LABEL_LAYOUT[key], ...(parsed[key] || {}) };
+            }
+            return merged;
+        } catch (e) {
+            console.warn('Error parsing label layout:', e);
+            return JSON.parse(JSON.stringify(DEFAULT_LABEL_LAYOUT));
+        }
     }
 
     function saveLabelLayout(layout) {
@@ -1540,9 +1549,12 @@
                         const k = inp.dataset.lk;
                         const p = inp.dataset.lp;
                         if (!layout[k]) layout[k] = {};
-                        layout[k][p] = parseInt(inp.value) || 0;
+                        const val = parseInt(inp.value);
+                        if (!isNaN(val)) layout[k][p] = val;
                     });
                     saveLabelLayout(layout);
+                    console.log('[AeroChef] Layout saved:', JSON.stringify(layout));
+                    toast('📐 Layout saxlanıldı ✔', 'success', 2500);
                 }
                 const key = overlay.querySelector('#acf8-ac-type-sel')?.value || acCfg.key;
                 const cfgs = getAcConfigs();
