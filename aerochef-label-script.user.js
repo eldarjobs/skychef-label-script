@@ -253,118 +253,264 @@
     ============================================ */
     const style = document.createElement('style');
     style.textContent = `
+    /* ── Design Tokens ── */
+    :root {
+      --acf-primary: #2563eb;
+      --acf-primary-hover: #1d4ed8;
+      --acf-primary-light: #eff6ff;
+      --acf-primary-border: #bfdbfe;
+      --acf-primary-accent: #1a73e8;
+      --acf-primary-focus: #3b82f6;
+      --acf-primary-disabled: #93c5fd;
+
+      --acf-success: #10b981;
+      --acf-success-hover: #059669;
+      --acf-success-text: #16a34a;
+      --acf-danger: #ef4444;
+      --acf-danger-dark: #dc2626;
+      --acf-danger-bg: #fef2f2;
+      --acf-warning: #f9a825;
+      --acf-purple: #7c3aed;
+      --acf-purple-deep: #4f46e5;
+      --acf-teal: #0f766e;
+
+      --acf-bg: #fff;
+      --acf-bg-subtle: #f3f4f6;
+      --acf-bg-muted: #f8fafc;
+      --acf-bg-preview: #f1f5f9;
+      --acf-bg-footer: #fafafa;
+      --acf-border: #e5e7eb;
+      --acf-border-input: #d1d5db;
+      --acf-text: #111827;
+      --acf-text-secondary: #374151;
+      --acf-text-muted: #6b7280;
+      --acf-text-dim: #9ca3af;
+      --acf-text-faint: #64748b;
+
+      --acf-navy: #1e3a8a;
+      --acf-navy-light: #1d4ed8;
+      --acf-red-label: #cc1f1f;
+      --acf-red-border: #991b1b;
+
+      --acf-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --acf-font-mono: 'Courier New', monospace;
+      --acf-fs-2xs: 9px;
+      --acf-fs-xs: 10px;
+      --acf-fs-sm: 11px;
+      --acf-fs-base: 12px;
+      --acf-fs-md: 13px;
+      --acf-fs-lg: 14px;
+      --acf-fs-xl: 15px;
+
+      --acf-radius: 5px;
+      --acf-radius-md: 6px;
+      --acf-radius-lg: 8px;
+      --acf-radius-xl: 10px;
+      --acf-radius-pill: 20px;
+      --acf-radius-round: 50%;
+
+      --acf-shadow-modal: 0 16px 50px rgba(0,0,0,.28);
+      --acf-shadow-card: 0 3px 10px rgba(0,0,0,.18);
+      --acf-shadow-btn: 0 4px 16px rgba(26,115,232,.45);
+      --acf-shadow-batch: 0 20px 60px rgba(0,0,0,.3);
+      --acf-focus-ring: 0 0 0 2px rgba(59,130,246,.12);
+      --acf-focus-ring-strong: 0 0 0 2px rgba(59,130,246,.15);
+    }
+
+    /* ── Animations ── */
     @keyframes acf8fi  { from{opacity:0} to{opacity:1} }
     @keyframes acf8su  { from{transform:translateY(-10px);opacity:0} to{transform:translateY(0);opacity:1} }
     @keyframes acf8spin{ to{transform:rotate(360deg)} }
 
+    /* ── Reusable Utilities ── */
+    .acf8-row{display:flex;align-items:center;gap:6px;}
+    .acf8-stack{display:flex;flex-direction:column;gap:4px;}
+    .acf8-label-text{font-size:var(--acf-fs-xs);font-weight:700;color:var(--acf-text-muted);text-transform:uppercase;letter-spacing:.5px;}
+    .acf8-input{padding:5px 8px;border:1px solid var(--acf-border-input);border-radius:var(--acf-radius);font-size:var(--acf-fs-base);color:var(--acf-text-secondary);background:var(--acf-bg);outline:none;transition:border-color .15s;width:100%;}
+    .acf8-input:focus{border-color:var(--acf-primary-focus);box-shadow:var(--acf-focus-ring);}
+    .acf8-input-sm{padding:4px 7px;border:1px solid var(--acf-border-input);border-radius:4px;font-size:var(--acf-fs-sm);color:var(--acf-text-secondary);background:var(--acf-bg);outline:none;}
+    .acf8-input-sm:focus{border-color:var(--acf-primary-focus);box-shadow:var(--acf-focus-ring);}
+    .acf8-btn-sm{padding:4px 10px;border:none;border-radius:4px;font-size:var(--acf-fs-sm);font-weight:700;cursor:pointer;white-space:nowrap;color:#fff;}
+    .acf8-btn-sm.primary{background:var(--acf-primary);}
+    .acf8-btn-sm.primary:hover{background:var(--acf-primary-hover);}
+    .acf8-btn-sm.success{background:var(--acf-success);}
+    .acf8-btn-sm.success:hover{background:var(--acf-success-hover);}
+    .acf8-btn-sm.purple{background:var(--acf-purple);}
+    .acf8-btn-sm.teal{background:var(--acf-teal);}
+    .acf8-btn-sm.indigo{background:var(--acf-purple-deep);}
+    .acf8-btn-action{padding:5px 12px;border:none;border-radius:var(--acf-radius);font-size:var(--acf-fs-base);font-weight:600;cursor:pointer;color:#fff;background:var(--acf-primary);}
+    .acf8-btn-action:hover{background:var(--acf-primary-hover);}
+    .acf8-badge{background:var(--acf-navy);color:#fff;padding:2px 10px;border-radius:var(--acf-radius-xl);font-size:var(--acf-fs-sm);font-weight:700;}
+    .acf8-badge-sm{background:var(--acf-navy);color:#fff;padding:1px 8px;border-radius:var(--acf-radius-lg);font-size:var(--acf-fs-xs);font-weight:700;}
+    .acf8-divider{border-top:1px solid var(--acf-border);padding-top:10px;}
+    .acf8-divider-dashed{border-top:1px dashed var(--acf-border);padding-top:6px;}
+    .acf8-delete-btn{background:none;border:none;color:var(--acf-danger);cursor:pointer;font-size:13px;line-height:1;}
+    .acf8-delete-btn:hover{color:var(--acf-danger-dark);}
+    .acf8-list-row{display:flex;align-items:center;gap:6px;padding:3px 6px;background:var(--acf-bg-subtle);border-radius:var(--acf-radius);font-size:var(--acf-fs-base);}
+
+    /* Toggle Switch */
+    .acf8-toggle{position:relative;display:inline-block;width:36px;height:20px;}
+    .acf8-toggle input{opacity:0;width:0;height:0;}
+    .acf8-toggle-knob{position:absolute;cursor:pointer;inset:0;border-radius:var(--acf-radius-pill);transition:.2s;}
+    .acf8-toggle-knob.off{background:var(--acf-border-input);}
+    .acf8-toggle-knob.on{background:var(--acf-primary);}
+
+    /* Hint / Muted text */
+    .acf8-hint{font-size:var(--acf-fs-2xs);color:var(--acf-text-dim);font-weight:400;}
+    .acf8-muted{font-size:var(--acf-fs-xs);color:var(--acf-text-dim);}
+    .acf8-secondary{font-size:var(--acf-fs-xs);color:var(--acf-text-muted);}
+
+    /* ── Printer Button ── */
     .acf8-printer{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;background:none;border:none;border-radius:4px;cursor:pointer;transition:background .15s;padding:0;vertical-align:middle;}
     .acf8-printer:hover{background:rgba(26,115,232,.1);}
-    .acf8-printer svg{width:18px;height:18px;fill:#1a73e8;}
+    .acf8-printer svg{width:18px;height:18px;fill:var(--acf-primary-accent);}
     .acf8-printer.loading{pointer-events:none;}
-    .acf8-printer.loading svg{fill:#f9a825;}
-    .acf8-printer.error svg{fill:#dc2626!important;}
+    .acf8-printer.loading svg{fill:var(--acf-warning);}
+    .acf8-printer.error svg{fill:var(--acf-danger-dark)!important;}
 
+    /* ── Overlay & Modal ── */
     .acf8-overlay{position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:2147483647;display:flex;align-items:center;justify-content:center;animation:acf8fi .15s ease;}
 
-    .acf8-modal{background:#fff;border-radius:10px;width:780px;max-width:96vw;max-height:92vh;box-shadow:0 16px 50px rgba(0,0,0,.28);display:flex;flex-direction:column;overflow:hidden;animation:acf8su .18s ease;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:12px;}
+    .acf8-modal{background:var(--acf-bg);border-radius:var(--acf-radius-xl);width:780px;max-width:96vw;max-height:92vh;box-shadow:var(--acf-shadow-modal);display:flex;flex-direction:column;overflow:hidden;animation:acf8su .18s ease;font-family:var(--acf-font);font-size:var(--acf-fs-base);}
     .acf8-modal *{box-sizing:border-box;margin:0;}
 
-    .acf8-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0;border-bottom:1px solid #e5e7eb;flex-shrink:0;}
+    /* ── Header ── */
+    .acf8-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0;border-bottom:1px solid var(--acf-border);flex-shrink:0;}
     .acf8-hdr-left{display:flex;flex-direction:column;}
-    .acf8-hdr-title{font-size:14px;font-weight:700;color:#111827;margin-bottom:8px;}
-    .acf8-close{background:none;border:none;font-size:22px;color:#9ca3af;cursor:pointer;line-height:1;padding:0 0 10px 10px;align-self:flex-start;}
-    .acf8-close:hover{color:#111827;}
+    .acf8-hdr-title{font-size:var(--acf-fs-lg);font-weight:700;color:var(--acf-text);margin-bottom:8px;}
+    .acf8-close{background:none;border:none;font-size:22px;color:var(--acf-text-dim);cursor:pointer;line-height:1;padding:0 0 10px 10px;align-self:flex-start;}
+    .acf8-close:hover{color:var(--acf-text);}
 
+    /* ── Tabs ── */
     .acf8-tabs{display:flex;}
-    .acf8-tab{padding:6px 14px;font-size:12px;font-weight:600;color:#6b7280;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;margin-bottom:-1px;display:flex;align-items:center;gap:5px;}
-    .acf8-tab.active{color:#2563eb;border-bottom-color:#2563eb;}
-    .acf8-tab:hover:not(.active){color:#374151;}
+    .acf8-tab{padding:6px 14px;font-size:var(--acf-fs-base);font-weight:600;color:var(--acf-text-muted);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;margin-bottom:-1px;display:flex;align-items:center;gap:5px;}
+    .acf8-tab.active{color:var(--acf-primary);border-bottom-color:var(--acf-primary);}
+    .acf8-tab:hover:not(.active){color:var(--acf-text-secondary);}
     .acf8-tab svg{width:15px;height:15px;fill:currentColor;}
 
+    /* ── Panels ── */
     .acf8-panel{display:none;flex:1;overflow-y:auto;padding:14px 16px;flex-direction:column;gap:12px;}
     .acf8-panel.active{display:flex;}
 
-    .acf8-flight-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;background:#eff6ff;border-radius:7px;border:1px solid #bfdbfe;}
-    .acf8-flight-bar svg{width:16px;height:16px;fill:#1d4ed8;flex-shrink:0;}
-    .acf8-fb-route{font-size:14px;font-weight:800;color:#1e3a8a;letter-spacing:.5px;}
-    .acf8-fb-flight{font-size:12px;font-weight:600;color:#1d4ed8;}
-    .acf8-fb-date{font-size:11px;color:#6b7280;}
-    .acf8-fb-order{font-size:11px;color:#9ca3af;margin-left:auto;}
+    /* ── Flight Bar ── */
+    .acf8-flight-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;background:var(--acf-primary-light);border-radius:7px;border:1px solid var(--acf-primary-border);}
+    .acf8-flight-bar svg{width:16px;height:16px;fill:var(--acf-navy-light);flex-shrink:0;}
+    .acf8-fb-route{font-size:var(--acf-fs-lg);font-weight:800;color:var(--acf-navy);letter-spacing:.5px;}
+    .acf8-fb-flight{font-size:var(--acf-fs-base);font-weight:600;color:var(--acf-navy-light);}
+    .acf8-fb-date{font-size:var(--acf-fs-sm);color:var(--acf-text-muted);}
+    .acf8-fb-order{font-size:var(--acf-fs-sm);color:var(--acf-text-dim);margin-left:auto;}
 
+    /* ── Print Body ── */
     .acf8-print-body{display:flex;gap:16px;flex:1;min-height:0;}
     .acf8-print-form{flex:0 0 228px;display:flex;flex-direction:column;gap:9px;overflow-y:auto;}
     .acf8-preview-col{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0;}
 
+    /* ── Form Groups ── */
     .acf8-fg{display:flex;flex-direction:column;gap:3px;}
-    .acf8-fg label{font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;}
-    .acf8-fg label .req{color:#ef4444;}
-    .acf8-fg select,.acf8-fg input[type=text],.acf8-fg input[type=number]{padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:12px;color:#374151;background:#fff;outline:none;transition:border-color .15s;width:100%;}
-    .acf8-fg select:focus,.acf8-fg input:focus{border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,.12);}
+    .acf8-fg label{font-size:var(--acf-fs-xs);font-weight:700;color:var(--acf-text-muted);text-transform:uppercase;letter-spacing:.5px;}
+    .acf8-fg label .req{color:var(--acf-danger);}
+    .acf8-fg select,.acf8-fg input[type=text],.acf8-fg input[type=number]{padding:5px 8px;border:1px solid var(--acf-border-input);border-radius:var(--acf-radius);font-size:var(--acf-fs-base);color:var(--acf-text-secondary);background:var(--acf-bg);outline:none;transition:border-color .15s;width:100%;}
+    .acf8-fg select:focus,.acf8-fg input:focus{border-color:var(--acf-primary-focus);box-shadow:var(--acf-focus-ring);}
 
+    /* ── Chips ── */
     .acf8-chips{display:flex;flex-wrap:wrap;gap:5px;}
-    .acf8-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;color:#fff;letter-spacing:.2px;}
-    .acf8-chip-v{opacity:.88;font-weight:400;font-size:11px;}
+    .acf8-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:var(--acf-radius-pill);font-size:var(--acf-fs-sm);font-weight:700;color:#fff;letter-spacing:.2px;}
+    .acf8-chip-v{opacity:.88;font-weight:400;font-size:var(--acf-fs-sm);}
 
+    /* ── Counter ── */
     .acf8-counter{display:flex;align-items:center;gap:5px;}
-    .acf8-counter button{width:24px;height:24px;border:1px solid #d1d5db;border-radius:5px;background:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#374151;line-height:1;}
-    .acf8-counter button:hover{background:#f3f4f6;}
-    .acf8-counter input{width:40px;text-align:center;font-size:12px;}
+    .acf8-counter button{width:24px;height:24px;border:1px solid var(--acf-border-input);border-radius:var(--acf-radius);background:var(--acf-bg);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--acf-text-secondary);line-height:1;}
+    .acf8-counter button:hover{background:var(--acf-bg-subtle);}
+    .acf8-counter input{width:40px;text-align:center;font-size:var(--acf-fs-base);}
 
-    .acf8-preview-box{flex:1;border:1px solid #e5e7eb;border-radius:7px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;min-height:140px;overflow:hidden;position:relative;}
+    /* ── Preview ── */
+    .acf8-preview-box{flex:1;border:1px solid var(--acf-border);border-radius:7px;background:var(--acf-bg-preview);display:flex;align-items:center;justify-content:center;min-height:140px;overflow:hidden;position:relative;}
     .acf8-preview-box img{max-width:100%;max-height:100%;object-fit:contain;}
-    .acf8-prev-ph{display:flex;flex-direction:column;align-items:center;gap:8px;color:#9ca3af;font-size:12px;}
-    .acf8-prev-ph svg{width:30px;height:30px;fill:#d1d5db;}
-    .acf8-spinner{width:24px;height:24px;border:3px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;animation:acf8spin .7s linear infinite;}
+    .acf8-prev-ph{display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--acf-text-dim);font-size:var(--acf-fs-base);}
+    .acf8-prev-ph svg{width:30px;height:30px;fill:var(--acf-border-input);}
+    .acf8-spinner{width:24px;height:24px;border:3px solid var(--acf-border);border-top-color:var(--acf-primary);border-radius:var(--acf-radius-round);animation:acf8spin .7s linear infinite;}
 
+    /* ── Settings Grid ── */
     .acf8-settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;}
     .acf8-settings-grid .full{grid-column:1/-1;}
     .acf8-method-row{display:flex;gap:6px;}
-    .acf8-method-btn{flex:1;padding:6px 8px;border-radius:5px;font-size:11px;font-weight:600;border:1.5px solid #e5e7eb;background:#fff;cursor:pointer;color:#6b7280;transition:all .15s;}
-    .acf8-method-btn.active{border-color:#2563eb;color:#2563eb;background:#eff6ff;}
+    .acf8-method-btn{flex:1;padding:6px 8px;border-radius:var(--acf-radius);font-size:var(--acf-fs-sm);font-weight:600;border:1.5px solid var(--acf-border);background:var(--acf-bg);cursor:pointer;color:var(--acf-text-muted);transition:all .15s;}
+    .acf8-method-btn.active{border-color:var(--acf-primary);color:var(--acf-primary);background:var(--acf-primary-light);}
     .acf8-ip-row{display:flex;gap:6px;}
     .acf8-ip-row input{flex:1;}
-    .acf8-ip-row .acf8-ip-btn{padding:0 10px;border-radius:5px;font-size:11px;font-weight:700;border:none;color:#fff;background:#10b981;cursor:pointer;white-space:nowrap;height:30px;}
-    .acf8-ip-row .acf8-ip-btn:hover{background:#059669;}
-    .acf8-ip-status{font-size:10px;margin-top:2px;}
-    .acf8-ip-status.ok{color:#16a34a;}
-    .acf8-ip-status.err{color:#dc2626;}
+    .acf8-ip-row .acf8-ip-btn{padding:0 10px;border-radius:var(--acf-radius);font-size:var(--acf-fs-sm);font-weight:700;border:none;color:#fff;background:var(--acf-success);cursor:pointer;white-space:nowrap;height:30px;}
+    .acf8-ip-row .acf8-ip-btn:hover{background:var(--acf-success-hover);}
+    .acf8-ip-status{font-size:var(--acf-fs-xs);margin-top:2px;}
+    .acf8-ip-status.ok{color:var(--acf-success-text);}
+    .acf8-ip-status.err{color:var(--acf-danger-dark);}
 
+    /* ── Galley List ── */
     .acf8-galley-list{max-height:90px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;margin-bottom:4px;}
-    .acf8-galley-item{display:flex;align-items:center;justify-content:space-between;padding:3px 7px;background:#f3f4f6;border-radius:4px;font-size:11px;}
-    .acf8-galley-item button{background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;line-height:1;}
+    .acf8-galley-item{display:flex;align-items:center;justify-content:space-between;padding:3px 7px;background:var(--acf-bg-subtle);border-radius:4px;font-size:var(--acf-fs-sm);}
+    .acf8-galley-item button{background:none;border:none;color:var(--acf-danger);cursor:pointer;font-size:13px;line-height:1;}
     .acf8-galley-add{display:flex;gap:5px;}
-    .acf8-galley-add input{flex:1;padding:4px 7px;border:1px solid #d1d5db;border-radius:4px;font-size:11px;}
-    .acf8-galley-add button{padding:4px 10px;background:#2563eb;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer;font-weight:700;white-space:nowrap;}
+    .acf8-galley-add input{flex:1;padding:4px 7px;border:1px solid var(--acf-border-input);border-radius:4px;font-size:var(--acf-fs-sm);}
+    .acf8-galley-add button{padding:4px 10px;background:var(--acf-primary);color:#fff;border:none;border-radius:4px;font-size:var(--acf-fs-sm);cursor:pointer;font-weight:700;white-space:nowrap;}
 
+    /* ── AC Config List ── */
     .acf8-ac-config-list{max-height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;margin-bottom:4px;}
-    .acf8-ac-config-item{display:flex;align-items:center;justify-content:space-between;padding:3px 7px;background:#f3f4f6;border-radius:4px;font-size:11px;}
-    .acf8-ac-config-item button{background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;line-height:1;}
+    .acf8-ac-config-item{display:flex;align-items:center;justify-content:space-between;padding:3px 7px;background:var(--acf-bg-subtle);border-radius:4px;font-size:var(--acf-fs-sm);}
+    .acf8-ac-config-item button{background:none;border:none;color:var(--acf-danger);cursor:pointer;font-size:13px;line-height:1;}
     .acf8-ac-config-add{display:flex;gap:5px;}
-    .acf8-ac-config-add input{flex:1;padding:4px 7px;border:1px solid #d1d5db;border-radius:4px;font-size:11px;}
-    .acf8-ac-config-add button{padding:4px 10px;background:#2563eb;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer;font-weight:700;white-space:nowrap;}
+    .acf8-ac-config-add input{flex:1;padding:4px 7px;border:1px solid var(--acf-border-input);border-radius:4px;font-size:var(--acf-fs-sm);}
+    .acf8-ac-config-add button{padding:4px 10px;background:var(--acf-primary);color:#fff;border:none;border-radius:4px;font-size:var(--acf-fs-sm);cursor:pointer;font-weight:700;white-space:nowrap;}
 
-    .acf8-ftr{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid #e5e7eb;background:#fafafa;flex-shrink:0;}
-    .acf8-ftr-status{font-size:11px;color:#6b7280;}
+    /* ── Footer ── */
+    .acf8-ftr{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--acf-border);background:var(--acf-bg-footer);flex-shrink:0;}
+    .acf8-ftr-status{font-size:var(--acf-fs-sm);color:var(--acf-text-muted);}
     .acf8-ftr-right{display:flex;gap:7px;}
-    .acf8-btn{padding:7px 18px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid transparent;transition:all .15s;}
-    .acf8-btn-cancel{background:#fff;border-color:#d1d5db;color:#374151;}
-    .acf8-btn-cancel:hover{background:#f3f4f6;}
-    .acf8-btn-print{background:#2563eb;color:#fff;}
-    .acf8-btn-print:hover{background:#1d4ed8;}
-    .acf8-btn-print:disabled{background:#93c5fd;cursor:not-allowed;}
-    .acf8-btn-save{background:#10b981;color:#fff;}
-    .acf8-btn-save:hover{background:#059669;}
+    .acf8-btn{padding:7px 18px;border-radius:var(--acf-radius-md);font-size:var(--acf-fs-base);font-weight:700;cursor:pointer;border:1px solid transparent;transition:all .15s;}
+    .acf8-btn-cancel{background:var(--acf-bg);border-color:var(--acf-border-input);color:var(--acf-text-secondary);}
+    .acf8-btn-cancel:hover{background:var(--acf-bg-subtle);}
+    .acf8-btn-print{background:var(--acf-primary);color:#fff;}
+    .acf8-btn-print:hover{background:var(--acf-primary-hover);}
+    .acf8-btn-print:disabled{background:var(--acf-primary-disabled);cursor:not-allowed;}
+    .acf8-btn-save{background:var(--acf-success);color:#fff;}
+    .acf8-btn-save:hover{background:var(--acf-success-hover);}
 
-    .acf8-layout-section{border-top:1px solid #e5e7eb;padding-top:10px;grid-column:1/-1;}
-    .acf8-layout-section .acf8-ls-title{display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:700;color:#374151;margin-bottom:6px;}
-    .acf8-layout-section .acf8-ls-title span{color:#9ca3af;font-weight:400;font-size:9px;}
+    /* ── Layout Editor ── */
+    .acf8-layout-section{border-top:1px solid var(--acf-border);padding-top:10px;grid-column:1/-1;}
+    .acf8-layout-section .acf8-ls-title{display:flex;align-items:center;justify-content:space-between;font-size:var(--acf-fs-sm);font-weight:700;color:var(--acf-text-secondary);margin-bottom:6px;}
+    .acf8-layout-section .acf8-ls-title span{color:var(--acf-text-dim);font-weight:400;font-size:var(--acf-fs-2xs);}
     .acf8-layout-editor{display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;padding:2px 0;}
-    .acf8-layout-row{display:flex;align-items:center;gap:5px;padding:4px 8px;background:#f8fafc;border-radius:5px;border:1px solid #e5e7eb;flex-wrap:nowrap;}
-    .acf8-layout-row b{min-width:78px;font-size:10px;color:#1e3a8a;flex-shrink:0;}
-    .acf8-layout-lbl{font-size:9px;color:#9ca3af;font-weight:700;flex-shrink:0;}
-    .acf8-layout-inp{width:48px;padding:3px 4px;border:1px solid #d1d5db;border-radius:4px;font-size:11px;color:#374151;background:#fff;text-align:center;flex-shrink:0;}
-    .acf8-layout-inp:focus{border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,.15);outline:none;}
-    .acf8-layout-reset-btn{padding:3px 10px;background:#ef4444;color:#fff;border:none;border-radius:5px;font-size:10px;cursor:pointer;font-weight:600;flex-shrink:0;}
+    .acf8-layout-row{display:flex;align-items:center;gap:5px;padding:4px 8px;background:var(--acf-bg-muted);border-radius:var(--acf-radius);border:1px solid var(--acf-border);flex-wrap:nowrap;}
+    .acf8-layout-row b{min-width:78px;font-size:var(--acf-fs-xs);color:var(--acf-navy);flex-shrink:0;}
+    .acf8-layout-lbl{font-size:var(--acf-fs-2xs);color:var(--acf-text-dim);font-weight:700;flex-shrink:0;}
+    .acf8-layout-inp{width:48px;padding:3px 4px;border:1px solid var(--acf-border-input);border-radius:4px;font-size:var(--acf-fs-sm);color:var(--acf-text-secondary);background:var(--acf-bg);text-align:center;flex-shrink:0;}
+    .acf8-layout-inp:focus{border-color:var(--acf-primary-focus);box-shadow:var(--acf-focus-ring-strong);outline:none;}
+    .acf8-layout-reset-btn{padding:3px 10px;background:var(--acf-danger);color:#fff;border:none;border-radius:var(--acf-radius);font-size:var(--acf-fs-xs);cursor:pointer;font-weight:600;flex-shrink:0;}
+
+    /* ── Batch Modal ── */
+    .acf8-bm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2147483647;display:flex;align-items:center;justify-content:center;animation:acf8fi .15s ease;}
+    .acf8-bm-dialog{background:var(--acf-bg);border-radius:12px;width:480px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:var(--acf-shadow-batch);font-family:var(--acf-font);font-size:var(--acf-fs-md);}
+    .acf8-bm-dialog *{box-sizing:border-box;margin:0;}
+    .acf8-bm-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--acf-border);}
+    .acf8-bm-title{font-size:var(--acf-fs-xl);font-weight:700;color:var(--acf-text);}
+    .acf8-bm-subtitle{font-size:var(--acf-fs-sm);color:var(--acf-text-muted);margin-top:2px;}
+    .acf8-bm-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--acf-text-dim);line-height:1;}
+    .acf8-bm-close:hover{color:var(--acf-text);}
+    .acf8-bm-section{padding:12px 18px;border-bottom:1px solid var(--acf-border);}
+    .acf8-bm-body{padding:14px 18px;display:flex;flex-direction:column;gap:12px;}
+    .acf8-bm-footer{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--acf-border);}
+    .acf8-bm-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:var(--acf-primary-light);border:1px solid var(--acf-primary-border);border-radius:12px;font-size:var(--acf-fs-sm);font-weight:600;color:var(--acf-navy);}
+    .acf8-bm-chip span{color:var(--acf-text-muted);font-weight:400;}
+    .acf8-bm-method-btn{flex:1;padding:7px;border-radius:var(--acf-radius-md);font-size:var(--acf-fs-sm);font-weight:600;cursor:pointer;transition:all .15s;}
+    .acf8-bm-method-btn.off{border:1.5px solid var(--acf-border);background:var(--acf-bg);color:var(--acf-text-muted);}
+    .acf8-bm-method-btn.on{border:1.5px solid var(--acf-primary);background:var(--acf-primary-light);color:var(--acf-primary);}
+    .acf8-bm-cancel{padding:7px 16px;border:1px solid var(--acf-border);border-radius:var(--acf-radius-md);background:var(--acf-bg);font-size:var(--acf-fs-base);cursor:pointer;color:var(--acf-text-muted);font-weight:600;}
+    .acf8-bm-cancel:hover{background:var(--acf-bg-subtle);}
+    .acf8-bm-start{padding:7px 18px;border:none;border-radius:var(--acf-radius-md);background:var(--acf-primary-accent);color:#fff;font-size:var(--acf-fs-base);font-weight:700;cursor:pointer;}
+    .acf8-bm-start:hover{background:var(--acf-primary);}
+    .acf8-bm-start:disabled{opacity:.6;cursor:not-allowed;}
+    .acf8-bm-status{font-size:var(--acf-fs-sm);color:var(--acf-text-muted);min-height:16px;}
+
+    /* ── Checkbox ── */
+    .acf8-cb{width:14px;height:14px;cursor:pointer;accent-color:var(--acf-primary-accent);}
     `;
     document.head.appendChild(style);
 
@@ -1724,7 +1870,7 @@
             thCb.title = 'Select all for batch print';
             const allCb = document.createElement('input');
             allCb.type = 'checkbox';
-            allCb.style.cssText = 'width:14px;height:14px;cursor:pointer;accent-color:#1a73e8;';
+            allCb.className = 'acf8-cb';
             allCb.title = 'Select/Deselect All';
             allCb.onchange = () => {
                 table.querySelectorAll('.acf8-row-cb').forEach(cb => {
@@ -1788,7 +1934,7 @@
             const cb = document.createElement('input');
             cb.type = 'checkbox';
             cb.className = 'acf8-row-cb';
-            cb.style.cssText = 'width:14px;height:14px;cursor:pointer;accent-color:#1a73e8;';
+            cb.className = 'acf8-row-cb acf8-cb';
             cb.onchange = () => {
                 if (cb.checked) selectedRows.set(row, { editBtn, printBtn, flightData: { ...flightData } });
                 else selectedRows.delete(row);
@@ -1807,57 +1953,57 @@
             const galleys = getGalleys();
 
             const flightChips = selected.map(({ flightData: fd2 }) =>
-                `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;font-size:11px;font-weight:600;color:#1e3a8a;">${fd2.flightNo || '?'} <span style="color:#6b7280;font-weight:400;">${fd2.route || ''} ${fd2.date || ''}</span></span>`
+                `<span class="acf8-bm-chip">${fd2.flightNo || '?'} <span>${fd2.route || ''} ${fd2.date || ''}</span></span>`
             ).join('');
 
             const bModal = document.createElement('div');
-            bModal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2147483647;display:flex;align-items:center;justify-content:center;animation:acf8fi .15s ease;';
+            bModal.className = 'acf8-bm-overlay';
             bModal.innerHTML = `
-            <div style="background:#fff;border-radius:12px;width:480px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;">
-              <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #e5e7eb;">
+            <div class="acf8-bm-dialog">
+              <div class="acf8-bm-header">
                 <div>
-                  <div style="font-size:15px;font-weight:700;color:#111;">🖨 Batch Print</div>
-                  <div style="font-size:11px;color:#6b7280;margin-top:2px;">${selected.length} uçuş seçilib</div>
+                  <div class="acf8-bm-title">🖨 Batch Print</div>
+                  <div class="acf8-bm-subtitle">${selected.length} uçuş seçilib</div>
                 </div>
-                <button id="acf8-bm-close" style="background:none;border:none;font-size:22px;cursor:pointer;color:#9ca3af;line-height:1;">&times;</button>
+                <button id="acf8-bm-close" class="acf8-bm-close">&times;</button>
               </div>
-              <div style="padding:12px 18px;border-bottom:1px solid #e5e7eb;">
-                <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Seçilmiş uçuşlar</div>
+              <div class="acf8-bm-section">
+                <div class="acf8-label-text" style="margin-bottom:6px;">Seçilmiş uçuşlar</div>
                 <div style="display:flex;flex-wrap:wrap;gap:5px;">${flightChips}</div>
               </div>
-              <div style="padding:14px 18px;display:flex;flex-direction:column;gap:12px;">
-                <div style="display:flex;flex-direction:column;gap:4px;">
-                  <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Aircraft Config</label>
-                  <select id="acf8-bm-ac" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;color:#374151;">
+              <div class="acf8-bm-body">
+                <div class="acf8-stack">
+                  <label class="acf8-label-text">Aircraft Config</label>
+                  <select id="acf8-bm-ac" class="acf8-input">
                     ${Object.entries(acCfgs).map(([k, c]) => `<option value="${k}"${k === curAcKey ? ' selected' : ''}>${k} – ${c.label}</option>`).join('')}
                   </select>
                 </div>
-                <div style="display:flex;flex-direction:column;gap:4px;">
-                  <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Galley</label>
-                  <select id="acf8-bm-galley" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;color:#374151;">
+                <div class="acf8-stack">
+                  <label class="acf8-label-text">Galley</label>
+                  <select id="acf8-bm-galley" class="acf8-input">
                     ${galleys.map(g => `<option value="${g}"${g === gs(SK.GALLEY, galleys[0]) ? ' selected' : ''}>${g}</option>`).join('')}
                   </select>
                 </div>
-                <div style="display:flex;flex-direction:column;gap:4px;">
-                  <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Print Method</label>
+                <div class="acf8-stack">
+                  <label class="acf8-label-text">Print Method</label>
                   <div style="display:flex;gap:6px;">
-                    <button class="acf8-bm-meth${curMethod === 'network' ? ' acf8-bm-active' : ''}" data-m="network" style="flex:1;padding:7px;border-radius:6px;font-size:11px;font-weight:600;border:1.5px solid ${curMethod === 'network' ? '#2563eb' : '#e5e7eb'};background:${curMethod === 'network' ? '#eff6ff' : '#fff'};color:${curMethod === 'network' ? '#2563eb' : '#6b7280'};cursor:pointer;">🌐 Network ZPL</button>
-                    <button class="acf8-bm-meth${curMethod === 'browser' ? ' acf8-bm-active' : ''}" data-m="browser" style="flex:1;padding:7px;border-radius:6px;font-size:11px;font-weight:600;border:1.5px solid ${curMethod === 'browser' ? '#2563eb' : '#e5e7eb'};background:${curMethod === 'browser' ? '#eff6ff' : '#fff'};color:${curMethod === 'browser' ? '#2563eb' : '#6b7280'};cursor:pointer;">🖨 Browser Print</button>
+                    <button class="acf8-bm-meth acf8-bm-method-btn ${curMethod === 'network' ? 'on' : 'off'}" data-m="network">🌐 Network ZPL</button>
+                    <button class="acf8-bm-meth acf8-bm-method-btn ${curMethod === 'browser' ? 'on' : 'off'}" data-m="browser">🖨 Browser Print</button>
                   </div>
                 </div>
-                <div style="display:flex;align-items:center;justify-content:space-between;">
-                  <label style="font-size:11px;font-weight:600;color:#374151;">📷 ZPL QR Kod</label>
-                  <label style="position:relative;display:inline-block;width:36px;height:20px;">
-                    <input type="checkbox" id="acf8-bm-qr" ${gs(SK.QR_CODE, 'off') === 'on' ? 'checked' : ''} style="opacity:0;width:0;height:0;">
-                    <span id="acf8-bm-qr-knob" style="position:absolute;cursor:pointer;inset:0;background:${gs(SK.QR_CODE, 'off') === 'on' ? '#2563eb' : '#d1d5db'};border-radius:20px;transition:.2s;"
-                      onclick="const c=this.previousElementSibling;c.checked=!c.checked;this.style.background=c.checked?'#2563eb':'#d1d5db'"></span>
+                <div class="acf8-row" style="justify-content:space-between;">
+                  <label style="font-size:11px;font-weight:600;color:var(--acf-text-secondary);">📷 ZPL QR Kod</label>
+                  <label class="acf8-toggle">
+                    <input type="checkbox" id="acf8-bm-qr" ${gs(SK.QR_CODE, 'off') === 'on' ? 'checked' : ''}>
+                    <span id="acf8-bm-qr-knob" class="acf8-toggle-knob ${gs(SK.QR_CODE, 'off') === 'on' ? 'on' : 'off'}"
+                      onclick="const c=this.previousElementSibling;c.checked=!c.checked;this.className='acf8-toggle-knob '+(c.checked?'on':'off')"></span>
                   </label>
                 </div>
-                <div id="acf8-bm-status" style="font-size:11px;color:#6b7280;min-height:16px;"></div>
+                <div id="acf8-bm-status" class="acf8-bm-status"></div>
               </div>
-              <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid #e5e7eb;">
-                <button id="acf8-bm-cancel" style="padding:7px 16px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;font-size:12px;cursor:pointer;color:#6b7280;font-weight:600;">İptal</button>
-                <button id="acf8-bm-start" style="padding:7px 18px;border:none;border-radius:6px;background:#1a73e8;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Çap başlat (${selected.length} uçuş)</button>
+              <div class="acf8-bm-footer">
+                <button id="acf8-bm-cancel" class="acf8-bm-cancel">İptal</button>
+                <button id="acf8-bm-start" class="acf8-bm-start">Çap başlat (${selected.length} uçuş)</button>
               </div>
             </div>`;
             document.body.appendChild(bModal);
@@ -1868,9 +2014,8 @@
                     bmMethod = b.dataset.m;
                     bModal.querySelectorAll('.acf8-bm-meth').forEach(x => {
                         const on = x.dataset.m === bmMethod;
-                        x.style.borderColor = on ? '#2563eb' : '#e5e7eb';
-                        x.style.background = on ? '#eff6ff' : '#fff';
-                        x.style.color = on ? '#2563eb' : '#6b7280';
+                        x.classList.toggle('on', on);
+                        x.classList.toggle('off', !on);
                     });
                 };
             });
