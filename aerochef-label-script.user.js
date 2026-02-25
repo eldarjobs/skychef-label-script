@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V11.0)
 // @namespace    http://tampermonkey.net/
-// @version      11.5
+// @version      11.6
 // @description  V11: Custom colors, auto-update, batch ZPL, label layout editor, version check
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -1243,7 +1243,7 @@
         z += `^FO${L.divider2.x},${L.divider2.y}^GB${LW - 8},2,2^FS
 `;
 
-        z += `^FO${L.itemName.x},${L.itemName.y}^FI${FR}^A0N,${nameFz},${nameFz}^FD${item.name}^FS
+        z += `^FO${L.itemName.x},${L.itemName.y}${FR}^FB${LW - 16},2,0,C,0^A0N,${nameFz},${nameFz}^FD${item.name}^FS
 `;
 
         if (gs(SK.QR_CODE, 'off') === 'on') {
@@ -1258,9 +1258,9 @@
     }
 
     /* ============================================
-       9. PREVIEW RENDERER - FIXED RED BACKGROUND
+       9. HTML CARD BUILDER (SHARED)
     ============================================ */
-    function renderLocalPreview(previewBox, flight, paxData, galley, _unused, acItems) {
+    function buildHtmlCard(flight, item, cls, paxCount) {
         const route = flight.route || '';
         const parts = route.split('-');
         const from = parts[0] || 'GYD';
@@ -1268,6 +1268,50 @@
         const date = _dateFmt(flight.date);
         const fno = flight.flightNo || '-';
 
+        const isRed = (item.bgColor || 'white') === 'red';
+        const bg = isRed ? '#dc2626' : '#ffffff';
+        const txtClr = isRed ? '#ffffff' : '#0f172a';
+        const borClr = isRed ? '#991b1b' : '#2563eb';
+        const divClr = isRed ? 'rgba(255,255,255,0.2)' : '#e2e8f0';
+
+        const logoUrl = SK.DEFAULT_LOGO;
+        const nlen = (item.name || '').length;
+        const nameFz = nlen > 18 ? '10px' : nlen > 12 ? '12px' : '15px';
+
+        const logoHtml = logoUrl
+            ? `<img src="${logoUrl}" style="width:100%;height:100%;object-fit:contain;display:block;" onerror="this.style.display='none'">`
+            : `<div style="font-size:10px;font-weight:900;letter-spacing:.5px;line-height:1.2;color:${txtClr}">AZERBAIJAN<br><span style="font-size:8px;letter-spacing:2px;">&#8210; AIRLINES &#8210;</span></div>`;
+
+        return `
+        <div style="width:168px;height:246px;border:2px solid ${borClr};border-radius:8px;
+             overflow:hidden;font-family:'Courier New',monospace;background:${bg};color:${txtClr};
+             display:flex;flex-direction:column;box-shadow:0 4px 12px rgba(0,0,0,0.1);flex-shrink:0;page-break-inside:avoid;margin:0;">
+          <div style="border-bottom:1px solid ${divClr};margin:4px 4px 2px;flex-shrink:0;overflow:hidden;height:50px;display:flex;align-items:center;justify-content:center;">
+            ${logoHtml}
+          </div>
+          <div style="padding:6px 8px;font-size:9px;line-height:1.6;flex-shrink:0;border-bottom:1px solid ${divClr};">
+            <div style="display:flex;justify-content:space-between;"><span style="opacity:0.7;">Date:</span> ${date}</div>
+            <div style="display:flex;justify-content:space-between;"><span style="opacity:0.7;">Flight:</span> ${fno}</div>
+            <div style="display:flex;justify-content:space-between;margin-top:2px;">
+              <span>${from}</span> <span>→</span> <span>${to}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+              <span>${to}</span> <span>←</span> <span>${from}</span>
+            </div>
+            <div style="margin-top:4px;font-weight:700;text-align:center;background:${isRed ? 'rgba(255,255,255,0.1)' : 'rgba(37,99,235,0.1)'};padding:2px 0;border-radius:4px;">
+              ${cls} ${paxCount}
+            </div>
+          </div>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:8px;text-align:center;">
+            <span style="font-size:${nameFz};font-weight:900;font-style:italic;line-height:1.2;">${item.name}</span>
+          </div>
+        </div>`;
+    }
+
+    /* ============================================
+       9b. PREVIEW RENDERER
+    ============================================ */
+    function renderLocalPreview(previewBox, flight, paxData, galley, _unused, acItems) {
         const printCls = getPrintClasses(paxData);
         const allItems = (acItems && acItems.length) ? acItems : [{ name: '(no items)', bgColor: 'white', _qty: 1 }];
 
@@ -1287,56 +1331,13 @@
 
         let cur = 0;
 
-        function buildCard(lbl) {
-            const { cls, paxCount, item } = lbl;
-            const isRed = (item.bgColor || 'white') === 'red';
-            
-            // RED BACKGROUND FOR PREVIEW - FIXED
-            const bg = isRed ? '#dc2626' : '#ffffff';
-            const txtClr = isRed ? '#ffffff' : '#0f172a';
-            const borClr = isRed ? '#991b1b' : '#2563eb';
-            const divClr = isRed ? 'rgba(255,255,255,0.2)' : '#e2e8f0';
-            
-            const logoUrl = SK.DEFAULT_LOGO;
-            const nlen = (item.name || '').length;
-            const nameFz = nlen > 18 ? '9px' : nlen > 12 ? '11px' : '14px';
-
-            const logoHtml = logoUrl
-                ? `<img src="${logoUrl}" style="width:100%;height:100%;object-fit:contain;display:block;" onerror="this.style.display='none'">`
-                : `<div style="font-size:10px;font-weight:900;letter-spacing:.5px;line-height:1.2;color:${txtClr}">AZERBAIJAN<br><span style="font-size:8px;letter-spacing:2px;">&#8210; AIRLINES &#8210;</span></div>`;
-
-            return `
-            <div style="width:168px;height:246px;border:2px solid ${borClr};border-radius:8px;
-                 overflow:hidden;font-family:'Courier New',monospace;background:${bg};color:${txtClr};
-                 display:flex;flex-direction:column;box-shadow:0 4px 12px rgba(0,0,0,0.1);flex-shrink:0;">
-              <div style="border-bottom:1px solid ${divClr};margin:4px 4px 2px;flex-shrink:0;overflow:hidden;height:50px;display:flex;align-items:center;justify-content:center;">
-                ${logoHtml}
-              </div>
-              <div style="padding:6px 8px;font-size:9px;line-height:1.6;flex-shrink:0;border-bottom:1px solid ${divClr};">
-                <div style="display:flex;justify-content:space-between;"><span style="opacity:0.7;">Date:</span> ${date}</div>
-                <div style="display:flex;justify-content:space-between;"><span style="opacity:0.7;">Flight:</span> ${fno}</div>
-                <div style="display:flex;justify-content:space-between;margin-top:2px;">
-                  <span>${from}</span> <span>→</span> <span>${to}</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;">
-                  <span>${to}</span> <span>←</span> <span>${from}</span>
-                </div>
-                <div style="margin-top:4px;font-weight:700;text-align:center;background:${isRed ? 'rgba(255,255,255,0.1)' : 'rgba(37,99,235,0.1)'};padding:2px 0;border-radius:4px;">
-                  ${cls} ${paxCount}
-                </div>
-              </div>
-              <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:8px;text-align:center;">
-                <span style="font-size:${nameFz};font-weight:900;font-style:italic;line-height:1.2;">${item.name}</span>
-              </div>
-            </div>`;
-        }
-
         function render() {
             previewBox.innerHTML = '';
             previewBox.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:12px;background:#f1f5f9;border-radius:12px;';
 
             const cardWrap = document.createElement('div');
-            cardWrap.innerHTML = buildCard(labels[cur]);
+            const currentLbl = labels[cur];
+            cardWrap.innerHTML = buildHtmlCard(flight, currentLbl.item, currentLbl.cls, currentLbl.paxCount);
             previewBox.appendChild(cardWrap);
 
             const nav = document.createElement('div');
@@ -1349,8 +1350,7 @@
 
             const info = document.createElement('div');
             info.style.cssText = 'font-size:10px;color:#64748b;text-align:center;';
-            const lbl = labels[cur];
-            info.textContent = `${lbl.cls} • ${lbl.item.name} • ${lbl.item.bgColor === 'red' ? '🔴' : '⚪'}`;
+            info.textContent = `${currentLbl.cls} • ${currentLbl.item.name} • ${currentLbl.item.bgColor === 'red' ? '🔴' : '⚪'}`;
             previewBox.appendChild(info);
 
             previewBox.querySelector('#acf8-prev-lbl').onclick = () => {
@@ -1456,15 +1456,9 @@
     }
 
     /* ============================================
-       11. BROWSER PRINT - FIXED RED BACKGROUND
+       11. BROWSER PRINT
     ============================================ */
     function browserPrint(flight, paxData, acItemQtys, acItems) {
-        const route = flight.route || '';
-        const parts = route.split('-');
-        const from = parts[0] || '';
-        const to = parts[1] || '';
-        const date = _dateFmt(flight.date);
-        const fno = flight.flightNo || '-';
         const classes = getPrintClasses(paxData);
         const items = (acItems && acItems.length) ? acItems : [];
 
@@ -1475,11 +1469,6 @@
             return;
         }
 
-        const logoUrl = SK.DEFAULT_LOGO;
-        const logoHtmlBP = logoUrl
-            ? `<img src="${logoUrl}" style="max-height:30px;max-width:90%;object-fit:contain;display:block;margin:0 auto;" onerror="this.style.display='none'">`
-            : `<div class="logo-name">AZERBAIJAN</div><div class="logo-sub">&#8211; AIRLINES &#8211;</div>`;
-
         let cards = '';
         for (const cls of classes) {
             const paxCount = paxData.find(p => p.class === cls)?.value ?? '';
@@ -1487,29 +1476,8 @@
                 const item = items[i];
                 const qty = (acItemQtys && acItemQtys[i] != null) ? acItemQtys[i] : 1;
                 if (qty < 1) continue;
-                const isRed = (item.bgColor || 'white') === 'red';
-                // FIXED: Strong red background for browser print
-                const bg = isRed ? '#dc2626' : '#ffffff';
-                const clr = isRed ? '#ffffff' : '#000000';
-                const borClr = isRed ? '#991b1b' : '#1e3a8a';
-                const nlen = (item.name || '').length;
-                const nameFs = nlen > 18 ? '14px' : nlen > 12 ? '18px' : '22px';
                 for (let c = 0; c < qty; c++) {
-                    cards += `<div class="lc" style="background:${bg};color:${clr};border-color:${borClr}">
-                      <div class="logo-box" style="border-color:${isRed ? '#ffffff' : '#1e3a8a'}">
-                        ${logoHtmlBP}
-                      </div>
-                      <div class="info">
-                        <div><span class="lbl">Date:</span> ${date}</div>
-                        <div><span class="lbl">Flight:</span> ${fno}</div>
-                        <div class="route">${from} → ${to}</div>
-                        <div class="route">${to} ← ${from}</div>
-                        <div class="class-badge" style="background:${isRed ? 'rgba(255,255,255,0.2)' : 'rgba(37,99,235,0.1)'}">${cls} ${paxCount}</div>
-                      </div>
-                      <div class="item-name" style="border-top:1px solid ${isRed ? 'rgba(255,255,255,0.3)' : '#cbd5e1'};font-size:${nameFs}">
-                        ${item.name}
-                      </div>
-                    </div>`;
+                    cards += buildHtmlCard(flight, item, cls, paxCount);
                 }
             }
         }
@@ -1520,21 +1488,8 @@
             *{margin:0;padding:0;box-sizing:border-box;}
             body{font-family:'Courier New',monospace;padding:20px;background:#e5e7eb;}
             .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-start;}
-            .lc{width:200px;height:auto;min-height:280px;border:2px solid;border-radius:8px;
-                overflow:hidden;display:flex;flex-direction:column;page-break-inside:avoid;
-                background:#fff;box-shadow:0 4px 6px rgba(0,0,0,0.1);}
-            .logo-box{border-bottom:1px solid;margin:0;padding:8px;text-align:center;height:60px;
-                display:flex;align-items:center;justify-content:center;}
-            .logo-name{font-size:16px;font-weight:900;letter-spacing:1px;}
-            .logo-sub{font-size:10px;letter-spacing:2px;}
-            .info{padding:8px 10px;font-size:11px;line-height:1.8;}
-            .route{display:flex;justify-content:space-between;margin:2px 0;}
-            .class-badge{margin-top:6px;padding:3px 0;text-align:center;border-radius:4px;font-weight:700;}
-            .item-name{padding:10px 8px;text-align:center;font-weight:900;font-style:italic;
-                        border-top:1px solid;font-size:22px;}
-            .np{text-align:right;margin-bottom:15px;}
-            @media print{.np{display:none;}body{background:#fff;padding:0;}}
-            .lbl{opacity:0.6;font-size:9px;}
+            .np{text-align:right;margin-bottom:15px;width:100%;}
+            @media print{.np{display:none;}body{background:#fff;padding:0;} .wrap{gap:8px;} }
         </style></head><body>
         <div class="np">
           <b>${totalLabels} labels</b>&nbsp;&nbsp;
@@ -1545,18 +1500,10 @@
     }
 
     /* ============================================
-       12. BATCH BROWSER CARDS BUILDER - FIXED RED
+       12. BATCH BROWSER CARDS BUILDER
     ============================================ */
     function buildBatchBrowserCards(flight, paxData, acItems, acItemQtys) {
-        const logoImg = `<img src="${SK.DEFAULT_LOGO}" style="width:100%;height:100%;object-fit:contain;display:block;" onerror="this.style.display='none'">`;
-        const route = flight.route || '';
-        const parts = route.split('-');
-        const from = parts[0] || '';
-        const to = parts[1] || '';
-        const date = _dateFmt(flight.date);
-        const fno = flight.flightNo || '-';
         const classes = getPrintClasses(paxData);
-
         let html = '';
         for (const cls of classes) {
             const paxCount = paxData.find(p => p.class === cls)?.value ?? '';
@@ -1564,25 +1511,8 @@
                 const item = acItems[i];
                 const qty = (acItemQtys && acItemQtys[i] != null) ? acItemQtys[i] : 1;
                 if (qty < 1) continue;
-                const isRed = (item.bgColor || 'white') === 'red';
-                // FIXED: Strong red background
-                const bg = isRed ? '#dc2626' : '#ffffff';
-                const clr = isRed ? '#ffffff' : '#000000';
-                const bor = isRed ? '#991b1b' : '#1e3a8a';
-                const nlen = (item.name || '').length;
-                const nameFs = nlen > 18 ? '14px' : nlen > 12 ? '18px' : '22px';
                 for (let c = 0; c < qty; c++) {
-                    html += `<div class="lc" style="background:${bg};color:${clr};border-color:${bor}">
-                      <div class="logo-box" style="border-color:${isRed ? '#ffffff' : '#1e3a8a'}">${logoImg}</div>
-                      <div class="info">
-                        <div><span class="lbl">Date:</span> ${date}</div>
-                        <div><span class="lbl">Flight:</span> ${fno}</div>
-                        <div class="route">${from} → ${to}</div>
-                        <div class="route">${to} ← ${from}</div>
-                        <div class="class-badge" style="background:${isRed ? 'rgba(255,255,255,0.2)' : 'rgba(37,99,235,0.1)'}">${cls} ${paxCount}</div>
-                      </div>
-                      <div class="item-name" style="border-top:1px solid ${isRed ? 'rgba(255,255,255,0.3)' : '#cbd5e1'};font-size:${nameFs}">${item.name}</div>
-                    </div>`;
+                    html += buildHtmlCard(flight, item, cls, paxCount);
                 }
             }
         }
@@ -2348,7 +2278,7 @@
                 if (qrEl) ss(SK.QR_CODE, qrEl.checked ? 'on' : 'off');
                 const batchEl = overlay.querySelector('#acf8-batch-toggle');
                 if (batchEl) ss(SK.ZPL_BATCH_MODE, batchEl.checked ? 'batch' : 'sequential');
-                
+
                 const layoutEd = overlay.querySelector('#acf8-layout-editor');
                 if (layoutEd) {
                     const layout = getLabelLayout();
@@ -2741,19 +2671,8 @@
                             *{margin:0;padding:0;box-sizing:border-box;}
                             body{font-family:'Courier New',monospace;padding:20px;background:#e5e7eb;}
                             .wrap{display:flex;flex-wrap:wrap;gap:12px;}
-                            .lc{width:200px;height:auto;min-height:280px;border:2px solid;border-radius:8px;
-                                overflow:hidden;display:flex;flex-direction:column;page-break-inside:avoid;
-                                background:#fff;box-shadow:0 4px 6px rgba(0,0,0,0.1);}
-                            .logo-box{border-bottom:1px solid;margin:0;padding:8px;text-align:center;height:60px;
-                                display:flex;align-items:center;justify-content:center;}
-                            .info{padding:8px 10px;font-size:11px;line-height:1.8;}
-                            .route{display:flex;justify-content:space-between;margin:2px 0;}
-                            .class-badge{margin-top:6px;padding:3px 0;text-align:center;border-radius:4px;font-weight:700;}
-                            .item-name{padding:10px 8px;text-align:center;font-weight:900;font-style:italic;
-                                        border-top:1px solid;font-size:22px;}
-                            .np{text-align:right;margin-bottom:15px;}
-                            @media print{.np{display:none;}body{background:#fff;padding:0;}}
-                            .lbl{opacity:0.6;font-size:9px;}
+                            .np{text-align:right;margin-bottom:15px;width:100%;}
+                            @media print{.np{display:none;}body{background:#fff;padding:0;} .wrap{gap:8px;} }
                         </style>
                     </head>
                     <body>
