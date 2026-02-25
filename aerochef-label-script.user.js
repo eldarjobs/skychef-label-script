@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V9)
 // @namespace    http://tampermonkey.net/
-// @version      9.7
+// @version      9.8
 // @description  Local HTML preview, aircraft-type items config (Meals/Beverages/Breads), Zebra ZT411 ZPL print.
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -11,6 +11,7 @@
 // @downloadURL  https://raw.githubusercontent.com/eldarjobs/skychef-label-script/master/aerochef-label-script.user.js
 // @connect      *
 // ==/UserScript==
+
 
 (function () {
     'use strict';
@@ -27,8 +28,11 @@
         EXCHANGE: 'acf9_exchange',
         PRINT_TYPE: 'acf9_print_type',
         LABEL_COUNT: 'acf9_label_count',
-        AC_TYPE: 'acf9_ac_type',        // selected aircraft type key
-        AC_CONFIGS: 'acf9_ac_configs',     // JSON: custom aircraft configs
+        AC_TYPE: 'acf9_ac_type',
+        AC_CONFIGS: 'acf9_ac_configs',
+        LABEL_W_MM: 'acf9_label_w_mm',    // label width  in mm (default 57)
+        LABEL_H_MM: 'acf9_label_h_mm',    // label height in mm (default 83)
+        PRINT_CLASSES: 'acf9_print_classes',  // comma-sep class codes to print
     };
     const gs = (k, d = '') => { try { return GM_getValue(k, d); } catch { return localStorage.getItem(k) ?? d; } };
     const ss = (k, v) => { try { GM_setValue(k, v); } catch { localStorage.setItem(k, v); } };
@@ -327,8 +331,24 @@
            One label per ITEM per PAX-CLASS.
            Red items: fill black + ^FR (reverse = white text on black)
     ════════════════════════════════════════ */
-    const LW = 455;   // dots wide  ≈57mm
-    const LH = 662;   // dots tall  ≈83mm
+    /* ── Label size helpers ── */
+    // Converts mm → dots at 203 dpi
+    const mm2dots = mm => Math.round(mm * 203 / 25.4);
+
+    function getLabelDims() {
+        const w = parseFloat(gs(SK.LABEL_W_MM, '57')) || 57;
+        const h = parseFloat(gs(SK.LABEL_H_MM, '83')) || 83;
+        return { LW: mm2dots(w), LH: mm2dots(h) };
+    }
+
+    /* ── Class filter ── */
+    // Only classes in PRINT_CLASSES list (default BC, EC) with pax > 0
+    function getPrintClasses(paxData) {
+        const allowed = gs(SK.PRINT_CLASSES, 'BC,EC').split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+        const filtered = paxData.filter(p => allowed.includes(p.class.toUpperCase()) && (p.value || 0) > 0);
+        // Fallback: if nothing passes filter, use all non-zero classes
+        return (filtered.length ? filtered : paxData.filter(p => (p.value || 0) > 0)).map(p => p.class);
+    }
 
     function _dateFmt(raw) {
         // "25-Feb-2026" or "2026-02-25" → "25 / Feb / 2026"
@@ -339,6 +359,7 @@
 
     /* Build ONE ZPL label for a single item+class */
     function buildItemLabelZPL(flight, item, classCode, paxCount) {
+        const { LW, LH } = getLabelDims();
         const route = flight.route || '';
         const parts = route.split('-');
         const from = parts[0] || '';
@@ -402,7 +423,8 @@
     /* Build ALL labels: each item × each pax class × per-item qty */
     function buildAllLabelsZPL(flight, paxData, acItems, itemQtys) {
         let all = '';
-        const classes = paxData.length ? paxData.map(p => p.class) : ['Y'];
+        const classes = getPrintClasses(paxData);
+        if (!classes.length) return '';
         for (const cls of classes) {
             const paxCount = paxData.find(p => p.class === cls)?.value ?? '';
             for (let i = 0; i < (acItems || []).length; i++) {
@@ -420,57 +442,91 @@
        7. LOCAL HTML LABEL PREVIEW
        Shows per-item miniature cards (AzAL format).
     ════════════════════════════════════════ */
-    function renderLocalPreview(previewBox, flight, paxData, galley, labelCount, acItems) {
+    function renderLocalPreview(previewBox, flight, paxData, galley, _unused, acItems) {
         const route = flight.route || '';
         const parts = route.split('-');
         const from = parts[0] || 'GYD';
         const to = parts[1] || '---';
-        const cls = paxData.length ? paxData[0].class : 'Y';
-        const paxCount = paxData.length ? paxData[0].value : '';
         const date = _dateFmt(flight.date);
         const fno = flight.flightNo || '-';
 
-        previewBox.innerHTML = '';
-        previewBox.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;padding:8px;align-items:flex-start;justify-content:flex-start;overflow-y:auto;';
+        // Build ordered label list: class × item × qty
+        const printCls = getPrintClasses(paxData);
+        const allItems = (acItems && acItems.length) ? acItems : [{ name: '(no items)', bgColor: 'white', _qty: 1 }];
 
-        const items = (acItems && acItems.length) ? acItems : [{ name: '(no items)', bgColor: 'white' }];
-        items.forEach((item, idx) => {
+        // Flat array of { cls, paxCount, item }
+        const labels = [];
+        printCls.forEach(cls => {
+            const paxCount = paxData.find(p => p.class === cls)?.value ?? '';
+            allItems.forEach(item => {
+                const qty = item._qty || 1;
+                for (let q = 0; q < qty; q++) labels.push({ cls, paxCount, item });
+            });
+        });
+
+        if (!labels.length) { previewBox.innerHTML = '<span style="color:#9ca3af;font-size:11px;">No labels</span>'; return; }
+
+        let cur = 0;
+
+        function buildCard(lbl) {
+            const { cls, paxCount, item } = lbl;
             const isRed = (item.bgColor || 'white') === 'red';
             const bg = isRed ? '#dc2626' : '#ffffff';
             const txtClr = isRed ? '#fff' : '#111';
             const borClr = isRed ? '#b91c1c' : '#374151';
             const divClr = isRed ? 'rgba(255,255,255,.4)' : '#ccc';
-
-            const card = document.createElement('div');
-            card.style.cssText = `width:140px;min-height:200px;border:1.5px solid ${borClr};border-radius:4px;` +
-                `overflow:hidden;font-family:'Courier New',monospace;background:${bg};color:${txtClr};` +
-                `display:flex;flex-direction:column;flex-shrink:0;`;
-
-            card.innerHTML = `
+            const nameFz = (item.name || '').length > 14 ? 10 : 12;
+            return `
+            <div style="width:160px;min-height:220px;border:1.5px solid ${borClr};border-radius:4px;
+                 overflow:hidden;font-family:'Courier New',monospace;background:${bg};color:${txtClr};
+                 display:flex;flex-direction:column;">
               <div style="border:1.5px solid ${borClr};margin:3px;padding:4px 3px;text-align:center;font-size:9.5px;font-weight:900;line-height:1.3;">
                 AZERBAIJAN<br><span style="font-size:8px;font-weight:600;letter-spacing:1px;">─ AIRLINES ─</span>
               </div>
-              <div style="padding:5px 5px 0;font-size:8.5px;line-height:1.7;flex:1;">
+              <div style="padding:5px 5px 0;font-size:8.5px;line-height:1.65;flex:1;">
                 <div>Date: ${date}</div>
-                <div>Flight No.: ${fno}</div>
+                <div>Flt: ${fno}</div>
                 <div>${from} ${to}</div>
                 <div>${to} – ${from}</div>
-                <div>${cls} ${paxCount} –</div>
+                <div><b>${cls} ${paxCount} –</b></div>
               </div>
-              <div style="border-top:1px solid ${divClr};margin:3px 3px 3px;padding:5px 3px;text-align:center;font-size:${(item.name || '').length > 14 ? 10 : 12}px;font-weight:900;font-style:italic;display:flex;align-items:center;justify-content:center;gap:4px;">
-                <span>${item.name}</span>
-                ${(item._qty > 1) ? `<span style="font-size:9px;opacity:.7;">×${item._qty}</span>` : ''}
-              </div>`;
-
-            previewBox.appendChild(card);
-        });
-
-        if (items.length > 6) {
-            const note = document.createElement('div');
-            note.style.cssText = 'font-size:10px;color:#6b7280;padding:4px;width:100%;text-align:center;';
-            note.textContent = `Göstərilən: ${Math.min(items.length, 6)} / ${items.length} label (hər class üçün)`;
-            previewBox.appendChild(note);
+              <div style="border-top:1px solid ${divClr};padding:5px 3px;text-align:center;
+                   font-size:${nameFz}px;font-weight:900;font-style:italic;">
+                ${item.name}
+              </div>
+            </div>`;
         }
+
+        function render() {
+            previewBox.innerHTML = '';
+            previewBox.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:6px;gap:6px;';
+
+            // Card
+            const cardWrap = document.createElement('div');
+            cardWrap.innerHTML = buildCard(labels[cur]);
+            previewBox.appendChild(cardWrap);
+
+            // Nav row
+            const nav = document.createElement('div');
+            nav.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;color:#374151;';
+            nav.innerHTML = `
+                <button id="acf8-prev-lbl" style="width:26px;height:26px;border:1px solid #d1d5db;border-radius:5px;background:#fff;cursor:pointer;font-size:14px;">‹</button>
+                <span style="min-width:64px;text-align:center;">${cur + 1} / ${labels.length}</span>
+                <button id="acf8-next-lbl" style="width:26px;height:26px;border:1px solid #d1d5db;border-radius:5px;background:#fff;cursor:pointer;font-size:14px;">›</button>`;
+            previewBox.appendChild(nav);
+
+            // Label info badge
+            const info = document.createElement('div');
+            info.style.cssText = 'font-size:9px;color:#9ca3af;text-align:center;';
+            const lbl = labels[cur];
+            info.textContent = `${lbl.cls} • ${lbl.item.name}`;
+            previewBox.appendChild(info);
+
+            previewBox.querySelector('#acf8-prev-lbl').onclick = () => { cur = (cur - 1 + labels.length) % labels.length; render(); };
+            previewBox.querySelector('#acf8-next-lbl').onclick = () => { cur = (cur + 1) % labels.length; render(); };
+        }
+
+        render();
     }
 
     /* ════════════════════════════════════════
@@ -500,8 +556,14 @@
         const to = parts[1] || '';
         const date = _dateFmt(flight.date);
         const fno = flight.flightNo || '-';
-        const classes = paxData.length ? paxData.map(p => p.class) : ['Y'];
+        const classes = getPrintClasses(paxData);
         const items = (acItems && acItems.length) ? acItems : [];
+        if (!classes.length || !items.length) {
+            const pw = window.open('', '_blank');
+            pw?.document.write('<p style="font-family:sans-serif;padding:20px;">BC/EC pax yoxdur və ya item konfiqurasiya edilməyib.</p>');
+            pw?.document.close();
+            return;
+        }
 
         let cards = '';
         for (const cls of classes) {
@@ -669,6 +731,22 @@
                   <button class="acf8-method-btn${curMethod === 'network' ? ' active' : ''}" data-method="network">🌐 Network (ZT411 TCP)</button>
                   <button class="acf8-method-btn${curMethod === 'browser' ? ' active' : ''}" data-method="browser">🖨 Browser Print</button>
                 </div>
+              </div>
+              <!-- Label Size -->
+              <div class="acf8-fg full">
+                <label>Label Size (mm)</label>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <span style="font-size:11px;color:#6b7280;">W:</span>
+                  <input type="number" id="acf8-lbl-w" min="30" max="150" value="${gs(SK.LABEL_W_MM, '57')}" style="width:60px;padding:4px 6px;border:1px solid #d1d5db;border-radius:5px;font-size:12px;">
+                  <span style="font-size:11px;color:#6b7280;">H:</span>
+                  <input type="number" id="acf8-lbl-h" min="30" max="200" value="${gs(SK.LABEL_H_MM, '83')}" style="width:60px;padding:4px 6px;border:1px solid #d1d5db;border-radius:5px;font-size:12px;">
+                  <span style="font-size:10px;color:#9ca3af;">mm</span>
+                </div>
+              </div>
+              <!-- Print Classes -->
+              <div class="acf8-fg full">
+                <label>Print Classes <span style="font-size:9px;color:#9ca3af;font-weight:400;">(comma-separated, e.g. BC,EC)</span></label>
+                <input type="text" id="acf8-print-classes" value="${gs(SK.PRINT_CLASSES, 'BC,EC')}" placeholder="BC,EC" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:12px;width:100%;">
               </div>
               <div class="acf8-fg full" id="acf8-ip-group" style="${curMethod !== 'network' ? 'opacity:.4;pointer-events:none' : ''}">
                 <label>Zebra Printer IP</label>
@@ -922,11 +1000,19 @@
             // SETTINGS TAB → Save
             if (curTab === 'settings') {
                 ss(SK.PRINT_METHOD, curMethod);
+                // Label size
+                const wEl = overlay.querySelector('#acf8-lbl-w');
+                const hEl = overlay.querySelector('#acf8-lbl-h');
+                if (wEl && hEl) { ss(SK.LABEL_W_MM, wEl.value); ss(SK.LABEL_H_MM, hEl.value); }
+                // Print classes
+                const pcEl = overlay.querySelector('#acf8-print-classes');
+                if (pcEl) ss(SK.PRINT_CLASSES, pcEl.value.trim());
                 // Save current acItems to config
                 const key = overlay.querySelector('#acf8-ac-type-sel')?.value || acCfg.key;
                 const cfgs = getAcConfigs();
                 if (cfgs[key]) { cfgs[key].items = [...acItems]; saveAcConfigs(cfgs); }
                 toast('Settings saved ✔', 'success');
+                schedulePreview();
                 return;
             }
 
@@ -1141,5 +1227,4 @@
     }, 2000);
 
 })();
-
 
