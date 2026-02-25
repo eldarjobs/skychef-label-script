@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V11.0)
 // @namespace    http://tampermonkey.net/
-// @version      12
+// @version      12.1
 // @description  V11: Custom colors, auto-update, batch ZPL, label layout editor, version check
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -274,39 +274,60 @@
     }
 
     .acf8-modal {
-        background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%);
-        border-radius:24px; width:920px; max-width:96vw; max-height:92vh;
-        box-shadow:0 0 0 1px rgba(0,0,0,.05), 0 32px 64px -16px rgba(0,0,0,.2), 0 0 80px rgba(37,99,235,.06);
-        display:flex; flex-direction:column; overflow:hidden;
-        animation:acf8-slide-up .35s cubic-bezier(.22,1,.36,1);
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        border-radius: 20px;
+        width: 960px;
+        max-width: 96vw;
+        max-height: 92vh;
+        box-shadow: 0 0 0 1px rgba(0,0,0,.05), 0 32px 64px -16px rgba(0,0,0,.2), 0 0 80px rgba(37,99,235,.06);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: acf8-slide-up .35s cubic-bezier(.22,1,.36,1);
     }
 
     /* ── Header ── */
     .acf8-hdr {
-        display:flex; align-items:center; justify-content:space-between;
-        padding:20px 28px; background:linear-gradient(135deg,#f0f5ff 0%,#f8fafc 100%);
-        border-bottom:1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 24px 32px;
+        background: linear-gradient(135deg, #f0f5ff 0%, #f8fafc 100%);
+        border-bottom: 1px solid #e2e8f0;
     }
-    .acf8-hdr-left { display:flex; flex-direction:column; gap:14px; }
+    .acf8-hdr-left { display: flex; flex-direction: column; gap: 16px; }
     .acf8-hdr-title {
-        font-size:22px; font-weight:800; color:#0f172a;
-        letter-spacing:-.6px; background:linear-gradient(135deg,#1e3a5f,#2563eb);
-        -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+        font-size: 24px;
+        font-weight: 800;
+        color: #0f172a;
+        letter-spacing: -.5px;
+        background: linear-gradient(135deg, #1e3a5f, #2563eb);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
 
     /* ── Tabs ── */
-    .acf8-tabs { display:flex; gap:6px; background:#e2e8f0; padding:3px; border-radius:14px; }
+    .acf8-tabs { display: flex; gap: 6px; background: #e2e8f0; padding: 4px; border-radius: 14px; }
     .acf8-tab {
-        display:flex; align-items:center; gap:8px; padding:8px 18px;
-        background:transparent; border:none; border-radius:11px;
-        font-size:13px; font-weight:600; color:#64748b; cursor:pointer;
-        transition:all .2s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 22px;
+        background: transparent;
+        border: none;
+        border-radius: 11px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #64748b;
+        cursor: pointer;
+        transition: all .2s ease;
     }
-    .acf8-tab svg { width:16px; height:16px; fill:currentColor; }
-    .acf8-tab:hover { color:#334155; background:rgba(255,255,255,.6); }
+    .acf8-tab svg { width: 18px; height: 18px; fill: currentColor; }
+    .acf8-tab:hover { color: #334155; background: rgba(255,255,255,.6); }
     .acf8-tab.active {
-        background:#ffffff; color:#1e40af;
-        box-shadow:0 2px 8px rgba(0,0,0,.08);
+        background: #ffffff;
+        color: #1e40af;
+        box-shadow: 0 2px 8px rgba(0,0,0,.08);
     }
 
     .acf8-close {
@@ -317,44 +338,61 @@
     .acf8-close:hover { background:#fef2f2; border-color:#fecaca; color:#ef4444; transform:rotate(90deg); }
 
     /* ── Panels ── */
-    .acf8-panel { display:none; flex:1; overflow-y:auto; padding:24px 28px; }
-    .acf8-panel.active { display:block; animation:acf8-fade-in .2s ease; }
+    .acf8-panel { display: none; flex: 1; overflow-y: auto; padding: 28px 32px; }
+    .acf8-panel.active { display: block; animation: acf8-fade-in .2s ease; }
 
     /* ── Flight Bar ── */
     .acf8-flight-bar {
-        display:flex; align-items:center; gap:14px; padding:18px 22px;
-        background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#1e40af 100%);
-        border-radius:16px; margin-bottom:22px; color:#fff;
-        box-shadow:0 8px 24px rgba(15,23,42,.25);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 20px 24px;
+        background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%);
+        border-radius: 16px;
+        margin-bottom: 24px;
+        color: #fff;
+        box-shadow: 0 8px 24px rgba(15,23,42,.25);
     }
-    .acf8-flight-bar svg { width:26px; height:26px; fill:rgba(255,255,255,.85); }
-    .acf8-fb-route { font-size:19px; font-weight:800; letter-spacing:.5px; }
-    .acf8-fb-flight { font-size:14px; font-weight:500; opacity:.85; }
-    .acf8-fb-date { font-size:12px; opacity:.55; background:rgba(255,255,255,.1); padding:3px 10px; border-radius:20px; }
-    .acf8-fb-order { margin-left:auto; font-size:12px; opacity:.4; }
+    .acf8-flight-bar svg { width: 28px; height: 28px; fill: rgba(255,255,255,.85); }
+    .acf8-fb-route { font-size: 20px; font-weight: 800; letter-spacing: .5px; }
+    .acf8-fb-flight { font-size: 15px; font-weight: 500; opacity: .85; }
+    .acf8-fb-date { font-size: 13px; opacity: .55; background: rgba(255,255,255,.1); padding: 4px 12px; border-radius: 20px; }
+    .acf8-fb-order { margin-left: auto; font-size: 13px; opacity: .4; }
 
     /* ── Print Body ── */
-    .acf8-print-body { display:flex; gap:28px; }
-    .acf8-print-form { flex:0 0 290px; }
-    .acf8-preview-col { flex:1; }
+    .acf8-print-body { display: flex; gap: 32px; }
+    .acf8-print-form { flex: 0 0 300px; }
+    .acf8-preview-col { flex: 1; }
 
     /* ── Form Groups ── */
-    .acf8-fg { margin-bottom:18px; }
+    .acf8-fg { margin-bottom: 20px; }
     .acf8-fg label {
-        display:block; margin-bottom:7px; font-size:11px; font-weight:700;
-        color:#64748b; text-transform:uppercase; letter-spacing:.8px;
+        display: block;
+        margin-bottom: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: .6px;
     }
-    .acf8-fg .req { color:#ef4444; }
+    .acf8-fg .req { color: #ef4444; }
 
     .acf8-fg select, .acf8-fg input[type="text"], .acf8-fg input[type="number"] {
-        width:100%; padding:10px 14px; background:#f8fafc;
-        border:1.5px solid #e2e8f0; border-radius:12px; font-size:13px;
-        color:#0f172a; transition:all .2s; appearance:none;
+        width: 100%;
+        padding: 11px 14px;
+        background: #f8fafc;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 14px;
+        color: #0f172a;
+        transition: all .2s;
     }
-    .acf8-fg select:hover, .acf8-fg input:hover { border-color:#94a3b8; background:#fff; }
+    .acf8-fg select:hover, .acf8-fg input:hover { border-color: #94a3b8; background: #fff; }
     .acf8-fg select:focus, .acf8-fg input:focus {
-        outline:none; border-color:#2563eb; background:#fff;
-        box-shadow:0 0 0 4px rgba(37,99,235,.08);
+        outline: none;
+        border-color: #2563eb;
+        background: #fff;
+        box-shadow: 0 0 0 4px rgba(37,99,235,.08);
     }
 
     /* ── Item Qty List ── */
@@ -476,30 +514,41 @@
 
     /* ── Footer ── */
     .acf8-ftr {
-        display:flex; align-items:center; justify-content:space-between;
-        padding:18px 28px; background:linear-gradient(135deg,#f0f5ff,#f8fafc);
-        border-top:1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 32px;
+        background: linear-gradient(135deg, #f0f5ff, #f8fafc);
+        border-top: 1px solid #e2e8f0;
     }
-    .acf8-ftr-status { font-size:13px; color:#64748b; }
-    .acf8-ftr-right { display:flex; gap:12px; }
+    .acf8-ftr-status { font-size: 14px; color: #64748b; }
+    .acf8-ftr-right { display: flex; gap: 14px; }
 
     .acf8-btn {
-        padding:11px 26px; border-radius:14px; font-size:14px;
-        font-weight:700; cursor:pointer; transition:all .2s; border:none; letter-spacing:.2px;
+        padding: 12px 28px;
+        border-radius: 12px;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all .2s;
+        border: none;
+        letter-spacing: .2px;
     }
-    .acf8-btn-cancel { background:#fff; border:1.5px solid #e2e8f0; color:#475569; }
-    .acf8-btn-cancel:hover { background:#f1f5f9; border-color:#cbd5e1; }
+    .acf8-btn-cancel { background: #fff; border: 1.5px solid #e2e8f0; color: #475569; }
+    .acf8-btn-cancel:hover { background: #f1f5f9; border-color: #cbd5e1; }
     .acf8-btn-print {
-        background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff;
-        box-shadow:0 4px 14px rgba(37,99,235,.3);
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: #fff;
+        box-shadow: 0 4px 14px rgba(37,99,235,.3);
     }
-    .acf8-btn-print:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(37,99,235,.35); }
+    .acf8-btn-print:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(37,99,235,.35); }
     .acf8-btn-save {
-        background:linear-gradient(135deg,#10b981,#059669); color:#fff;
-        box-shadow:0 4px 14px rgba(16,185,129,.25);
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: #fff;
+        box-shadow: 0 4px 14px rgba(16,185,129,.25);
     }
-    .acf8-btn-save:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(16,185,129,.3); }
-    .acf8-btn:disabled { opacity:.5; cursor:not-allowed; transform:none!important; }
+    .acf8-btn-save:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(16,185,129,.3); }
+    .acf8-btn:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
 
     /* ── Batch Modal ── */
     .acf8-bm-overlay {
