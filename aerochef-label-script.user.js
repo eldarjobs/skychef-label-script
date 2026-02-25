@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         AeroChef Paxload – Print Labels (V10.2)
+// @name         AeroChef Paxload – Print Labels (V11.0)
 // @namespace    http://tampermonkey.net/
-// @version      10.2
-// @description  Local HTML preview, aircraft-type items config, Zebra ZT411 ZPL print, BATCH PRINT FIXED
+// @version      11.0
+// @description  V11: Custom colors, auto-update, batch ZPL, label layout editor, version check
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
@@ -35,16 +35,19 @@
         LOGO_URL: 'acf9_logo_url',
         DEFAULT_LOGO: 'https://raw.githubusercontent.com/eldarjobs/skychef-label-script/main/AZAL.logo.png',
         QR_CODE: 'acf9_qr_code',
+        LAST_UPDATE_CHECK: 'acf9_last_update_check',
+        ZPL_BATCH_MODE: 'acf9_zpl_batch_mode',
+        LABEL_LAYOUT: 'acf9_label_layout',
     };
 
-    const gs = (k, d = '') => { 
-        try { return GM_getValue(k, d); } 
-        catch { return localStorage.getItem(k) ?? d; } 
+    const gs = (k, d = '') => {
+        try { return GM_getValue(k, d); }
+        catch { return localStorage.getItem(k) ?? d; }
     };
-    
-    const ss = (k, v) => { 
-        try { GM_setValue(k, v); } 
-        catch { localStorage.setItem(k, v); } 
+
+    const ss = (k, v) => {
+        try { GM_setValue(k, v); }
+        catch { localStorage.setItem(k, v); }
     };
 
     /* ============================================
@@ -69,8 +72,8 @@
                 const data = JSON.parse(e.target.result);
                 Object.entries(data).forEach(([k, v]) => ss(k, v));
                 toast(`✓ ${Object.keys(data).length} ayar import edildi — səhifəni yeniləyin`, 'success', 5000);
-            } catch { 
-                toast('Import xətası: JSON formatı düzgün deyil', 'error'); 
+            } catch {
+                toast('Import xətası: JSON formatı düzgün deyil', 'error');
             }
         };
         reader.readAsText(file);
@@ -86,13 +89,13 @@
 
     const IP_REGEX = /^(\d{1,3}\.){3}\d{1,3}$/;
 
-    const getGalleys = () => { 
-        try { 
-            const r = gs(SK.GALLEY_LIST, ''); 
-            return r ? JSON.parse(r) : [...DEFAULT_GALLEYS]; 
-        } catch { 
-            return [...DEFAULT_GALLEYS]; 
-        } 
+    const getGalleys = () => {
+        try {
+            const r = gs(SK.GALLEY_LIST, '');
+            return r ? JSON.parse(r) : [...DEFAULT_GALLEYS];
+        } catch {
+            return [...DEFAULT_GALLEYS];
+        }
     };
 
     /* ============================================
@@ -169,16 +172,16 @@
     };
 
     function getAcConfigs() {
-        try { 
-            const r = gs(SK.AC_CONFIGS, ''); 
-            return r ? { ...DEFAULT_AC_CONFIGS, ...JSON.parse(r) } : { ...DEFAULT_AC_CONFIGS }; 
-        } catch { 
-            return { ...DEFAULT_AC_CONFIGS }; 
+        try {
+            const r = gs(SK.AC_CONFIGS, '');
+            return r ? { ...DEFAULT_AC_CONFIGS, ...JSON.parse(r) } : { ...DEFAULT_AC_CONFIGS };
+        } catch {
+            return { ...DEFAULT_AC_CONFIGS };
         }
     }
 
-    function saveAcConfigs(cfg) { 
-        ss(SK.AC_CONFIGS, JSON.stringify(cfg)); 
+    function saveAcConfigs(cfg) {
+        ss(SK.AC_CONFIGS, JSON.stringify(cfg));
     }
 
     function matchAcConfig(series, type) {
@@ -207,9 +210,9 @@
     /* ============================================
        5. CLASS COLOURS & ICONS
     ============================================ */
-    const CLASS_COLORS = { 
-        BC: '#6610f2', PE: '#fd7e14', EC: '#28a745', 
-        CT: '#e67e22', CP: '#17a2b8', CC: '#007bff', VP: '#e83e8c' 
+    const CLASS_COLORS = {
+        BC: '#6610f2', PE: '#fd7e14', EC: '#28a745',
+        CT: '#e67e22', CP: '#17a2b8', CC: '#007bff', VP: '#e83e8c'
     };
     const DEFAULT_COLOR = '#6c757d';
 
@@ -238,10 +241,10 @@
         t.style.cssText = `padding:10px 16px;border-radius:8px;font-size:13px;font-weight:500;color:#fff;background:${colors[type] || colors.info};box-shadow:0 4px 14px rgba(0,0,0,.2);animation:acf8fi .2s ease;font-family:system-ui,sans-serif;`;
         t.textContent = msg;
         _tw.appendChild(t);
-        setTimeout(() => { 
-            t.style.opacity = '0'; 
-            t.style.transition = 'opacity .4s'; 
-            setTimeout(() => t.remove(), 400); 
+        setTimeout(() => {
+            t.style.opacity = '0';
+            t.style.transition = 'opacity .4s';
+            setTimeout(() => t.remove(), 400);
         }, ms);
     }
 
@@ -367,13 +370,13 @@
 
     function getPrintClasses(paxData) {
         const allowed = gs(SK.PRINT_CLASSES, 'BC,EC').split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
-        
+
         if (paxData && paxData.length > 0) {
             const filtered = paxData.filter(p => allowed.includes(p.class.toUpperCase()) && (p.value || 0) > 0);
             const result = (filtered.length ? filtered : paxData.filter(p => (p.value || 0) > 0));
             if (result.length > 0) return result.map(p => p.class);
         }
-        
+
         return ['BC', 'EC']; // FALLBACK
     }
 
@@ -385,6 +388,7 @@
 
     function buildItemLabelZPL(flight, item, classCode, paxCount) {
         const { LW, LH } = getLabelDims();
+        const L = getLabelLayout();
         const route = flight.route || '';
         const parts = route.split('-');
         const from = parts[0] || '';
@@ -406,31 +410,31 @@
         if (isRed) z += `^FO0,0^GB${LW},${LH},${LH}^FS
 `;
 
-        z += `^FO4,4^GB${LW - 8},72,2^FS
+        z += `^FO${L.logo.x},${L.logo.y}^GB${L.logo.w || LW - 8},${L.logo.h || 72},2^FS
 `;
-        z += `^FO50,9^A0N,24,24${FR}^FDAZERBAIJAN^FS
+        z += `^FO${L.header1.x},${L.header1.y}^A0N,${L.header1.fz},${L.header1.fz}${FR}^FDAZERBAIJAN^FS
 `;
-        z += `^FO110,36${FR}^A0N,18,18^FD- AIRLINES -^FS
-`;
-
-        z += `^FO4,79^GB${LW - 8},2,2^FS
+        z += `^FO${L.header2.x},${L.header2.y}${FR}^A0N,${L.header2.fz},${L.header2.fz}^FD- AIRLINES -^FS
 `;
 
-        z += `^FO8,88${FR}^A0N,17,17^FDDate: ${date}^FS
-`;
-        z += `^FO8,110${FR}^A0N,17,17^FDFlight No. : ${fno}^FS
-`;
-        z += `^FO8,132${FR}^A0N,17,17^FD${from}  ${to}^FS
-`;
-        z += `^FO8,152${FR}^A0N,17,17^FD${to} - ${from}^FS
-`;
-        z += `^FO8,174${FR}^A0N,17,17^FD${classCode} ${paxCount || ''} -^FS
+        z += `^FO${L.divider1.x},${L.divider1.y}^GB${LW - 8},2,2^FS
 `;
 
-        z += `^FO4,580^GB${LW - 8},2,2^FS
+        z += `^FO${L.date.x},${L.date.y}${FR}^A0N,${L.date.fz},${L.date.fz}^FDDate: ${date}^FS
+`;
+        z += `^FO${L.flight.x},${L.flight.y}${FR}^A0N,${L.flight.fz},${L.flight.fz}^FDFlight No. : ${fno}^FS
+`;
+        z += `^FO${L.routeFrom.x},${L.routeFrom.y}${FR}^A0N,${L.routeFrom.fz},${L.routeFrom.fz}^FD${from}  ${to}^FS
+`;
+        z += `^FO${L.routeTo.x},${L.routeTo.y}${FR}^A0N,${L.routeTo.fz},${L.routeTo.fz}^FD${to} - ${from}^FS
+`;
+        z += `^FO${L.classPax.x},${L.classPax.y}${FR}^A0N,${L.classPax.fz},${L.classPax.fz}^FD${classCode} ${paxCount || ''} -^FS
 `;
 
-        z += `^FO8,595^FI${FR}^A0N,${nameFz},${nameFz}^FD${item.name}^FS
+        z += `^FO${L.divider2.x},${L.divider2.y}^GB${LW - 8},2,2^FS
+`;
+
+        z += `^FO${L.itemName.x},${L.itemName.y}^FI${FR}^A0N,${nameFz},${nameFz}^FD${item.name}^FS
 `;
 
         if (gs(SK.QR_CODE, 'off') === 'on') {
@@ -467,9 +471,9 @@
             });
         });
 
-        if (!labels.length) { 
-            previewBox.innerHTML = '<span style="color:#9ca3af;font-size:11px;">No labels</span>'; 
-            return; 
+        if (!labels.length) {
+            previewBox.innerHTML = '<span style="color:#9ca3af;font-size:11px;">No labels</span>';
+            return;
         }
 
         let cur = 0;
@@ -531,13 +535,13 @@
             info.textContent = `${lbl.cls} • ${lbl.item.name}`;
             previewBox.appendChild(info);
 
-            previewBox.querySelector('#acf8-prev-lbl').onclick = () => { 
-                cur = (cur - 1 + labels.length) % labels.length; 
-                render(); 
+            previewBox.querySelector('#acf8-prev-lbl').onclick = () => {
+                cur = (cur - 1 + labels.length) % labels.length;
+                render();
             };
-            previewBox.querySelector('#acf8-next-lbl').onclick = () => { 
-                cur = (cur + 1) % labels.length; 
-                render(); 
+            previewBox.querySelector('#acf8-next-lbl').onclick = () => {
+                cur = (cur + 1) % labels.length;
+                render();
             };
         }
 
@@ -560,6 +564,68 @@
         });
     }
 
+    /* === 10b. BATCH ZPL SENDER (Feature 3) === */
+    function sendZplBatch(ip, zplArray, onOk, onErr) {
+        const allZpl = zplArray.join('\n');
+        GM_xmlhttpRequest({
+            method: 'POST',
+            url: `http://${ip}:9100`,
+            data: allZpl,
+            headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+            timeout: 30000,
+            onload: r => r.status < 400 ? onOk(zplArray.length) : onErr(`HTTP ${r.status}`),
+            onerror: () => onErr('Network error – printer offline?'),
+            ontimeout: () => onErr('Timeout – batch too large?'),
+        });
+    }
+
+    /* === 10c. VERSION CHECK (Feature 2) === */
+    function checkForUpdates(force) {
+        const lastCheck = parseInt(gs(SK.LAST_UPDATE_CHECK, '0'));
+        const now = Date.now();
+        if (!force && now - lastCheck < 86400000) return;
+        ss(SK.LAST_UPDATE_CHECK, String(now));
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: 'https://raw.githubusercontent.com/eldarjobs/skychef-label-script/master/version.txt',
+            timeout: 5000,
+            onload: (r) => {
+                const latestVer = r.responseText.trim();
+                const currentVer = (typeof GM_info !== 'undefined' && GM_info.script) ? GM_info.script.version : '11.0';
+                if (latestVer !== currentVer && latestVer > currentVer) {
+                    toast(`🆕 Yeni versiya mövcuddur: v${latestVer} (hazırki: v${currentVer})`, 'info', 10000);
+                }
+            },
+            onerror: () => { /* silent fail */ }
+        });
+    }
+
+    /* === 10d. LABEL LAYOUT (Feature 4) === */
+    const DEFAULT_LABEL_LAYOUT = {
+        logo: { x: 4, y: 4, w: 200, h: 72 },
+        header1: { x: 50, y: 9, fz: 24 },
+        header2: { x: 110, y: 36, fz: 18 },
+        divider1: { x: 4, y: 79 },
+        date: { x: 8, y: 88, fz: 17 },
+        flight: { x: 8, y: 110, fz: 17 },
+        routeFrom: { x: 8, y: 132, fz: 17 },
+        routeTo: { x: 8, y: 152, fz: 17 },
+        classPax: { x: 8, y: 174, fz: 17 },
+        divider2: { x: 4, y: 580 },
+        itemName: { x: 8, y: 595 },
+    };
+
+    function getLabelLayout() {
+        try {
+            const s = gs(SK.LABEL_LAYOUT, '');
+            return s ? { ...DEFAULT_LABEL_LAYOUT, ...JSON.parse(s) } : { ...DEFAULT_LABEL_LAYOUT };
+        } catch { return { ...DEFAULT_LABEL_LAYOUT }; }
+    }
+
+    function saveLabelLayout(layout) {
+        ss(SK.LABEL_LAYOUT, JSON.stringify(layout));
+    }
+
     /* ============================================
        11. BROWSER PRINT (FALLBACK)
     ============================================ */
@@ -572,7 +638,7 @@
         const fno = flight.flightNo || '-';
         const classes = getPrintClasses(paxData);
         const items = (acItems && acItems.length) ? acItems : [];
-        
+
         if (!classes.length || !items.length) {
             const pw = window.open('', '_blank');
             pw?.document.write('<p style="font-family:sans-serif;padding:20px;">BC/EC pax yoxdur və ya item konfiqurasiya edilməyib.</p>');
@@ -658,7 +724,7 @@
         const date = _dateFmt(flight.date);
         const fno = flight.flightNo || '-';
         const classes = getPrintClasses(paxData);
-        
+
         let html = '';
         for (const cls of classes) {
             const paxCount = paxData.find(p => p.class === cls)?.value ?? '';
@@ -697,104 +763,104 @@
         return new Promise(resolve => {
             const iframeName = 'acf8_sp_' + Math.random().toString(36).slice(2);
             const iframe = document.createElement('iframe');
-            iframe.name = iframeName; 
+            iframe.name = iframeName;
             iframe.style.display = 'none';
             document.body.appendChild(iframe);
-            
+
             let loadCount = 0;
             let formEl = null;
-            
-            const tmr = setTimeout(() => { 
-                iframe.remove(); 
-                if (formEl) formEl.remove(); 
+
+            const tmr = setTimeout(() => {
+                iframe.remove();
+                if (formEl) formEl.remove();
                 resolve([]); // TIMEOUT RESOLVE
             }, 20000); // 20 saniyə
-            
+
             iframe.onload = () => {
                 loadCount++;
                 try {
                     const doc = iframe.contentDocument || iframe.contentWindow.document;
                     if (!doc.body || doc.URL === 'about:blank' || !doc.body.innerHTML) return;
-                    
+
                     const classTable = doc.getElementById('ctl00_CphMaster_gdvClass');
-                    
+
                     if (doc.title.includes('Pax Load') || classTable) {
                         clearTimeout(tmr);
                         const paxData = [];
                         if (classTable) {
                             classTable.querySelectorAll('tr.acf-griddetail-normalrow, tr.acf-griddetail-alternaterow').forEach(row => {
-                                const ci = row.querySelector('input[id*="hidClassCode"]'); 
+                                const ci = row.querySelector('input[id*="hidClassCode"]');
                                 if (!ci) return;
                                 const cn = ci.value.trim();
                                 const pi = row.querySelector('input[id*="txtTotalPaxLoad"]');
-                                let v = 0; 
-                                if (pi) { 
-                                    v = parseInt(pi.value.trim()); 
-                                    if (isNaN(v)) v = 0; 
+                                let v = 0;
+                                if (pi) {
+                                    v = parseInt(pi.value.trim());
+                                    if (isNaN(v)) v = 0;
                                 }
                                 if (cn) paxData.push({ class: cn, value: v });
                             });
                         }
-                        iframe.remove(); 
-                        if (formEl) formEl.remove(); 
+                        iframe.remove();
+                        if (formEl) formEl.remove();
                         resolve(paxData); // SUCCESS RESOLVE
-                        
+
                     } else if (loadCount > 1) {
-                        clearTimeout(tmr); 
-                        iframe.remove(); 
-                        if (formEl) formEl.remove(); 
+                        clearTimeout(tmr);
+                        iframe.remove();
+                        if (formEl) formEl.remove();
                         resolve([]); // FALLBACK RESOLVE
                     }
-                } catch (ex) { 
-                    console.warn('[batch pax]', ex);  
+                } catch (ex) {
+                    console.warn('[batch pax]', ex);
                     resolve([]); // ERROR RESOLVE
                 }
             };
-            
+
             const mainForm = document.forms[0];
-            if (!mainForm) { 
-                clearTimeout(tmr); 
-                iframe.remove(); 
-                resolve([]); 
-                return; 
+            if (!mainForm) {
+                clearTimeout(tmr);
+                iframe.remove();
+                resolve([]);
+                return;
             }
-            
+
             formEl = document.createElement('form');
-            formEl.method = 'POST'; 
-            formEl.action = window.location.href; 
+            formEl.method = 'POST';
+            formEl.action = window.location.href;
             formEl.target = iframeName;
-            
+
             new FormData(mainForm).forEach((v, k) => {
-                const inp = document.createElement('input'); 
-                inp.type = 'hidden'; 
-                inp.name = k; 
-                inp.value = v; 
+                const inp = document.createElement('input');
+                inp.type = 'hidden';
+                inp.name = k;
+                inp.value = v;
                 formEl.appendChild(inp);
             });
-            
+
             const href = editBtn.getAttribute('href') || '';
             const m = href.match(/__doPostBack\(['"]([^'"]*)['"]/);
             if (m?.[1]) {
                 let et = formEl.querySelector('[name="__EVENTTARGET"]');
-                if (!et) { 
-                    et = document.createElement('input'); 
-                    et.type = 'hidden'; 
-                    et.name = '__EVENTTARGET'; 
-                    formEl.appendChild(et); 
+                if (!et) {
+                    et = document.createElement('input');
+                    et.type = 'hidden';
+                    et.name = '__EVENTTARGET';
+                    formEl.appendChild(et);
                 }
                 et.value = m[1];
-                
+
                 let ea = formEl.querySelector('[name="__EVENTARGUMENT"]');
-                if (!ea) { 
-                    ea = document.createElement('input'); 
-                    ea.type = 'hidden'; 
-                    ea.name = '__EVENTARGUMENT'; 
-                    formEl.appendChild(ea); 
+                if (!ea) {
+                    ea = document.createElement('input');
+                    ea.type = 'hidden';
+                    ea.name = '__EVENTARGUMENT';
+                    formEl.appendChild(ea);
                 }
                 ea.value = '';
             }
-            
-            document.body.appendChild(formEl); 
+
+            document.body.appendChild(formEl);
             formEl.submit();
         });
     }
@@ -816,9 +882,9 @@
             printBtn.classList.add('error');
             printBtn.innerHTML = ICO.error;
             iframe.remove();
-            setTimeout(() => { 
-                printBtn.classList.remove('error'); 
-                printBtn.innerHTML = ICO.printer; 
+            setTimeout(() => {
+                printBtn.classList.remove('error');
+                printBtn.innerHTML = ICO.printer;
             }, 3000);
         }, 15000);
 
@@ -841,9 +907,9 @@
                             const className = classInput.value.trim();
                             const paxInput = row.querySelector('input[id*="txtTotalPaxLoad"]');
                             let val = 0;
-                            if (paxInput) { 
-                                val = parseInt(paxInput.value.trim()); 
-                                if (isNaN(val)) val = 0; 
+                            if (paxInput) {
+                                val = parseInt(paxInput.value.trim());
+                                if (isNaN(val)) val = 0;
                             }
                             if (className) paxData.push({ class: className, value: val });
                         });
@@ -861,9 +927,9 @@
                     printBtn.classList.add('error');
                     printBtn.innerHTML = ICO.error;
                     iframe.remove();
-                    setTimeout(() => { 
-                        printBtn.classList.remove('error'); 
-                        printBtn.innerHTML = ICO.printer; 
+                    setTimeout(() => {
+                        printBtn.classList.remove('error');
+                        printBtn.innerHTML = ICO.printer;
                     }, 3000);
                 }
             } catch (err) {
@@ -873,19 +939,19 @@
                 printBtn.classList.add('error');
                 printBtn.innerHTML = ICO.error;
                 iframe.remove();
-                setTimeout(() => { 
-                    printBtn.classList.remove('error'); 
-                    printBtn.innerHTML = ICO.printer; 
+                setTimeout(() => {
+                    printBtn.classList.remove('error');
+                    printBtn.innerHTML = ICO.printer;
                 }, 3000);
             }
         };
 
         const mainForm = document.forms[0];
-        if (!mainForm) { 
-            clearTimeout(timeout); 
-            printBtn.classList.remove('loading'); 
-            printBtn.innerHTML = ICO.printer; 
-            return; 
+        if (!mainForm) {
+            clearTimeout(timeout);
+            printBtn.classList.remove('loading');
+            printBtn.innerHTML = ICO.printer;
+            return;
         }
 
         const formClone = document.createElement('form');
@@ -897,15 +963,15 @@
         const fd = new FormData(mainForm);
         const href = editBtn.getAttribute('href') || '';
         const match = href.match(/__doPostBack\(['"](.*?)['"]/);
-        if (match && match[1]) { 
-            fd.set('__EVENTTARGET', match[1]); 
-            fd.set('__EVENTARGUMENT', ''); 
+        if (match && match[1]) {
+            fd.set('__EVENTTARGET', match[1]);
+            fd.set('__EVENTARGUMENT', '');
         }
 
         for (const [k, v] of fd.entries()) {
-            const f = document.createElement('input'); 
-            f.type = 'hidden'; 
-            f.name = k; 
+            const f = document.createElement('input');
+            f.type = 'hidden';
+            f.name = k;
             f.value = v;
             formClone.appendChild(f);
         }
@@ -999,8 +1065,12 @@
                 </div>
                 <div class="acf8-fg" style="border-top:1px dashed #e5e7eb;padding-top:6px;">
                   <label>&#10133; Quick Custom Label</label>
-                  <div style="display:flex;gap:5px;align-items:center;">
-                    <input type="text" id="acf8-custom-name" placeholder="Item name" style="flex:1;padding:4px 7px;border:1px solid #d1d5db;border-radius:5px;font-size:11px;">
+                  <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
+                    <input type="text" id="acf8-custom-name" placeholder="Item name" style="flex:1;min-width:80px;padding:4px 7px;border:1px solid #d1d5db;border-radius:5px;font-size:11px;">
+                    <select id="acf8-custom-color" style="padding:4px 6px;border:1px solid #d1d5db;border-radius:5px;font-size:11px;width:auto;">
+                      <option value="white">⬜ Ağ</option>
+                      <option value="red">🟥 Qırmızı</option>
+                    </select>
                     <div class="acf8-counter">
                       <button id="acf8-custom-minus">&#8722;</button>
                       <input type="number" id="acf8-custom-qty" value="1" min="1" max="20" style="width:36px;font-size:11px;padding:3px;border:1px solid #d1d5db;border-radius:4px;text-align:center;">
@@ -1086,6 +1156,27 @@
                   <button id="acf8-ac-item-add" style="padding:5px 12px;background:#2563eb;color:#fff;border:none;border-radius:5px;font-size:12px;cursor:pointer;font-weight:600;">+ Add Item</button>
                 </div>
               </div>
+              <div class="acf8-fg full" style="flex-direction:row;align-items:center;justify-content:space-between;">
+                <label style="text-transform:none;font-size:11px;font-weight:600;color:#374151;cursor:pointer;">⚡ ZPL Batch Göndərmə (daha sürətli)</label>
+                <label style="position:relative;display:inline-block;width:36px;height:20px;">
+                  <input type="checkbox" id="acf8-batch-toggle" ${gs(SK.ZPL_BATCH_MODE, 'sequential') === 'batch' ? 'checked' : ''} style="opacity:0;width:0;height:0;">
+                  <span id="acf8-batch-knob" style="position:absolute;cursor:pointer;inset:0;background:${gs(SK.ZPL_BATCH_MODE, 'sequential') === 'batch' ? '#2563eb' : '#d1d5db'};border-radius:20px;transition:.2s;"
+                    onclick="const c=this.previousElementSibling;c.checked=!c.checked;this.style.background=c.checked?'#2563eb':'#d1d5db'"></span>
+                </label>
+              </div>
+              <div class="acf8-fg full" style="border-top:1px solid #e5e7eb;padding-top:10px;">
+                <label>📐 Label Layout Editor <span style="font-size:9px;color:#9ca3af;font-weight:400;">(ZPL koordinatları)</span></label>
+                <div id="acf8-layout-editor" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;max-height:160px;overflow-y:auto;"></div>
+                <div style="display:flex;gap:6px;margin-top:4px;">
+                  <button id="acf8-layout-reset" style="flex:1;padding:4px 8px;background:#ef4444;color:#fff;border:none;border-radius:5px;font-size:11px;cursor:pointer;font-weight:600;">↺ Reset Default</button>
+                </div>
+              </div>
+              <div class="acf8-fg full" style="border-top:1px solid #e5e7eb;padding-top:10px;">
+                <label>🔄 Versiya Yoxlaması</label>
+                <div style="display:flex;gap:6px;">
+                  <button id="acf8-check-update" style="flex:1;padding:5px 10px;background:#7c3aed;color:#fff;border:none;border-radius:5px;font-size:11px;cursor:pointer;font-weight:700;">🔄 Yeniləmələri yoxla</button>
+                </div>
+              </div>
               <div class="acf8-fg full" style="border-top:1px solid #e5e7eb;padding-top:10px;">
                 <label>Config Export / Import</label>
                 <div style="display:flex;gap:6px;">
@@ -1120,13 +1211,16 @@
             if (!el) return;
             el.innerHTML = '';
             customItems.forEach((ci, idx) => {
+                const isRed = (ci.bgColor || 'white') === 'red';
+                const dotClr = isRed ? '#dc2626' : '#9ca3af';
+                const bgRow = isRed ? '#fef2f2' : '#f0f4ff';
                 const row = document.createElement('div');
-                row.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:11px;background:#f0f4ff;border-radius:4px;padding:2px 6px;';
-                row.innerHTML = `<span style="flex:1;">${ci.name} <b style="color:#2563eb;">×${ci._qty}</b></span><button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;">×</button>`;
-                row.querySelector('button').onclick = () => { 
-                    customItems.splice(idx, 1); 
-                    renderCustomList(); 
-                    schedulePreview(); 
+                row.style.cssText = `display:flex;align-items:center;gap:5px;font-size:11px;background:${bgRow};border-radius:4px;padding:2px 6px;`;
+                row.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:${dotClr};flex-shrink:0;"></span><span style="flex:1;">${ci.name} <b style="color:#2563eb;">×${ci._qty}</b></span><button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;">×</button>`;
+                row.querySelector('button').onclick = () => {
+                    customItems.splice(idx, 1);
+                    renderCustomList();
+                    schedulePreview();
                 };
                 el.appendChild(row);
             });
@@ -1208,9 +1302,9 @@
                 const unitI = overlay.querySelector('#acf8-ac-item-unit');
                 const name = nameI.value.trim();
                 const unit = unitI.value.trim() || 'pcs';
-                if (!name) { 
-                    toast('Item adı daxil edin', 'error'); 
-                    return; 
+                if (!name) {
+                    toast('Item adı daxil edin', 'error');
+                    return;
                 }
                 acItems.push({ name, bgColor: 'white' });
                 acItemQtys.push(1);
@@ -1264,13 +1358,14 @@
                 const nameI = overlay.querySelector('#acf8-custom-name');
                 const qtyI = overlay.querySelector('#acf8-custom-qty');
                 const name = (nameI.value || '').trim();
-                if (!name) { 
-                    toast('Custom item adı daxil edin', 'error'); 
-                    return; 
+                if (!name) {
+                    toast('Custom item adı daxil edin', 'error');
+                    return;
                 }
                 const qty = Math.max(1, parseInt(qtyI.value) || 1);
-                customItems.push({ name, bgColor: 'white', _qty: qty });
-                nameI.value = ''; 
+                const bgColor = overlay.querySelector('#acf8-custom-color')?.value || 'white';
+                customItems.push({ name, bgColor, _qty: qty });
+                nameI.value = '';
                 qtyI.value = 1;
                 renderCustomList();
                 schedulePreview();
@@ -1291,10 +1386,10 @@
             if (e.target.files[0]) importSettings(e.target.files[0]);
         });
 
-        const close = () => { 
-            clearTimeout(prevTimer); 
-            overlay.remove(); 
-            document.removeEventListener('keydown', kbH); 
+        const close = () => {
+            clearTimeout(prevTimer);
+            overlay.remove();
+            document.removeEventListener('keydown', kbH);
         };
         overlay.querySelector('.acf8-close').onclick = close;
         overlay.querySelector('#acf8-btn-cancel').onclick = close;
@@ -1302,9 +1397,9 @@
 
         function kbH(e) {
             if (e.key === 'Escape') close();
-            if (e.key === 'Enter' && !['INPUT', 'SELECT'].includes(e.target.tagName)) { 
-                e.preventDefault(); 
-                actionBtn.click(); 
+            if (e.key === 'Enter' && !['INPUT', 'SELECT'].includes(e.target.tagName)) {
+                e.preventDefault();
+                actionBtn.click();
             }
         }
         document.addEventListener('keydown', kbH);
@@ -1312,9 +1407,9 @@
         overlay.querySelectorAll('.acf8-tab').forEach(tab => {
             tab.onclick = () => {
                 overlay.querySelectorAll('.acf8-tab').forEach(t => t.classList.remove('active'));
-                overlay.querySelectorAll('.acf8-panel').forEach(p => { 
-                    p.classList.remove('active'); 
-                    p.style.display = 'none'; 
+                overlay.querySelectorAll('.acf8-panel').forEach(p => {
+                    p.classList.remove('active');
+                    p.style.display = 'none';
                 });
                 tab.classList.add('active');
                 const panel = overlay.querySelector(`#acf8-panel-${tab.dataset.tab}`);
@@ -1340,13 +1435,13 @@
         overlay.querySelector('#acf8-ip-save').onclick = () => {
             const ip = overlay.querySelector('#acf8-ip').value.trim();
             const st = overlay.querySelector('#acf8-ip-status');
-            if (!IP_REGEX.test(ip)) { 
-                st.textContent = '✗ Invalid IP'; 
-                st.className = 'acf8-ip-status err'; 
-                return; 
+            if (!IP_REGEX.test(ip)) {
+                st.textContent = '✗ Invalid IP';
+                st.className = 'acf8-ip-status err';
+                return;
             }
             ss(SK.PRINTER_IP, ip);
-            st.textContent = '✓ Saved'; 
+            st.textContent = '✓ Saved';
             st.className = 'acf8-ip-status ok';
             toast('Printer IP saved: ' + ip, 'success');
         };
@@ -1356,9 +1451,9 @@
             const name = inp.value.trim();
             if (!name) return;
             const list = getGalleys();
-            if (list.includes(name)) { 
-                toast('Already exists', 'error'); 
-                return; 
+            if (list.includes(name)) {
+                toast('Already exists', 'error');
+                return;
             }
             list.push(name);
             ss(SK.GALLEY_LIST, JSON.stringify(list));
@@ -1374,24 +1469,71 @@
             schedulePreview();
         };
 
+        /* --- Layout Editor (Feature 4) --- */
+        function renderLayoutEditor() {
+            const el = overlay.querySelector('#acf8-layout-editor');
+            if (!el) return;
+            el.innerHTML = '';
+            const layout = getLabelLayout();
+            const keys = Object.keys(DEFAULT_LABEL_LAYOUT);
+            keys.forEach(key => {
+                const item = layout[key] || DEFAULT_LABEL_LAYOUT[key];
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:10px;color:#374151;';
+                let fields = `<b style="min-width:60px;">${key}</b> X:<input type="number" data-lk="${key}" data-lp="x" value="${item.x ?? 0}" style="width:42px;padding:2px 3px;border:1px solid #d1d5db;border-radius:3px;font-size:10px;"> Y:<input type="number" data-lk="${key}" data-lp="y" value="${item.y ?? 0}" style="width:42px;padding:2px 3px;border:1px solid #d1d5db;border-radius:3px;font-size:10px;">`;
+                if (item.fz != null) fields += ` Fz:<input type="number" data-lk="${key}" data-lp="fz" value="${item.fz}" style="width:36px;padding:2px 3px;border:1px solid #d1d5db;border-radius:3px;font-size:10px;">`;
+                if (item.w != null) fields += ` W:<input type="number" data-lk="${key}" data-lp="w" value="${item.w}" style="width:42px;padding:2px 3px;border:1px solid #d1d5db;border-radius:3px;font-size:10px;">`;
+                if (item.h != null) fields += ` H:<input type="number" data-lk="${key}" data-lp="h" value="${item.h}" style="width:42px;padding:2px 3px;border:1px solid #d1d5db;border-radius:3px;font-size:10px;">`;
+                row.innerHTML = fields;
+                el.appendChild(row);
+            });
+        }
+        renderLayoutEditor();
+
+        overlay.querySelector('#acf8-layout-reset')?.addEventListener('click', () => {
+            saveLabelLayout(DEFAULT_LABEL_LAYOUT);
+            renderLayoutEditor();
+            toast('Layout reset to default', 'success');
+        });
+
+        /* --- Check for Updates button (Feature 5) --- */
+        overlay.querySelector('#acf8-check-update')?.addEventListener('click', () => {
+            checkForUpdates(true);
+            toast('Versiya yoxlanır...', 'info', 2000);
+        });
+
         actionBtn.onclick = () => {
             if (curTab === 'settings') {
                 ss(SK.PRINT_METHOD, curMethod);
                 const wEl = overlay.querySelector('#acf8-lbl-w');
                 const hEl = overlay.querySelector('#acf8-lbl-h');
-                if (wEl && hEl) { 
-                    ss(SK.LABEL_W_MM, wEl.value); 
-                    ss(SK.LABEL_H_MM, hEl.value); 
+                if (wEl && hEl) {
+                    ss(SK.LABEL_W_MM, wEl.value);
+                    ss(SK.LABEL_H_MM, hEl.value);
                 }
                 const pcEl = overlay.querySelector('#acf8-print-classes');
                 if (pcEl) ss(SK.PRINT_CLASSES, pcEl.value.trim());
                 const qrEl = overlay.querySelector('#acf8-qr-toggle');
                 if (qrEl) ss(SK.QR_CODE, qrEl.checked ? 'on' : 'off');
+                const batchEl = overlay.querySelector('#acf8-batch-toggle');
+                if (batchEl) ss(SK.ZPL_BATCH_MODE, batchEl.checked ? 'batch' : 'sequential');
+                /* Save layout coords */
+                const layoutEd = overlay.querySelector('#acf8-layout-editor');
+                if (layoutEd) {
+                    const layout = getLabelLayout();
+                    layoutEd.querySelectorAll('input[data-lk]').forEach(inp => {
+                        const k = inp.dataset.lk;
+                        const p = inp.dataset.lp;
+                        if (!layout[k]) layout[k] = {};
+                        layout[k][p] = parseInt(inp.value) || 0;
+                    });
+                    saveLabelLayout(layout);
+                }
                 const key = overlay.querySelector('#acf8-ac-type-sel')?.value || acCfg.key;
                 const cfgs = getAcConfigs();
-                if (cfgs[key]) { 
-                    cfgs[key].items = [...acItems]; 
-                    saveAcConfigs(cfgs); 
+                if (cfgs[key]) {
+                    cfgs[key].items = [...acItems];
+                    saveAcConfigs(cfgs);
                 }
                 toast('Settings saved ✔', 'success');
                 schedulePreview();
@@ -1399,13 +1541,13 @@
             }
 
             const printType = overlay.querySelector('#acf8-sel-printtype').value;
-            if (!printType) { 
-                toast('Print Type seçilməlidir!', 'error'); 
-                return; 
+            if (!printType) {
+                toast('Print Type seçilməlidir!', 'error');
+                return;
             }
-            if (!paxData.length) { 
-                toast('Pax data yoxdur', 'error'); 
-                return; 
+            if (!paxData.length) {
+                toast('Pax data yoxdur', 'error');
+                return;
             }
 
             const galley = overlay.querySelector('#acf8-sel-galley').value || 'Galley 1';
@@ -1429,9 +1571,9 @@
                 return;
             }
 
-            if (!IP_REGEX.test(ip)) { 
-                toast('Əvvəlcə Settings-də Printer IP daxil edin', 'error'); 
-                return; 
+            if (!IP_REGEX.test(ip)) {
+                toast('Əvvəlcə Settings-də Printer IP daxil edin', 'error');
+                return;
             }
 
             const printCls2 = getPrintClasses(paxData);
@@ -1452,35 +1594,53 @@
                 }
             }
 
-            if (!zplList.length) { 
-                toast('Göndəriləcək label yoxdur', 'error'); 
-                return; 
+            if (!zplList.length) {
+                toast('Göndəriləcək label yoxdur', 'error');
+                return;
             }
 
             actionBtn.disabled = true;
             let sent = 0;
             let failed = 0;
 
-            function sendNext() {
-                if (sent + failed >= zplList.length) {
-                    actionBtn.disabled = false;
-                    if (failed === 0) {
-                        toast(`✓ ${sent}/${zplList.length} label ZT411-ə göndərildi (${ip})`, 'success');
+            const useBatch = gs(SK.ZPL_BATCH_MODE, 'sequential') === 'batch';
+
+            if (useBatch) {
+                ftrStatus.textContent = `Batch göndərilir: ${zplList.length} label…`;
+                sendZplBatch(ip, zplList,
+                    (count) => {
+                        actionBtn.disabled = false;
+                        toast(`✓ ${count} label batch ZT411-ə göndərildi (${ip})`, 'success');
                         close();
-                    } else {
-                        ftrStatus.textContent = `${sent} ok, ${failed} xəta`;
-                        toast(`${failed} label göndərilmədi`, 'error');
+                    },
+                    (err) => {
+                        actionBtn.disabled = false;
+                        ftrStatus.textContent = `Batch xəta: ${err}`;
+                        toast(`Batch göndərmə uğursuz: ${err}`, 'error');
                     }
-                    return;
-                }
-                const idx = sent + failed;
-                ftrStatus.textContent = `Göndərilir: ${idx + 1} / ${zplList.length}…`;
-                sendZplToZebra(ip, zplList[idx],
-                    () => { sent++; sendNext(); },
-                    (err) => { failed++; console.warn('ZPL err:', err); sendNext(); }
                 );
+            } else {
+                function sendNext() {
+                    if (sent + failed >= zplList.length) {
+                        actionBtn.disabled = false;
+                        if (failed === 0) {
+                            toast(`✓ ${sent}/${zplList.length} label ZT411-ə göndərildi (${ip})`, 'success');
+                            close();
+                        } else {
+                            ftrStatus.textContent = `${sent} ok, ${failed} xəta`;
+                            toast(`${failed} label göndərilmədi`, 'error');
+                        }
+                        return;
+                    }
+                    const idx = sent + failed;
+                    ftrStatus.textContent = `Göndərilir: ${idx + 1} / ${zplList.length}…`;
+                    sendZplToZebra(ip, zplList[idx],
+                        () => { sent++; sendNext(); },
+                        (err) => { failed++; console.warn('ZPL err:', err); sendNext(); }
+                    );
+                }
+                sendNext();
             }
-            sendNext();
         };
 
         schedulePreview();
@@ -1490,6 +1650,7 @@
        15. MAIN - BATCH PRINT FIXED
     ============================================ */
     setTimeout(() => {
+        checkForUpdates(false);
         const table = document.querySelector('table.acf-grid-common') || document.getElementById('ctl00_CphMaster_gdvList');
         if (!table) return;
 
@@ -1688,14 +1849,14 @@
             bModal.querySelector('#acf8-bm-start').onclick = async () => {
                 const ip = gs(SK.PRINTER_IP, '');
                 if (bmMethod === 'network' && !IP_REGEX.test(ip)) {
-                    toast('Settings-də Printer IP təyin edin', 'error'); 
+                    toast('Settings-də Printer IP təyin edin', 'error');
                     return;
                 }
-                
+
                 const acKey2 = bModal.querySelector('#acf8-bm-ac').value;
                 const bmQR = bModal.querySelector('#acf8-bm-qr').checked ? 'on' : 'off';
                 ss(SK.QR_CODE, bmQR);
-                
+
                 const acCfg2 = (getAcConfigs())[acKey2] || getSelectedAcConfig();
                 const acItems2 = [...(acCfg2.items || [])];
                 const acItemQtys2 = acItems2.map(() => 1);
@@ -1711,11 +1872,11 @@
                     try {
                         const origClass = printBtn.className;
                         printBtn.classList.add('loading');
-                        const paxData = await fetchPaxForFlight(editBtn); 
-                        flightData.paxData = paxData;                      
+                        const paxData = await fetchPaxForFlight(editBtn);
+                        flightData.paxData = paxData;
                         printBtn.className = origClass;
-                    } catch (ex) { 
-                        console.warn(ex); 
+                    } catch (ex) {
+                        console.warn(ex);
                         flightData.paxData = [];
                     }
                     fetched++;
@@ -1727,7 +1888,7 @@
                     const pw = window.open('', '_blank', 'width=800,height=900');
                     let allCards = '';
                     let hasCards = false;
-                    
+
                     for (const { flightData: fd2 } of selected) {
                         const cards = buildBatchBrowserCards(fd2, fd2.paxData || [], acItems2, acItemQtys2);
                         if (cards && cards.trim() !== '') {
@@ -1735,15 +1896,15 @@
                             hasCards = true;
                         }
                     }
-                    
+
                     if (!hasCards) {
                         toast('Heç bir label yaradılmadı! Pax məlumatlarını yoxlayın.', 'error');
-                        startBtn.disabled = false; 
-                        batchBtn.disabled = false; 
-                        updateBatchBtn(); 
+                        startBtn.disabled = false;
+                        batchBtn.disabled = false;
+                        updateBatchBtn();
                         return;
                     }
-                    
+
                     pw.document.write(`<!DOCTYPE html>
                     <html>
                     <head>
@@ -1773,14 +1934,14 @@
                         <div class="wrap">${allCards}</div>
                     </body>
                     </html>`);
-                    
+
                     pw.document.close();
                     toast(`✓ ${selected.length} uçuş üçün browser print açıldı`, 'success');
                     closeModal();
                     selectedRows.clear();
-                    batchBtn.disabled = false; 
+                    batchBtn.disabled = false;
                     updateBatchBtn();
-                    
+
                 } else {
                     const zplList = [];
                     for (const { flightData: fd2 } of selected) {
@@ -1796,31 +1957,44 @@
                             }
                         }
                     }
-                    
+
                     if (!zplList.length) {
                         toast('Göndəriləcək label yoxdur', 'error');
-                        startBtn.disabled = false; 
-                        batchBtn.disabled = false; 
-                        updateBatchBtn(); 
+                        startBtn.disabled = false;
+                        batchBtn.disabled = false;
+                        updateBatchBtn();
                         return;
                     }
-                    
-                    let sent2 = 0, fail2 = 0;
-                    function batchSendNext() {
-                        if (sent2 + fail2 >= zplList.length) {
-                            batchBtn.disabled = false; 
-                            updateBatchBtn();
-                            toast(`✓ ${sent2}/${zplList.length} label ZT411-ə göndərildi`, 'success');
-                            selectedRows.clear();
-                            closeModal(); 
-                            return;
+
+                    const useBatch2 = gs(SK.ZPL_BATCH_MODE, 'sequential') === 'batch';
+                    if (useBatch2) {
+                        statusEl.textContent = `Batch göndərilir: ${zplList.length} label…`;
+                        sendZplBatch(ip, zplList,
+                            (count) => {
+                                batchBtn.disabled = false; updateBatchBtn();
+                                toast(`✓ ${count} label batch ZT411-ə göndərildi`, 'success');
+                                selectedRows.clear(); closeModal();
+                            },
+                            (err) => {
+                                batchBtn.disabled = false; updateBatchBtn();
+                                toast(`Batch xəta: ${err}`, 'error');
+                            }
+                        );
+                    } else {
+                        let sent2 = 0, fail2 = 0;
+                        function batchSendNext() {
+                            if (sent2 + fail2 >= zplList.length) {
+                                batchBtn.disabled = false; updateBatchBtn();
+                                toast(`✓ ${sent2}/${zplList.length} label ZT411-ə göndərildi`, 'success');
+                                selectedRows.clear(); closeModal(); return;
+                            }
+                            statusEl.textContent = `🖨 ${sent2 + fail2 + 1} / ${zplList.length} göndərilir…`;
+                            sendZplToZebra(ip, zplList[sent2 + fail2],
+                                () => { sent2++; batchSendNext(); },
+                                () => { fail2++; batchSendNext(); });
                         }
-                        statusEl.textContent = `🖨 ${sent2 + fail2 + 1} / ${zplList.length} göndərilir…`;
-                        sendZplToZebra(ip, zplList[sent2 + fail2],
-                            () => { sent2++; batchSendNext(); },
-                            () => { fail2++; batchSendNext(); });
+                        batchSendNext();
                     }
-                    batchSendNext();
                 }
             };
         };
