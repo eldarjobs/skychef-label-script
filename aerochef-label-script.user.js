@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V11.0)
 // @namespace    http://tampermonkey.net/
-// @version      11.8
+// @version      11.9
 // @description  V11: Custom colors, auto-update, batch ZPL, label layout editor, version check
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
