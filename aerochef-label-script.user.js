@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V9)
 // @namespace    http://tampermonkey.net/
-// @version      9.9
+// @version      10
 // @description  Local HTML preview, aircraft-type items config (Meals/Beverages/Breads), Zebra ZT411 ZPL print.
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -1512,150 +1512,232 @@
             row.insertBefore(cbTd, printTd);
         });
 
-        /* ── Batch print action ── */
-        batchBtn.onclick = async () => {
+        /* ── Batch print action – opens settings modal first ── */
+        batchBtn.onclick = () => {
             if (!selectedRows.size) return;
             const selected = [...selectedRows.values()];
-            const method = gs(SK.PRINT_METHOD, 'network');
-            const ip = gs(SK.PRINTER_IP, '');
+            const acCfgs = getAcConfigs();
+            const curAcKey = gs(SK.AC_TYPE, Object.keys(acCfgs)[0]);
+            const curMethod = gs(SK.PRINT_METHOD, 'network');
+            const curIp = gs(SK.PRINTER_IP, '');
+            const galleys = getGalleys();
 
-            if (method === 'network' && !IP_REGEX.test(ip)) {
-                toast('Settings-də Printer IP təyin edin', 'error'); return;
-            }
+            // Build flight summary chips
+            const flightChips = selected.map(({ flightData: fd2 }) =>
+                `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;font-size:11px;font-weight:600;color:#1e3a8a;">${fd2.flightNo || '?'} <span style="color:#6b7280;font-weight:400;">${fd2.route || ''} ${fd2.date || ''}</span></span>`
+            ).join('');
 
-            batchBtn.disabled = true;
-            batchBtn.textContent = `⏳ 0 / ${selected.length} hazırlanır…`;
+            // Modal HTML
+            const bModal = document.createElement('div');
+            bModal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2147483647;display:flex;align-items:center;justify-content:center;animation:acf8fi .15s ease;';
+            bModal.innerHTML = `
+            <div style="background:#fff;border-radius:12px;width:480px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;">
+              <!-- Header -->
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #e5e7eb;">
+                <div>
+                  <div style="font-size:15px;font-weight:700;color:#111;">🖨 Batch Print</div>
+                  <div style="font-size:11px;color:#6b7280;margin-top:2px;">${selected.length} uçuş seçilib</div>
+                </div>
+                <button id="acf8-bm-close" style="background:none;border:none;font-size:22px;cursor:pointer;color:#9ca3af;line-height:1;">&times;</button>
+              </div>
+              <!-- Flight list -->
+              <div style="padding:12px 18px;border-bottom:1px solid #e5e7eb;">
+                <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Seçilmiş uçuşlar</div>
+                <div style="display:flex;flex-wrap:wrap;gap:5px;">${flightChips}</div>
+              </div>
+              <!-- Settings -->
+              <div style="padding:14px 18px;display:flex;flex-direction:column;gap:12px;">
+                <!-- AC Config -->
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Aircraft Config</label>
+                  <select id="acf8-bm-ac" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;color:#374151;">
+                    ${Object.entries(acCfgs).map(([k, c]) => `<option value="${k}"${k === curAcKey ? ' selected' : ''}>${k} – ${c.label}</option>`).join('')}
+                  </select>
+                </div>
+                <!-- Galley -->
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Galley</label>
+                  <select id="acf8-bm-galley" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;color:#374151;">
+                    ${galleys.map(g => `<option value="${g}"${g === gs(SK.GALLEY, galleys[0]) ? ' selected' : ''}>${g}</option>`).join('')}
+                  </select>
+                </div>
+                <!-- Print Method -->
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Print Method</label>
+                  <div style="display:flex;gap:6px;">
+                    <button class="acf8-bm-meth${curMethod === 'network' ? ' acf8-bm-active' : ''}" data-m="network" style="flex:1;padding:7px;border-radius:6px;font-size:11px;font-weight:600;border:1.5px solid ${curMethod === 'network' ? '#2563eb' : '#e5e7eb'};background:${curMethod === 'network' ? '#eff6ff' : '#fff'};color:${curMethod === 'network' ? '#2563eb' : '#6b7280'};cursor:pointer;">🌐 Network ZPL</button>
+                    <button class="acf8-bm-meth${curMethod === 'browser' ? ' acf8-bm-active' : ''}" data-m="browser" style="flex:1;padding:7px;border-radius:6px;font-size:11px;font-weight:600;border:1.5px solid ${curMethod === 'browser' ? '#2563eb' : '#e5e7eb'};background:${curMethod === 'browser' ? '#eff6ff' : '#fff'};color:${curMethod === 'browser' ? '#2563eb' : '#6b7280'};cursor:pointer;">🖨 Browser Print</button>
+                  </div>
+                </div>
+                <!-- QR -->
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                  <label style="font-size:11px;font-weight:600;color:#374151;">📷 ZPL QR Kod</label>
+                  <label style="position:relative;display:inline-block;width:36px;height:20px;">
+                    <input type="checkbox" id="acf8-bm-qr" ${gs(SK.QR_CODE, 'off') === 'on' ? 'checked' : ''} style="opacity:0;width:0;height:0;">
+                    <span id="acf8-bm-qr-knob" style="position:absolute;cursor:pointer;inset:0;background:${gs(SK.QR_CODE, 'off') === 'on' ? '#2563eb' : '#d1d5db'};border-radius:20px;transition:.2s;"
+                      onclick="const c=this.previousElementSibling;c.checked=!c.checked;this.style.background=c.checked?'#2563eb':'#d1d5db'"></span>
+                  </label>
+                </div>
+                <!-- Status -->
+                <div id="acf8-bm-status" style="font-size:11px;color:#6b7280;min-height:16px;"></div>
+              </div>
+              <!-- Footer -->
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid #e5e7eb;">
+                <button id="acf8-bm-cancel" style="padding:7px 16px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;font-size:12px;cursor:pointer;color:#6b7280;font-weight:600;">İptal</button>
+                <button id="acf8-bm-start" style="padding:7px 18px;border:none;border-radius:6px;background:#1a73e8;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Çap başlat (${selected.length} uçuş)</button>
+              </div>
+            </div>`;
+            document.body.appendChild(bModal);
 
-            // Fetch pax for each row sequentially and collect all labels
-            const allZpl = [];
-            const allBrowserItems = [];  // {flightData, paxData, items}
-            let fetched = 0;
-
-            for (const { editBtn, printBtn, flightData } of selected) {
-                batchBtn.textContent = `⏳ ${fetched + 1} / ${selected.length} PAX yüklənir…`;
-                try {
-                    await new Promise((resolve) => {
-                        // Temporarily override fetchAndShowPax for silent fetch
-                        const origClass = printBtn.className;
-                        printBtn.classList.add('loading');
-                        // Build iframe to get pax data silently
-                        const iframeName = 'acf8_batch_' + Math.random().toString(36).slice(2);
-                        const ifrm = document.createElement('iframe');
-                        ifrm.name = iframeName;
-                        ifrm.style.display = 'none';
-                        document.body.appendChild(ifrm);
-
-                        const form = document.querySelector('form');
-                        if (!form) { resolve(); return; }
-                        const fd = new FormData(form);
-                        fd.set('__EVENTTARGET', '');
-                        fd.set('__EVENTARGUMENT', '');
-                        const href = editBtn.getAttribute('href') || '';
-                        const m = href.match(/__doPostBack\(['"](.*?)['"]/);
-                        if (m?.[1]) fd.set('__EVENTTARGET', m[1]);
-
-                        const tempForm = document.createElement('form');
-                        tempForm.method = 'POST';
-                        tempForm.action = window.location.href;
-                        tempForm.target = iframeName;
-                        for (const [k, v] of fd.entries()) {
-                            const inp = document.createElement('input'); inp.type = 'hidden'; inp.name = k; inp.value = v;
-                            tempForm.appendChild(inp);
-                        }
-                        document.body.appendChild(tempForm);
-                        tempForm.submit();
-
-                        ifrm.onload = () => {
-                            try {
-                                const iDoc = ifrm.contentDocument || ifrm.contentWindow.document;
-                                const paxRows = iDoc.querySelectorAll('table[id*="gdvPax"] tr, table[id*="Pax"] tr, .pax-row, [class*="pax"] tr');
-                                const paxData = [];
-                                paxRows.forEach(tr => {
-                                    const tds = tr.querySelectorAll('td');
-                                    if (tds.length >= 2) {
-                                        const cls = tds[0]?.textContent.trim();
-                                        const val = parseInt(tds[1]?.textContent.trim());
-                                        if (cls && !isNaN(val)) paxData.push({ class: cls, value: val });
-                                    }
-                                });
-                                flightData.paxData = paxData;
-                            } catch (ex) { console.warn('batch pax parse err', ex); }
-                            printBtn.className = origClass;
-                            tempForm.remove();
-                            ifrm.remove();
-                            resolve();
-                        };
-                        // Fallback timeout
-                        setTimeout(() => { tempForm.remove(); ifrm.remove(); resolve(); }, 6000);
+            // Method toggle
+            let bmMethod = curMethod;
+            bModal.querySelectorAll('.acf8-bm-meth').forEach(b => {
+                b.onclick = () => {
+                    bmMethod = b.dataset.m;
+                    bModal.querySelectorAll('.acf8-bm-meth').forEach(x => {
+                        const on = x.dataset.m === bmMethod;
+                        x.style.borderColor = on ? '#2563eb' : '#e5e7eb';
+                        x.style.background = on ? '#eff6ff' : '#fff';
+                        x.style.color = on ? '#2563eb' : '#6b7280';
                     });
-                } catch (ex) { console.warn(ex); }
-                fetched++;
-            }
+                };
+            });
 
-            // Now we have all paxData collected — print
-            batchBtn.textContent = `🖨 Göndərilir…`;
-            const acCfg2 = getSelectedAcConfig();
-            const acItems2 = [...(acCfg2.items || [])];
-            const acItemQtys2 = acItems2.map(() => 1);
+            const closeModal = () => bModal.remove();
+            bModal.querySelector('#acf8-bm-close').onclick = closeModal;
+            bModal.querySelector('#acf8-bm-cancel').onclick = closeModal;
+            bModal.onclick = e => { if (e.target === bModal) closeModal(); };
 
-            if (method === 'browser') {
-                // Open one browser print page with all flights combined
-                const pw = window.open('', '_blank', 'width=800,height=900');
-                let allCards = '';
-                for (const { flightData: fd2 } of selected) {
-                    allCards += buildBatchBrowserCards(fd2, fd2.paxData || [], acItems2, acItemQtys2);
+            // Start button
+            bModal.querySelector('#acf8-bm-start').onclick = async () => {
+                const ip = gs(SK.PRINTER_IP, '');
+                if (bmMethod === 'network' && !IP_REGEX.test(ip)) {
+                    toast('Settings-də Printer IP təyin edin', 'error'); return;
                 }
-                pw.document.write(`<!DOCTYPE html><html><head><title>Batch Labels</title><style>
-                    *{margin:0;padding:0;box-sizing:border-box;}
-                    body{font-family:'Courier New',monospace;padding:10px;background:#e0e7ef;}
-                    .wrap{display:flex;flex-wrap:wrap;gap:10px;}
-                    .lc{width:200px;height:292px;border:2px solid #1e3a8a;border-radius:5px;overflow:hidden;display:flex;flex-direction:column;page-break-inside:avoid;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15);}
-                    .logo-box{border:1.5px solid #1e3a8a;margin:5px 5px 3px;height:62px;overflow:hidden;flex-shrink:0;}
-                    .info{padding:4px 8px;font-size:11px;line-height:1.75;flex-shrink:0;border-bottom:1px solid #c7d2e6;}
-                    .info .lbl{font-size:9px;color:#64748b;}
-                    .item-name{flex:1;display:flex;align-items:center;justify-content:center;padding:6px;text-align:center;font-weight:900;font-style:italic;}
-                    .np{text-align:right;margin-bottom:10px;}
-                    @media print{.np{display:none;}body{background:#fff;}}
-                </style></head><body>
-                <div class="np"><button onclick="window.print()" style="padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">&#128424; Print All</button></div>
-                <div class="wrap">${allCards}</div></body></html>`);
-                pw.document.close();
-                toast(`✓ ${selected.length} uçuş üçün browser print açıldı`, 'success');
-            } else {
-                // ZPL one by one
-                const zplList = [];
-                for (const { flightData: fd2 } of selected) {
-                    const pax2 = fd2.paxData || [];
-                    const cls2 = getPrintClasses(pax2);
-                    for (const cls of cls2) {
-                        const paxCnt = pax2.find(p => p.class === cls)?.value ?? '';
-                        for (let i = 0; i < acItems2.length; i++) {
-                            const qty = acItemQtys2[i] || 1;
-                            for (let c = 0; c < qty; c++) {
-                                zplList.push(buildItemLabelZPL(fd2, acItems2[i], cls, paxCnt));
+                const acKey2 = bModal.querySelector('#acf8-bm-ac').value;
+                const bmQR = bModal.querySelector('#acf8-bm-qr').checked ? 'on' : 'off';
+                // Temporarily apply QR setting
+                ss(SK.QR_CODE, bmQR);
+                const acCfg2 = (getAcConfigs())[acKey2] || getSelectedAcConfig();
+                const acItems2 = [...(acCfg2.items || [])];
+                const acItemQtys2 = acItems2.map(() => 1);
+
+                const startBtn = bModal.querySelector('#acf8-bm-start');
+                const statusEl = bModal.querySelector('#acf8-bm-status');
+                startBtn.disabled = true;
+                batchBtn.disabled = true;
+
+                // Fetch pax for each flight
+                let fetched = 0;
+                for (const { editBtn, printBtn, flightData } of selected) {
+                    statusEl.textContent = `⏳ PAX yüklənir: ${fetched + 1} / ${selected.length}`;
+                    try {
+                        await new Promise(resolve => {
+                            const origClass = printBtn.className;
+                            printBtn.classList.add('loading');
+                            const iframeName = 'acf8_batch_' + Math.random().toString(36).slice(2);
+                            const ifrm = document.createElement('iframe');
+                            ifrm.name = iframeName; ifrm.style.display = 'none';
+                            document.body.appendChild(ifrm);
+                            const form = document.querySelector('form');
+                            if (!form) { resolve(); return; }
+                            const fd = new FormData(form);
+                            fd.set('__EVENTTARGET', ''); fd.set('__EVENTARGUMENT', '');
+                            const href = editBtn.getAttribute('href') || '';
+                            const m2 = href.match(/__doPostBack\(['\"](.*?)['\"]/);
+                            if (m2?.[1]) fd.set('__EVENTTARGET', m2[1]);
+                            const tf = document.createElement('form');
+                            tf.method = 'POST'; tf.action = window.location.href; tf.target = iframeName;
+                            for (const [k, v] of fd.entries()) {
+                                const inp = document.createElement('input');
+                                inp.type = 'hidden'; inp.name = k; inp.value = v; tf.appendChild(inp);
+                            }
+                            document.body.appendChild(tf); tf.submit();
+                            ifrm.onload = () => {
+                                try {
+                                    const iDoc = ifrm.contentDocument || ifrm.contentWindow.document;
+                                    const paxRows = iDoc.querySelectorAll('table[id*="gdvPax"] tr, table[id*="Pax"] tr, .pax-row');
+                                    const paxData = [];
+                                    paxRows.forEach(tr => {
+                                        const tds = tr.querySelectorAll('td');
+                                        if (tds.length >= 2) {
+                                            const cls = tds[0]?.textContent.trim();
+                                            const val = parseInt(tds[1]?.textContent.trim());
+                                            if (cls && !isNaN(val)) paxData.push({ class: cls, value: val });
+                                        }
+                                    });
+                                    flightData.paxData = paxData;
+                                } catch (ex) { console.warn('batch pax err', ex); }
+                                printBtn.className = origClass;
+                                tf.remove(); ifrm.remove(); resolve();
+                            };
+                            setTimeout(() => { tf.remove(); ifrm.remove(); resolve(); }, 6000);
+                        });
+                    } catch (ex) { console.warn(ex); }
+                    fetched++;
+                }
+
+                statusEl.textContent = '🖨 Göndərilir…';
+
+                if (bmMethod === 'browser') {
+                    const pw = window.open('', '_blank', 'width=800,height=900');
+                    let allCards = '';
+                    for (const { flightData: fd2 } of selected) {
+                        allCards += buildBatchBrowserCards(fd2, fd2.paxData || [], acItems2, acItemQtys2);
+                    }
+                    pw.document.write(`<!DOCTYPE html><html><head><title>Batch Labels</title><style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Courier New',monospace;padding:10px;background:#e0e7ef;}
+                        .wrap{display:flex;flex-wrap:wrap;gap:10px;}
+                        .lc{width:200px;height:292px;border:2px solid #1e3a8a;border-radius:5px;overflow:hidden;display:flex;flex-direction:column;page-break-inside:avoid;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15);}
+                        .logo-box{border:1.5px solid #1e3a8a;margin:5px 5px 3px;height:62px;overflow:hidden;flex-shrink:0;}
+                        .info{padding:4px 8px;font-size:11px;line-height:1.75;flex-shrink:0;border-bottom:1px solid #c7d2e6;}
+                        .info .lbl{font-size:9px;color:#64748b;}
+                        .item-name{flex:1;display:flex;align-items:center;justify-content:center;padding:6px;text-align:center;font-weight:900;font-style:italic;}
+                        .np{text-align:right;margin-bottom:10px;}
+                        @media print{.np{display:none;}body{background:#fff;}}
+                    </style></head><body>
+                    <div class="np"><button onclick="window.print()" style="padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">&#128424; Print All</button></div>
+                    <div class="wrap">${allCards}</div></body></html>`);
+                    pw.document.close();
+                    toast(`✓ ${selected.length} uçuş üçün browser print açıldı`, 'success');
+                    closeModal();
+                    batchBtn.disabled = false; updateBatchBtn();
+                } else {
+                    // ZPL one by one
+                    const zplList = [];
+                    for (const { flightData: fd2 } of selected) {
+                        const pax2 = fd2.paxData || [];
+                        const cls2 = getPrintClasses(pax2);
+                        for (const cls of cls2) {
+                            const paxCnt = pax2.find(p => p.class === cls)?.value ?? '';
+                            for (let i = 0; i < acItems2.length; i++) {
+                                const qty = acItemQtys2[i] || 1;
+                                for (let c = 0; c < qty; c++) {
+                                    zplList.push(buildItemLabelZPL(fd2, acItems2[i], cls, paxCnt));
+                                }
                             }
                         }
                     }
-                }
-                if (!zplList.length) { toast('Göndəriləcək label yoxdur', 'error'); batchBtn.disabled = false; updateBatchBtn(); return; }
-                let sent2 = 0, fail2 = 0;
-                function batchSendNext() {
-                    if (sent2 + fail2 >= zplList.length) {
-                        batchBtn.disabled = false;
-                        updateBatchBtn();
-                        toast(`✓ ${sent2}/${zplList.length} label ZT411-ə göndərildi`, 'success');
-                        return;
+                    if (!zplList.length) {
+                        toast('Göndəriləcək label yoxdur', 'error');
+                        startBtn.disabled = false; batchBtn.disabled = false; updateBatchBtn(); return;
                     }
-                    batchBtn.textContent = `🖨 ${sent2 + fail2 + 1}/${zplList.length} göndərilir…`;
-                    sendZplToZebra(ip, zplList[sent2 + fail2],
-                        () => { sent2++; batchSendNext(); },
-                        () => { fail2++; batchSendNext(); });
+                    let sent2 = 0, fail2 = 0;
+                    function batchSendNext() {
+                        if (sent2 + fail2 >= zplList.length) {
+                            batchBtn.disabled = false; updateBatchBtn();
+                            toast(`✓ ${sent2}/${zplList.length} label ZT411-ə göndərildi`, 'success');
+                            closeModal(); return;
+                        }
+                        statusEl.textContent = `🖨 ${sent2 + fail2 + 1} / ${zplList.length} göndərilir…`;
+                        sendZplToZebra(ip, zplList[sent2 + fail2],
+                            () => { sent2++; batchSendNext(); },
+                            () => { fail2++; batchSendNext(); });
+                    }
+                    batchSendNext();
                 }
-                batchSendNext();
-                return;
-            }
-            batchBtn.disabled = false;
-            updateBatchBtn();
+            };
         };
 
     }, 2000);
