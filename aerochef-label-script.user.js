@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V11.0)
 // @namespace    http://tampermonkey.net/
-// @version      11.4
+// @version      11.5
 // @description  V11: Custom colors, auto-update, batch ZPL, label layout editor, version check
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -249,299 +249,919 @@
     }
 
     /* ============================================
-       7. CSS STYLES
+       7. COMPLETELY REDESIGNED CSS
     ============================================ */
     const style = document.createElement('style');
     style.textContent = `
-    /* ── Design Tokens – Premium Light ── */
-    :root {
-      --acf-primary: #2563eb;
-      --acf-primary-hover: #1d4ed8;
-      --acf-primary-light: #eef4ff;
-      --acf-primary-border: #bfdbfe;
-      --acf-primary-accent: #1a73e8;
-      --acf-primary-focus: #3b82f6;
-      --acf-primary-disabled: #93c5fd;
-      --acf-gradient: linear-gradient(135deg,#2563eb 0%,#7c3aed 50%,#06b6d4 100%);
-      --acf-gradient-btn: linear-gradient(135deg,#2563eb,#4f46e5);
-      --acf-gradient-flight: linear-gradient(135deg,#1e3a8a 0%,#312e81 100%);
-
-      --acf-success: #10b981;
-      --acf-success-hover: #059669;
-      --acf-success-text: #16a34a;
-      --acf-danger: #ef4444;
-      --acf-danger-dark: #dc2626;
-      --acf-danger-bg: #fef2f2;
-      --acf-warning: #f59e0b;
-      --acf-purple: #7c3aed;
-      --acf-purple-deep: #4f46e5;
-      --acf-teal: #0f766e;
-      --acf-cyan: #06b6d4;
-
-      --acf-bg: #ffffff;
-      --acf-bg-subtle: #f8fafc;
-      --acf-bg-muted: #f1f5f9;
-      --acf-bg-glass: rgba(255,255,255,.72);
-      --acf-bg-preview: #f0f4ff;
-      --acf-bg-footer: rgba(248,250,252,.95);
-      --acf-border: #e2e8f0;
-      --acf-border-input: rgba(148,163,184,.35);
-      --acf-text: #0f172a;
-      --acf-text-secondary: #334155;
-      --acf-text-muted: #64748b;
-      --acf-text-dim: #94a3b8;
-      --acf-text-faint: #cbd5e1;
-
-      --acf-navy: #1e3a8a;
-      --acf-navy-light: #3b82f6;
-      --acf-red-label: #cc1f1f;
-      --acf-red-border: #991b1b;
-
-      --acf-font: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-      --acf-font-mono: 'Courier New', monospace;
-      --acf-fs-2xs: 9px;
-      --acf-fs-xs: 10px;
-      --acf-fs-sm: 11px;
-      --acf-fs-base: 12px;
-      --acf-fs-md: 13px;
-      --acf-fs-lg: 14px;
-      --acf-fs-xl: 16px;
-
-      --acf-radius: 8px;
-      --acf-radius-md: 10px;
-      --acf-radius-lg: 12px;
-      --acf-radius-xl: 16px;
-      --acf-radius-pill: 100px;
-      --acf-radius-round: 50%;
-
-      --acf-shadow-modal: 0 25px 60px -12px rgba(0,0,0,.25), 0 0 0 1px rgba(0,0,0,.03);
-      --acf-shadow-card: 0 4px 20px rgba(37,99,235,.12);
-      --acf-shadow-btn: 0 4px 14px rgba(37,99,235,.35);
-      --acf-shadow-btn-hover: 0 6px 24px rgba(37,99,235,.45);
-      --acf-shadow-batch: 0 25px 65px rgba(0,0,0,.28);
-      --acf-shadow-glow: 0 0 20px rgba(59,130,246,.18);
-      --acf-focus-ring: 0 0 0 3px rgba(59,130,246,.18);
-      --acf-focus-ring-strong: 0 0 0 3px rgba(59,130,246,.25);
+    /* === MODERN REDESIGNED AEROCHEF LABEL STYLES === */
+    
+    /* Base & Reset */
+    .acf8-modal *,
+    .acf8-bm-dialog * {
+        box-sizing: border-box;
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     }
 
-    /* ── Animations ── */
-    @keyframes acf8fi  { from{opacity:0} to{opacity:1} }
-    @keyframes acf8su  { from{transform:scale(.97) translateY(-8px);opacity:0} to{transform:scale(1) translateY(0);opacity:1} }
-    @keyframes acf8spin{ to{transform:rotate(360deg)} }
-    @keyframes acf8glow{ 0%,100%{box-shadow:0 0 12px rgba(37,99,235,.2)} 50%{box-shadow:0 0 24px rgba(37,99,235,.4)} }
-    @keyframes acf8slideIn{ from{transform:translateX(-8px);opacity:0} to{transform:translateX(0);opacity:1} }
+    /* Animations */
+    @keyframes acf8-fade-in { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes acf8-slide-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes acf8-spin { to { transform: rotate(360deg); } }
+    @keyframes acf8-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-    /* ── Reusable Utilities ── */
-    .acf8-row{display:flex;align-items:center;gap:6px;}
-    .acf8-stack{display:flex;flex-direction:column;gap:4px;}
-    .acf8-label-text{font-size:var(--acf-fs-xs);font-weight:700;color:var(--acf-text-muted);text-transform:uppercase;letter-spacing:.5px;}
-    .acf8-input{padding:5px 8px;border:1px solid var(--acf-border-input);border-radius:var(--acf-radius);font-size:var(--acf-fs-base);color:var(--acf-text-secondary);background:var(--acf-bg);outline:none;transition:border-color .15s;width:100%;}
-    .acf8-input:focus{border-color:var(--acf-primary-focus);box-shadow:var(--acf-focus-ring);}
-    .acf8-input-sm{padding:4px 7px;border:1px solid var(--acf-border-input);border-radius:4px;font-size:var(--acf-fs-sm);color:var(--acf-text-secondary);background:var(--acf-bg);outline:none;}
-    .acf8-input-sm:focus{border-color:var(--acf-primary-focus);box-shadow:var(--acf-focus-ring);}
-    .acf8-btn-sm{padding:4px 10px;border:none;border-radius:4px;font-size:var(--acf-fs-sm);font-weight:700;cursor:pointer;white-space:nowrap;color:#fff;}
-    .acf8-btn-sm.primary{background:var(--acf-primary);}
-    .acf8-btn-sm.primary:hover{background:var(--acf-primary-hover);}
-    .acf8-btn-sm.success{background:var(--acf-success);}
-    .acf8-btn-sm.success:hover{background:var(--acf-success-hover);}
-    .acf8-btn-sm.purple{background:var(--acf-purple);}
-    .acf8-btn-sm.teal{background:var(--acf-teal);}
-    .acf8-btn-sm.indigo{background:var(--acf-purple-deep);}
-    .acf8-btn-action{padding:5px 12px;border:none;border-radius:var(--acf-radius);font-size:var(--acf-fs-base);font-weight:600;cursor:pointer;color:#fff;background:var(--acf-primary);}
-    .acf8-btn-action:hover{background:var(--acf-primary-hover);}
-    .acf8-badge{background:var(--acf-navy);color:#fff;padding:2px 10px;border-radius:var(--acf-radius-xl);font-size:var(--acf-fs-sm);font-weight:700;}
-    .acf8-badge-sm{background:var(--acf-navy);color:#fff;padding:1px 8px;border-radius:var(--acf-radius-lg);font-size:var(--acf-fs-xs);font-weight:700;}
-    .acf8-divider{border-top:1px solid var(--acf-border);padding-top:10px;}
-    .acf8-divider-dashed{border-top:1px dashed var(--acf-border);padding-top:6px;}
-    .acf8-delete-btn{background:none;border:none;color:var(--acf-danger);cursor:pointer;font-size:13px;line-height:1;}
-    .acf8-delete-btn:hover{color:var(--acf-danger-dark);}
-    .acf8-list-row{display:flex;align-items:center;gap:6px;padding:3px 6px;background:var(--acf-bg-subtle);border-radius:var(--acf-radius);font-size:var(--acf-fs-base);}
+    /* Overlay */
+    .acf8-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2147483647;
+        animation: acf8-fade-in 0.2s ease;
+    }
+
+    /* Main Modal */
+    .acf8-modal {
+        background: #ffffff;
+        border-radius: 20px;
+        width: 900px;
+        max-width: 96vw;
+        max-height: 90vh;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: acf8-slide-up 0.3s ease;
+    }
+
+    /* Header */
+    .acf8-hdr {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 24px;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .acf8-hdr-left {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .acf8-hdr-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #0f172a;
+        letter-spacing: -0.5px;
+    }
+
+    /* Tabs */
+    .acf8-tabs {
+        display: flex;
+        gap: 4px;
+    }
+
+    .acf8-tab {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: transparent;
+        border: none;
+        border-radius: 30px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .acf8-tab svg {
+        width: 18px;
+        height: 18px;
+        fill: currentColor;
+    }
+
+    .acf8-tab:hover {
+        background: #e2e8f0;
+        color: #334155;
+    }
+
+    .acf8-tab.active {
+        background: #2563eb;
+        color: #ffffff;
+    }
+
+    .acf8-close {
+        width: 36px;
+        height: 36px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 18px;
+        font-size: 20px;
+        color: #64748b;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+
+    .acf8-close:hover {
+        background: #fee2e2;
+        border-color: #fecaca;
+        color: #dc2626;
+    }
+
+    /* Panels */
+    .acf8-panel {
+        display: none;
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px;
+    }
+
+    .acf8-panel.active {
+        display: block;
+        animation: acf8-fade-in 0.2s ease;
+    }
+
+    /* Flight Bar */
+    .acf8-flight-bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 20px;
+        background: linear-gradient(135deg, #1e293b, #0f172a);
+        border-radius: 14px;
+        margin-bottom: 20px;
+        color: white;
+    }
+
+    .acf8-flight-bar svg {
+        width: 24px;
+        height: 24px;
+        fill: rgba(255, 255, 255, 0.9);
+    }
+
+    .acf8-fb-route {
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .acf8-fb-flight {
+        font-size: 14px;
+        font-weight: 500;
+        opacity: 0.8;
+    }
+
+    .acf8-fb-date {
+        font-size: 13px;
+        opacity: 0.6;
+    }
+
+    .acf8-fb-order {
+        margin-left: auto;
+        font-size: 13px;
+        opacity: 0.5;
+    }
+
+    /* Print Body Layout */
+    .acf8-print-body {
+        display: flex;
+        gap: 24px;
+    }
+
+    .acf8-print-form {
+        flex: 0 0 280px;
+    }
+
+    .acf8-preview-col {
+        flex: 1;
+    }
+
+    /* Form Groups */
+    .acf8-fg {
+        margin-bottom: 16px;
+    }
+
+    .acf8-fg label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .acf8-fg .req {
+        color: #dc2626;
+    }
+
+    .acf8-fg select,
+    .acf8-fg input[type="text"],
+    .acf8-fg input[type="number"] {
+        width: 100%;
+        padding: 10px 12px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 14px;
+        color: #0f172a;
+        transition: all 0.2s;
+    }
+
+    .acf8-fg select:hover,
+    .acf8-fg input:hover {
+        background: #ffffff;
+        border-color: #94a3b8;
+    }
+
+    .acf8-fg select:focus,
+    .acf8-fg input:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        background: #ffffff;
+    }
+
+    /* Item Quantity List */
+    #acf8-item-qtys-list {
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 8px;
+        max-height: 150px;
+        overflow-y: auto;
+    }
+
+    #acf8-item-qtys-list > div {
+        padding: 6px 8px;
+        border-radius: 6px;
+        transition: background 0.2s;
+    }
+
+    #acf8-item-qtys-list > div:hover {
+        background: #ffffff;
+    }
+
+    #acf8-item-qtys-list button {
+        width: 28px;
+        height: 28px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        background: #ffffff;
+        color: #475569;
+        font-size: 16px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+
+    #acf8-item-qtys-list button:hover {
+        background: #2563eb;
+        border-color: #2563eb;
+        color: #ffffff;
+    }
+
+    /* Chips (Pax Classes) */
+    .acf8-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .acf8-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 30px;
+        font-size: 13px;
+        font-weight: 600;
+        color: white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .acf8-chip-v {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 2px 6px;
+        border-radius: 20px;
+        font-size: 11px;
+    }
+
+    /* Preview Box */
+    .acf8-preview-box {
+        background: #ffffff;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px;
+        min-height: 300px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+    }
+
+    /* Settings Grid */
+    .acf8-settings-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+
+    .acf8-settings-grid .full {
+        grid-column: span 2;
+    }
+
+    /* Method Buttons */
+    .acf8-method-row {
+        display: flex;
+        gap: 8px;
+    }
+
+    .acf8-method-btn {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #f8fafc;
+        font-size: 13px;
+        font-weight: 600;
+        color: #475569;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .acf8-method-btn:hover {
+        background: #ffffff;
+        border-color: #94a3b8;
+    }
+
+    .acf8-method-btn.active {
+        background: #2563eb;
+        border-color: #2563eb;
+        color: #ffffff;
+    }
+
+    /* IP Row */
+    .acf8-ip-row {
+        display: flex;
+        gap: 8px;
+    }
+
+    .acf8-ip-row input {
+        flex: 1;
+    }
+
+    .acf8-ip-btn {
+        padding: 10px 16px;
+        background: #10b981;
+        border: none;
+        border-radius: 10px;
+        color: white;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .acf8-ip-btn:hover {
+        background: #059669;
+    }
+
+    .acf8-ip-status {
+        font-size: 12px;
+        margin-top: 4px;
+    }
+
+    .acf8-ip-status.ok { color: #10b981; }
+    .acf8-ip-status.err { color: #dc2626; }
+
+    /* Galley List */
+    .acf8-galley-list {
+        max-height: 120px;
+        overflow-y: auto;
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 8px;
+    }
+
+    .acf8-galley-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 13px;
+    }
+
+    .acf8-galley-item:hover {
+        background: #ffffff;
+    }
+
+    .acf8-galley-item button {
+        background: none;
+        border: none;
+        color: #94a3b8;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+    .acf8-galley-item button:hover {
+        color: #dc2626;
+    }
+
+    .acf8-galley-add {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .acf8-galley-add button {
+        padding: 8px 16px;
+        background: #2563eb;
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-weight: 600;
+        font-size: 12px;
+        cursor: pointer;
+    }
+
+    /* Aircraft Items */
+    #acf8-ac-items-list {
+        max-height: 150px;
+        overflow-y: auto;
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 8px;
+        margin: 8px 0;
+    }
+
+    #acf8-ac-items-list > div {
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 13px;
+    }
+
+    #acf8-ac-items-list > div:hover {
+        background: #ffffff;
+    }
+
+    #acf8-ac-items-list button {
+        background: none;
+        border: none;
+        color: #94a3b8;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+    #acf8-ac-items-list button:hover {
+        color: #dc2626;
+    }
+
+    /* Layout Editor */
+    .acf8-layout-section {
+        grid-column: span 2;
+        border-top: 1px solid #e2e8f0;
+        padding-top: 20px;
+        margin-top: 10px;
+    }
+
+    .acf8-layout-editor {
+        max-height: 250px;
+        overflow-y: auto;
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 8px;
+    }
+
+    .acf8-layout-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .acf8-layout-row:last-child {
+        border-bottom: none;
+    }
+
+    .acf8-layout-row b {
+        min-width: 80px;
+        font-size: 12px;
+        color: #2563eb;
+    }
+
+    .acf8-layout-lbl {
+        font-size: 11px;
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    .acf8-layout-inp {
+        width: 55px;
+        padding: 5px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 12px;
+        text-align: center;
+    }
+
+    .acf8-layout-inp:focus {
+        outline: none;
+        border-color: #2563eb;
+    }
+
+    .acf8-layout-reset-btn {
+        padding: 6px 12px;
+        background: #ef4444;
+        border: none;
+        border-radius: 6px;
+        color: white;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .acf8-layout-reset-btn:hover {
+        background: #dc2626;
+    }
 
     /* Toggle Switch */
-    .acf8-toggle{position:relative;display:inline-block;width:36px;height:20px;}
-    .acf8-toggle input{opacity:0;width:0;height:0;}
-    .acf8-toggle-knob{position:absolute;cursor:pointer;inset:0;border-radius:var(--acf-radius-pill);transition:.2s;}
-    .acf8-toggle-knob.off{background:var(--acf-border-input);}
-    .acf8-toggle-knob.on{background:var(--acf-primary);}
+    .acf8-toggle {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+    }
 
-    /* Hint / Muted text */
-    .acf8-hint{font-size:var(--acf-fs-2xs);color:var(--acf-text-dim);font-weight:400;}
-    .acf8-muted{font-size:var(--acf-fs-xs);color:var(--acf-text-dim);}
-    .acf8-secondary{font-size:var(--acf-fs-xs);color:var(--acf-text-muted);}
+    .acf8-toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
 
-    /* ── Printer Button ── */
-    .acf8-printer{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;background:none;border:none;border-radius:4px;cursor:pointer;transition:background .15s;padding:0;vertical-align:middle;}
-    .acf8-printer:hover{background:rgba(26,115,232,.1);}
-    .acf8-printer svg{width:18px;height:18px;fill:var(--acf-primary-accent);}
-    .acf8-printer.loading{pointer-events:none;}
-    .acf8-printer.loading svg{fill:var(--acf-warning);}
-    .acf8-printer.error svg{fill:var(--acf-danger-dark)!important;}
+    .acf8-toggle-knob {
+        position: absolute;
+        cursor: pointer;
+        inset: 0;
+        border-radius: 24px;
+        transition: 0.2s;
+    }
 
-    /* ── Overlay & Modal ── */
-    .acf8-overlay{position:fixed;inset:0;background:rgba(15,23,42,.38);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:2147483647;display:flex;align-items:center;justify-content:center;animation:acf8fi .2s ease;}
+    .acf8-toggle-knob.off {
+        background: #cbd5e1;
+    }
 
-    .acf8-modal{background:var(--acf-bg);border-radius:var(--acf-radius-xl);width:820px;max-width:96vw;max-height:92vh;box-shadow:var(--acf-shadow-modal);display:flex;flex-direction:column;overflow:hidden;animation:acf8su .25s cubic-bezier(.22,1,.36,1);font-family:var(--acf-font);font-size:var(--acf-fs-base);border-top:3px solid transparent;background-clip:padding-box;position:relative;}
-    .acf8-modal::before{content:'';position:absolute;top:-3px;left:0;right:0;height:3px;background:var(--acf-gradient);border-radius:var(--acf-radius-xl) var(--acf-radius-xl) 0 0;}
-    .acf8-modal *{box-sizing:border-box;margin:0;}
+    .acf8-toggle-knob.on {
+        background: #2563eb;
+    }
 
-    /* ── Header ── */
-    .acf8-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 0;border-bottom:1px solid var(--acf-border);flex-shrink:0;background:var(--acf-bg-subtle);}
-    .acf8-hdr-left{display:flex;flex-direction:column;}
-    .acf8-hdr-title{font-size:var(--acf-fs-xl);font-weight:800;color:var(--acf-text);margin-bottom:10px;letter-spacing:-.3px;}
-    .acf8-close{background:none;border:none;font-size:22px;color:var(--acf-text-dim);cursor:pointer;line-height:1;padding:4px 6px;align-self:flex-start;border-radius:var(--acf-radius);transition:all .15s;}
-    .acf8-close:hover{color:var(--acf-danger);background:var(--acf-danger-bg);}
+    .acf8-toggle-knob:before {
+        content: "";
+        position: absolute;
+        height: 20px;
+        width: 20px;
+        left: 2px;
+        bottom: 2px;
+        background: white;
+        border-radius: 50%;
+        transition: 0.2s;
+    }
 
-    /* ── Tabs ── */
-    .acf8-tabs{display:flex;gap:2px;}
-    .acf8-tab{padding:8px 16px;font-size:var(--acf-fs-base);font-weight:600;color:var(--acf-text-muted);border:none;background:none;cursor:pointer;border-bottom:2.5px solid transparent;transition:all .2s;margin-bottom:-1px;display:flex;align-items:center;gap:6px;border-radius:var(--acf-radius) var(--acf-radius) 0 0;}
-    .acf8-tab.active{color:var(--acf-primary);border-bottom-color:var(--acf-primary);background:rgba(37,99,235,.05);}
-    .acf8-tab:hover:not(.active){color:var(--acf-text-secondary);background:rgba(0,0,0,.02);}
-    .acf8-tab svg{width:15px;height:15px;fill:currentColor;}
+    .acf8-toggle input:checked + .acf8-toggle-knob:before {
+        transform: translateX(20px);
+    }
 
-    /* ── Panels ── */
-    .acf8-panel{display:none;flex:1;overflow-y:auto;padding:16px 20px;flex-direction:column;gap:14px;}
-    .acf8-panel.active{display:flex;animation:acf8slideIn .2s ease;}
+    /* Footer */
+    .acf8-ftr {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 24px;
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+    }
 
-    /* ── Flight Bar ── */
-    .acf8-flight-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 16px;background:var(--acf-gradient-flight);border-radius:var(--acf-radius-md);border:none;box-shadow:var(--acf-shadow-card);}
-    .acf8-flight-bar svg{width:18px;height:18px;fill:rgba(255,255,255,.8);flex-shrink:0;}
-    .acf8-fb-route{font-size:var(--acf-fs-xl);font-weight:800;color:#fff;letter-spacing:.5px;}
-    .acf8-fb-flight{font-size:var(--acf-fs-base);font-weight:600;color:rgba(255,255,255,.85);}
-    .acf8-fb-date{font-size:var(--acf-fs-sm);color:rgba(255,255,255,.6);}
-    .acf8-fb-order{font-size:var(--acf-fs-sm);color:rgba(255,255,255,.5);margin-left:auto;}
+    .acf8-ftr-status {
+        font-size: 13px;
+        color: #64748b;
+    }
 
-    /* ── Print Body ── */
-    .acf8-print-body{display:flex;gap:18px;flex:1;min-height:0;}
-    .acf8-print-form{flex:0 0 240px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;padding-right:4px;}
-    .acf8-preview-col{flex:1;display:flex;flex-direction:column;gap:8px;min-width:0;}
+    .acf8-ftr-right {
+        display: flex;
+        gap: 12px;
+    }
 
-    /* ── Form Groups ── */
-    .acf8-fg{display:flex;flex-direction:column;gap:4px;}
-    .acf8-fg label{font-size:var(--acf-fs-xs);font-weight:700;color:var(--acf-text-muted);text-transform:uppercase;letter-spacing:.6px;}
-    .acf8-fg label .req{color:var(--acf-danger);}
-    .acf8-fg select,.acf8-fg input[type=text],.acf8-fg input[type=number]{padding:7px 10px;border:1.5px solid var(--acf-border-input);border-radius:var(--acf-radius);font-size:var(--acf-fs-base);color:var(--acf-text-secondary);background:var(--acf-bg-subtle);outline:none;transition:all .2s;width:100%;}
-    .acf8-fg select:focus,.acf8-fg input:focus{border-color:var(--acf-primary-focus);box-shadow:var(--acf-focus-ring);background:var(--acf-bg);}
-    .acf8-fg select:hover,.acf8-fg input:hover{border-color:var(--acf-primary-border);}
+    .acf8-btn {
+        padding: 10px 24px;
+        border-radius: 30px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+    }
 
-    /* ── Chips ── */
-    .acf8-chips{display:flex;flex-wrap:wrap;gap:6px;}
-    .acf8-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:var(--acf-radius-pill);font-size:var(--acf-fs-sm);font-weight:700;color:#fff;letter-spacing:.2px;box-shadow:0 2px 8px rgba(0,0,0,.15);transition:transform .15s;}
-    .acf8-chip:hover{transform:translateY(-1px);}
-    .acf8-chip-v{opacity:.9;font-weight:500;font-size:var(--acf-fs-sm);}
+    .acf8-btn-cancel {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        color: #475569;
+    }
 
-    /* ── Counter ── */
-    .acf8-counter{display:flex;align-items:center;gap:4px;}
-    .acf8-counter button{width:26px;height:26px;border:1.5px solid var(--acf-border-input);border-radius:var(--acf-radius);background:var(--acf-bg);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--acf-text-secondary);line-height:1;transition:all .15s;}
-    .acf8-counter button:hover{background:var(--acf-primary-light);border-color:var(--acf-primary-border);color:var(--acf-primary);}
-    .acf8-counter input{width:40px;text-align:center;font-size:var(--acf-fs-base);font-weight:600;}
+    .acf8-btn-cancel:hover {
+        background: #f1f5f9;
+    }
 
-    /* ── Preview ── */
-    .acf8-preview-box{flex:1;border:1.5px solid var(--acf-border);border-radius:var(--acf-radius-md);background:var(--acf-bg-preview);display:flex;align-items:center;justify-content:center;min-height:140px;overflow:hidden;position:relative;box-shadow:inset 0 2px 8px rgba(0,0,0,.04);}
-    .acf8-preview-box img{max-width:100%;max-height:100%;object-fit:contain;}
-    .acf8-prev-ph{display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--acf-text-dim);font-size:var(--acf-fs-base);}
-    .acf8-prev-ph svg{width:30px;height:30px;fill:var(--acf-text-faint);}
-    .acf8-spinner{width:26px;height:26px;border:3px solid var(--acf-border);border-top-color:var(--acf-primary);border-radius:var(--acf-radius-round);animation:acf8spin .7s linear infinite;}
+    .acf8-btn-print {
+        background: #2563eb;
+        color: white;
+        box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+    }
 
-    /* ── Settings Grid ── */
-    .acf8-settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px;}
-    .acf8-settings-grid .full{grid-column:1/-1;}
-    .acf8-method-row{display:flex;gap:8px;}
-    .acf8-method-btn{flex:1;padding:8px 10px;border-radius:var(--acf-radius);font-size:var(--acf-fs-sm);font-weight:600;border:1.5px solid var(--acf-border);background:var(--acf-bg);cursor:pointer;color:var(--acf-text-muted);transition:all .2s;}
-    .acf8-method-btn:hover{border-color:var(--acf-primary-border);color:var(--acf-text-secondary);}
-    .acf8-method-btn.active{border-color:var(--acf-primary);color:#fff;background:var(--acf-gradient-btn);box-shadow:var(--acf-shadow-btn);}
-    .acf8-ip-row{display:flex;gap:6px;}
-    .acf8-ip-row input{flex:1;}
-    .acf8-ip-row .acf8-ip-btn{padding:0 12px;border-radius:var(--acf-radius);font-size:var(--acf-fs-sm);font-weight:700;border:none;color:#fff;background:var(--acf-success);cursor:pointer;white-space:nowrap;height:32px;transition:all .15s;}
-    .acf8-ip-row .acf8-ip-btn:hover{background:var(--acf-success-hover);box-shadow:0 2px 8px rgba(16,185,129,.3);}
-    .acf8-ip-status{font-size:var(--acf-fs-xs);margin-top:2px;}
-    .acf8-ip-status.ok{color:var(--acf-success-text);}
-    .acf8-ip-status.err{color:var(--acf-danger-dark);}
+    .acf8-btn-print:hover {
+        background: #1d4ed8;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 10px -1px rgba(37, 99, 235, 0.3);
+    }
 
-    /* ── Galley List ── */
-    .acf8-galley-list{max-height:90px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;margin-bottom:4px;}
-    .acf8-galley-item{display:flex;align-items:center;justify-content:space-between;padding:4px 8px;background:var(--acf-bg-subtle);border-radius:var(--acf-radius);font-size:var(--acf-fs-sm);transition:background .15s;}
-    .acf8-galley-item:hover{background:var(--acf-bg-muted);}
-    .acf8-galley-item button{background:none;border:none;color:var(--acf-danger);cursor:pointer;font-size:13px;line-height:1;transition:color .15s;}
-    .acf8-galley-item button:hover{color:var(--acf-danger-dark);}
-    .acf8-galley-add{display:flex;gap:5px;}
-    .acf8-galley-add input{flex:1;padding:5px 8px;border:1.5px solid var(--acf-border-input);border-radius:var(--acf-radius);font-size:var(--acf-fs-sm);background:var(--acf-bg-subtle);}
-    .acf8-galley-add input:focus{border-color:var(--acf-primary-focus);box-shadow:var(--acf-focus-ring);background:var(--acf-bg);}
-    .acf8-galley-add button{padding:5px 12px;background:var(--acf-gradient-btn);color:#fff;border:none;border-radius:var(--acf-radius);font-size:var(--acf-fs-sm);cursor:pointer;font-weight:700;white-space:nowrap;box-shadow:var(--acf-shadow-btn);transition:all .15s;}
-    .acf8-galley-add button:hover{box-shadow:var(--acf-shadow-btn-hover);}
+    .acf8-btn-save {
+        background: #10b981;
+        color: white;
+        box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
+    }
 
-    /* ── AC Config List ── */
-    .acf8-ac-config-list{max-height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;margin-bottom:4px;}
-    .acf8-ac-config-item{display:flex;align-items:center;justify-content:space-between;padding:4px 8px;background:var(--acf-bg-subtle);border-radius:var(--acf-radius);font-size:var(--acf-fs-sm);transition:background .15s;}
-    .acf8-ac-config-item:hover{background:var(--acf-bg-muted);}
-    .acf8-ac-config-item button{background:none;border:none;color:var(--acf-danger);cursor:pointer;font-size:13px;line-height:1;}
-    .acf8-ac-config-add{display:flex;gap:5px;}
-    .acf8-ac-config-add input{flex:1;padding:5px 8px;border:1.5px solid var(--acf-border-input);border-radius:var(--acf-radius);font-size:var(--acf-fs-sm);background:var(--acf-bg-subtle);}
-    .acf8-ac-config-add input:focus{border-color:var(--acf-primary-focus);box-shadow:var(--acf-focus-ring);background:var(--acf-bg);}
-    .acf8-ac-config-add button{padding:5px 12px;background:var(--acf-gradient-btn);color:#fff;border:none;border-radius:var(--acf-radius);font-size:var(--acf-fs-sm);cursor:pointer;font-weight:700;white-space:nowrap;box-shadow:var(--acf-shadow-btn);transition:all .15s;}
-    .acf8-ac-config-add button:hover{box-shadow:var(--acf-shadow-btn-hover);}
+    .acf8-btn-save:hover {
+        background: #059669;
+        transform: translateY(-1px);
+    }
 
-    /* ── Footer ── */
-    .acf8-ftr{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid var(--acf-border);background:var(--acf-bg-footer);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);flex-shrink:0;}
-    .acf8-ftr-status{font-size:var(--acf-fs-sm);color:var(--acf-text-muted);}
-    .acf8-ftr-right{display:flex;gap:8px;}
-    .acf8-btn{padding:8px 20px;border-radius:var(--acf-radius);font-size:var(--acf-fs-base);font-weight:700;cursor:pointer;border:1.5px solid transparent;transition:all .2s;}
-    .acf8-btn-cancel{background:var(--acf-bg);border-color:var(--acf-border);color:var(--acf-text-secondary);}
-    .acf8-btn-cancel:hover{background:var(--acf-bg-muted);border-color:var(--acf-text-dim);}
-    .acf8-btn-print{background:var(--acf-gradient-btn);color:#fff;border:none;box-shadow:var(--acf-shadow-btn);}
-    .acf8-btn-print:hover{box-shadow:var(--acf-shadow-btn-hover);transform:translateY(-1px);}
-    .acf8-btn-print:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none;}
-    .acf8-btn-save{background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;box-shadow:0 4px 14px rgba(16,185,129,.35);}
-    .acf8-btn-save:hover{box-shadow:0 6px 24px rgba(16,185,129,.45);transform:translateY(-1px);}
+    .acf8-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none !important;
+    }
 
-    /* ── Layout Editor ── */
-    .acf8-layout-section{border-top:1px solid var(--acf-border);padding-top:12px;grid-column:1/-1;}
-    .acf8-layout-section .acf8-ls-title{display:flex;align-items:center;justify-content:space-between;font-size:var(--acf-fs-sm);font-weight:700;color:var(--acf-text-secondary);margin-bottom:8px;}
-    .acf8-layout-section .acf8-ls-title span{color:var(--acf-text-dim);font-weight:400;font-size:var(--acf-fs-2xs);}
-    .acf8-layout-editor{display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;padding:2px 0;}
-    .acf8-layout-row{display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--acf-bg-subtle);border-radius:var(--acf-radius);border:1px solid var(--acf-border);flex-wrap:nowrap;transition:all .15s;}
-    .acf8-layout-row:hover{background:var(--acf-bg-muted);border-color:var(--acf-primary-border);}
-    .acf8-layout-row b{min-width:78px;font-size:var(--acf-fs-xs);color:var(--acf-navy);flex-shrink:0;}
-    .acf8-layout-lbl{font-size:var(--acf-fs-2xs);color:var(--acf-text-dim);font-weight:700;flex-shrink:0;}
-    .acf8-layout-inp{width:48px;padding:4px 5px;border:1.5px solid var(--acf-border-input);border-radius:var(--acf-radius);font-size:var(--acf-fs-sm);color:var(--acf-text-secondary);background:var(--acf-bg);text-align:center;flex-shrink:0;transition:all .15s;}
-    .acf8-layout-inp:focus{border-color:var(--acf-primary-focus);box-shadow:var(--acf-focus-ring-strong);outline:none;}
-    .acf8-layout-reset-btn{padding:4px 12px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:var(--acf-radius);font-size:var(--acf-fs-xs);cursor:pointer;font-weight:600;flex-shrink:0;box-shadow:0 2px 8px rgba(239,68,68,.3);transition:all .15s;}
-    .acf8-layout-reset-btn:hover{box-shadow:0 4px 14px rgba(239,68,68,.4);transform:translateY(-1px);}
+    /* Batch Modal */
+    .acf8-bm-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2147483647;
+    }
 
-    /* ── Batch Modal ── */
-    .acf8-bm-overlay{position:fixed;inset:0;background:rgba(15,23,42,.4);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:2147483647;display:flex;align-items:center;justify-content:center;animation:acf8fi .2s ease;}
-    .acf8-bm-dialog{background:var(--acf-bg);border-radius:var(--acf-radius-xl);width:500px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:var(--acf-shadow-batch);font-family:var(--acf-font);font-size:var(--acf-fs-md);animation:acf8su .25s cubic-bezier(.22,1,.36,1);position:relative;}
-    .acf8-bm-dialog::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--acf-gradient);border-radius:var(--acf-radius-xl) var(--acf-radius-xl) 0 0;}
-    .acf8-bm-dialog *{box-sizing:border-box;margin:0;}
-    .acf8-bm-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--acf-border);}
-    .acf8-bm-title{font-size:var(--acf-fs-xl);font-weight:800;color:var(--acf-text);letter-spacing:-.3px;}
-    .acf8-bm-subtitle{font-size:var(--acf-fs-sm);color:var(--acf-text-muted);margin-top:2px;}
-    .acf8-bm-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--acf-text-dim);line-height:1;padding:4px 6px;border-radius:var(--acf-radius);transition:all .15s;}
-    .acf8-bm-close:hover{color:var(--acf-danger);background:var(--acf-danger-bg);}
-    .acf8-bm-section{padding:14px 20px;border-bottom:1px solid var(--acf-border);}
-    .acf8-bm-body{padding:16px 20px;display:flex;flex-direction:column;gap:14px;}
-    .acf8-bm-footer{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--acf-border);}
-    .acf8-bm-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--acf-primary-light);border:1px solid var(--acf-primary-border);border-radius:var(--acf-radius-pill);font-size:var(--acf-fs-sm);font-weight:600;color:var(--acf-navy);transition:all .15s;}
-    .acf8-bm-chip:hover{background:#dbeafe;transform:translateY(-1px);}
-    .acf8-bm-chip span{color:var(--acf-text-muted);font-weight:400;}
-    .acf8-bm-method-btn{flex:1;padding:8px;border-radius:var(--acf-radius);font-size:var(--acf-fs-sm);font-weight:600;cursor:pointer;transition:all .2s;}
-    .acf8-bm-method-btn.off{border:1.5px solid var(--acf-border);background:var(--acf-bg);color:var(--acf-text-muted);}
-    .acf8-bm-method-btn.off:hover{border-color:var(--acf-primary-border);color:var(--acf-text-secondary);}
-    .acf8-bm-method-btn.on{border:1.5px solid transparent;background:var(--acf-gradient-btn);color:#fff;box-shadow:var(--acf-shadow-btn);}
-    .acf8-bm-cancel{padding:8px 18px;border:1.5px solid var(--acf-border);border-radius:var(--acf-radius);background:var(--acf-bg);font-size:var(--acf-fs-base);cursor:pointer;color:var(--acf-text-muted);font-weight:600;transition:all .15s;}
-    .acf8-bm-cancel:hover{background:var(--acf-bg-muted);border-color:var(--acf-text-dim);}
-    .acf8-bm-start{padding:8px 20px;border:none;border-radius:var(--acf-radius);background:var(--acf-gradient-btn);color:#fff;font-size:var(--acf-fs-base);font-weight:700;cursor:pointer;box-shadow:var(--acf-shadow-btn);transition:all .2s;}
-    .acf8-bm-start:hover{box-shadow:var(--acf-shadow-btn-hover);transform:translateY(-1px);}
-    .acf8-bm-start:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none;}
-    .acf8-bm-status{font-size:var(--acf-fs-sm);color:var(--acf-text-muted);min-height:16px;}
+    .acf8-bm-dialog {
+        background: white;
+        border-radius: 20px;
+        width: 500px;
+        max-width: 96vw;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        animation: acf8-slide-up 0.3s ease;
+        overflow: hidden;
+    }
 
-    /* ── Checkbox ── */
-    .acf8-cb{width:15px;height:15px;cursor:pointer;accent-color:var(--acf-primary);border-radius:3px;}
+    .acf8-bm-header {
+        padding: 20px;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
 
-    /* ── Scrollbar ── */
-    .acf8-modal ::-webkit-scrollbar{width:5px;}
-    .acf8-modal ::-webkit-scrollbar-track{background:transparent;}
-    .acf8-modal ::-webkit-scrollbar-thumb{background:var(--acf-text-faint);border-radius:10px;}
-    .acf8-modal ::-webkit-scrollbar-thumb:hover{background:var(--acf-text-dim);}
+    .acf8-bm-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .acf8-bm-subtitle {
+        font-size: 13px;
+        color: #64748b;
+        margin-top: 4px;
+    }
+
+    .acf8-bm-body {
+        padding: 20px;
+    }
+
+    .acf8-bm-footer {
+        padding: 20px;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+    }
+
+    .acf8-bm-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: #eef2ff;
+        border-radius: 20px;
+        font-size: 12px;
+        color: #2563eb;
+    }
+
+    .acf8-bm-method-btn {
+        flex: 1;
+        padding: 10px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .acf8-bm-method-btn.off {
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        color: #475569;
+    }
+
+    .acf8-bm-method-btn.on {
+        background: #2563eb;
+        border: 1px solid #2563eb;
+        color: white;
+    }
+
+    .acf8-bm-cancel,
+    .acf8-bm-start {
+        padding: 10px 20px;
+        border-radius: 30px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+    }
+
+    .acf8-bm-cancel {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    .acf8-bm-start {
+        background: #2563eb;
+        color: white;
+        box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+    }
+
+    .acf8-bm-start:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Printer Button */
+    .acf8-printer {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        background: transparent;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .acf8-printer:hover {
+        background: #e2e8f0;
+    }
+
+    .acf8-printer svg {
+        width: 18px;
+        height: 18px;
+        fill: #2563eb;
+    }
+
+    .acf8-printer.loading svg {
+        fill: #f59e0b;
+        animation: acf8-spin 1s linear infinite;
+    }
+
+    .acf8-printer.error svg {
+        fill: #dc2626;
+    }
+
+    /* Batch Button */
+    #acf8-batch-btn {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 2147483646;
+        padding: 12px 24px;
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 40px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+        transition: all 0.2s;
+        display: none;
+    }
+
+    #acf8-batch-btn:hover {
+        background: #1d4ed8;
+        transform: translateY(-2px);
+        box-shadow: 0 15px 20px -3px rgba(37, 99, 235, 0.4);
+    }
+
+    /* Checkbox */
+    .acf8-cb {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        border-radius: 4px;
+        accent-color: #2563eb;
+    }
+
+    /* Scrollbar */
+    .acf8-modal ::-webkit-scrollbar,
+    .acf8-bm-dialog ::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .acf8-modal ::-webkit-scrollbar-track,
+    .acf8-bm-dialog ::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 3px;
+    }
+
+    .acf8-modal ::-webkit-scrollbar-thumb,
+    .acf8-bm-dialog ::-webkit-scrollbar-thumb {
+        background: #94a3b8;
+        border-radius: 3px;
+    }
+
+    .acf8-modal ::-webkit-scrollbar-thumb:hover,
+    .acf8-bm-dialog ::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+    }
+
+    /* Quick Custom Section */
+    #acf8-custom-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-top: 8px;
+    }
+
+    #acf8-custom-list > div {
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+    }
+
+    #acf8-custom-list button {
+        background: none;
+        border: none;
+        color: #94a3b8;
+        font-size: 14px;
+        cursor: pointer;
+    }
+
+    #acf8-custom-list button:hover {
+        color: #dc2626;
+    }
+
+    .acf8-counter {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+    }
+
+    .acf8-counter button {
+        width: 24px;
+        height: 24px;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        background: white;
+        cursor: pointer;
+    }
+
+    .acf8-counter input {
+        width: 40px;
+        text-align: center;
+    }
     `;
     document.head.appendChild(style);
 
@@ -638,7 +1258,7 @@
     }
 
     /* ============================================
-       9. PREVIEW RENDERER
+       9. PREVIEW RENDERER - FIXED RED BACKGROUND
     ============================================ */
     function renderLocalPreview(previewBox, flight, paxData, galley, _unused, acItems) {
         const route = flight.route || '';
@@ -670,33 +1290,42 @@
         function buildCard(lbl) {
             const { cls, paxCount, item } = lbl;
             const isRed = (item.bgColor || 'white') === 'red';
-            const bg = isRed ? '#cc1f1f' : '#ffffff';
-            const txtClr = isRed ? '#fff' : '#111';
-            const borClr = isRed ? '#991b1b' : '#1e3a8a';
-            const divClr = isRed ? 'rgba(255,255,255,.35)' : '#c7d2e6';
+            
+            // RED BACKGROUND FOR PREVIEW - FIXED
+            const bg = isRed ? '#dc2626' : '#ffffff';
+            const txtClr = isRed ? '#ffffff' : '#0f172a';
+            const borClr = isRed ? '#991b1b' : '#2563eb';
+            const divClr = isRed ? 'rgba(255,255,255,0.2)' : '#e2e8f0';
+            
             const logoUrl = SK.DEFAULT_LOGO;
             const nlen = (item.name || '').length;
             const nameFz = nlen > 18 ? '9px' : nlen > 12 ? '11px' : '14px';
 
             const logoHtml = logoUrl
                 ? `<img src="${logoUrl}" style="width:100%;height:100%;object-fit:contain;display:block;" onerror="this.style.display='none'">`
-                : `<div style="font-size:10px;font-weight:900;letter-spacing:.5px;line-height:1.2;">AZERBAIJAN<br><span style="font-size:8px;letter-spacing:2px;">&#8210; AIRLINES &#8210;</span></div>`;
+                : `<div style="font-size:10px;font-weight:900;letter-spacing:.5px;line-height:1.2;color:${txtClr}">AZERBAIJAN<br><span style="font-size:8px;letter-spacing:2px;">&#8210; AIRLINES &#8210;</span></div>`;
 
             return `
-            <div style="width:168px;height:246px;border:2px solid ${borClr};border-radius:5px;
+            <div style="width:168px;height:246px;border:2px solid ${borClr};border-radius:8px;
                  overflow:hidden;font-family:'Courier New',monospace;background:${bg};color:${txtClr};
-                 display:flex;flex-direction:column;box-shadow:0 3px 10px rgba(0,0,0,.18);flex-shrink:0;">
-              <div style="border:1.5px solid ${borClr};margin:4px 4px 2px;flex-shrink:0;overflow:hidden;height:50px;">
+                 display:flex;flex-direction:column;box-shadow:0 4px 12px rgba(0,0,0,0.1);flex-shrink:0;">
+              <div style="border-bottom:1px solid ${divClr};margin:4px 4px 2px;flex-shrink:0;overflow:hidden;height:50px;display:flex;align-items:center;justify-content:center;">
                 ${logoHtml}
               </div>
-              <div style="padding:3px 7px;font-size:8px;line-height:1.65;flex-shrink:0;border-bottom:1px solid ${divClr};">
-                <div><span style="opacity:.7;">Date:</span> ${date}</div>
-                <div><span style="opacity:.7;">Flt:</span>  ${fno}</div>
-                <div>${from} &#8594; ${to}</div>
-                <div>${to} &#8592; ${from}</div>
-                <div style="font-weight:700;">${cls} ${paxCount}</div>
+              <div style="padding:6px 8px;font-size:9px;line-height:1.6;flex-shrink:0;border-bottom:1px solid ${divClr};">
+                <div style="display:flex;justify-content:space-between;"><span style="opacity:0.7;">Date:</span> ${date}</div>
+                <div style="display:flex;justify-content:space-between;"><span style="opacity:0.7;">Flight:</span> ${fno}</div>
+                <div style="display:flex;justify-content:space-between;margin-top:2px;">
+                  <span>${from}</span> <span>→</span> <span>${to}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;">
+                  <span>${to}</span> <span>←</span> <span>${from}</span>
+                </div>
+                <div style="margin-top:4px;font-weight:700;text-align:center;background:${isRed ? 'rgba(255,255,255,0.1)' : 'rgba(37,99,235,0.1)'};padding:2px 0;border-radius:4px;">
+                  ${cls} ${paxCount}
+                </div>
               </div>
-              <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:6px 5px;text-align:center;flex-direction:column;gap:2px;">
+              <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:8px;text-align:center;">
                 <span style="font-size:${nameFz};font-weight:900;font-style:italic;line-height:1.2;">${item.name}</span>
               </div>
             </div>`;
@@ -704,24 +1333,24 @@
 
         function render() {
             previewBox.innerHTML = '';
-            previewBox.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;gap:8px;background:#f1f5f9;border-radius:6px;';
+            previewBox.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:12px;background:#f1f5f9;border-radius:12px;';
 
             const cardWrap = document.createElement('div');
             cardWrap.innerHTML = buildCard(labels[cur]);
             previewBox.appendChild(cardWrap);
 
             const nav = document.createElement('div');
-            nav.style.cssText = 'display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;color:#1e3a8a;';
+            nav.style.cssText = 'display:flex;align-items:center;gap:12px;font-size:13px;font-weight:600;color:#2563eb;';
             nav.innerHTML = `
-                <button id="acf8-prev-lbl" style="width:28px;height:28px;border:1.5px solid #1e3a8a;border-radius:6px;background:#fff;cursor:pointer;font-size:16px;color:#1e3a8a;line-height:1;">&#8249;</button>
-                <span style="min-width:68px;text-align:center;">${cur + 1} &nbsp;/&nbsp; ${labels.length}</span>
-                <button id="acf8-next-lbl" style="width:28px;height:28px;border:1.5px solid #1e3a8a;border-radius:6px;background:#fff;cursor:pointer;font-size:16px;color:#1e3a8a;line-height:1;">&#8250;</button>`;
+                <button id="acf8-prev-lbl" style="width:32px;height:32px;border:2px solid #2563eb;border-radius:8px;background:#fff;cursor:pointer;font-size:16px;color:#2563eb;line-height:1;">&#8249;</button>
+                <span style="min-width:80px;text-align:center;">${cur + 1} / ${labels.length}</span>
+                <button id="acf8-next-lbl" style="width:32px;height:32px;border:2px solid #2563eb;border-radius:8px;background:#fff;cursor:pointer;font-size:16px;color:#2563eb;line-height:1;">&#8250;</button>`;
             previewBox.appendChild(nav);
 
             const info = document.createElement('div');
-            info.style.cssText = 'font-size:9px;color:#64748b;text-align:center;letter-spacing:.3px;';
+            info.style.cssText = 'font-size:10px;color:#64748b;text-align:center;';
             const lbl = labels[cur];
-            info.textContent = `${lbl.cls} • ${lbl.item.name}`;
+            info.textContent = `${lbl.cls} • ${lbl.item.name} • ${lbl.item.bgColor === 'red' ? '🔴' : '⚪'}`;
             previewBox.appendChild(info);
 
             previewBox.querySelector('#acf8-prev-lbl').onclick = () => {
@@ -753,7 +1382,7 @@
         });
     }
 
-    /* === 10b. BATCH ZPL SENDER (Feature 3) === */
+    /* === 10b. BATCH ZPL SENDER === */
     function sendZplBatch(ip, zplArray, onOk, onErr) {
         const allZpl = zplArray.join('\n');
         GM_xmlhttpRequest({
@@ -768,7 +1397,7 @@
         });
     }
 
-    /* === 10c. VERSION CHECK (Feature 2) === */
+    /* === 10c. VERSION CHECK === */
     function checkForUpdates(force) {
         const lastCheck = parseInt(gs(SK.LAST_UPDATE_CHECK, '0'));
         const now = Date.now();
@@ -779,9 +1408,9 @@
             url: 'https://raw.githubusercontent.com/eldarjobs/skychef-label-script/master/version.txt',
             timeout: 5000,
             onload: (r) => {
-                if (r.status !== 200) return; /* file doesn't exist yet – silent */
+                if (r.status !== 200) return;
                 const latestVer = r.responseText.trim();
-                if (!/^\d+(\.\d+)+$/.test(latestVer)) return; /* not a real version */
+                if (!/^\d+(\.\d+)+$/.test(latestVer)) return;
                 const currentVer = (typeof GM_info !== 'undefined' && GM_info.script) ? GM_info.script.version : '11.0';
                 if (latestVer !== currentVer && latestVer > currentVer) {
                     toast(`🆕 Yeni versiya mövcuddur: v${latestVer} (hazırki: v${currentVer})`, 'info', 10000);
@@ -791,7 +1420,7 @@
         });
     }
 
-    /* === 10d. LABEL LAYOUT (Feature 4) === */
+    /* === 10d. LABEL LAYOUT === */
     const DEFAULT_LABEL_LAYOUT = {
         logo: { x: 4, y: 4, w: 200, h: 72 },
         header1: { x: 50, y: 9, fz: 24 },
@@ -827,7 +1456,7 @@
     }
 
     /* ============================================
-       11. BROWSER PRINT (FALLBACK)
+       11. BROWSER PRINT - FIXED RED BACKGROUND
     ============================================ */
     function browserPrint(flight, paxData, acItemQtys, acItems) {
         const route = flight.route || '';
@@ -848,7 +1477,7 @@
 
         const logoUrl = SK.DEFAULT_LOGO;
         const logoHtmlBP = logoUrl
-            ? `<img src="${logoUrl}" style="max-height:28px;max-width:90%;object-fit:contain;display:block;margin:0 auto;" onerror="this.style.display='none'">`
+            ? `<img src="${logoUrl}" style="max-height:30px;max-width:90%;object-fit:contain;display:block;margin:0 auto;" onerror="this.style.display='none'">`
             : `<div class="logo-name">AZERBAIJAN</div><div class="logo-sub">&#8211; AIRLINES &#8211;</div>`;
 
         let cards = '';
@@ -859,24 +1488,25 @@
                 const qty = (acItemQtys && acItemQtys[i] != null) ? acItemQtys[i] : 1;
                 if (qty < 1) continue;
                 const isRed = (item.bgColor || 'white') === 'red';
-                const bg = isRed ? '#cc1f1f' : '#ffffff';
+                // FIXED: Strong red background for browser print
+                const bg = isRed ? '#dc2626' : '#ffffff';
                 const clr = isRed ? '#ffffff' : '#000000';
                 const borClr = isRed ? '#991b1b' : '#1e3a8a';
                 const nlen = (item.name || '').length;
-                const nameFs = nlen > 18 ? '13px' : nlen > 12 ? '17px' : '22px';
+                const nameFs = nlen > 18 ? '14px' : nlen > 12 ? '18px' : '22px';
                 for (let c = 0; c < qty; c++) {
                     cards += `<div class="lc" style="background:${bg};color:${clr};border-color:${borClr}">
-                      <div class="logo-box" style="border-color:${isRed ? 'rgba(255,255,255,.5)' : '#1e3a8a'}">
+                      <div class="logo-box" style="border-color:${isRed ? '#ffffff' : '#1e3a8a'}">
                         ${logoHtmlBP}
                       </div>
                       <div class="info">
                         <div><span class="lbl">Date:</span> ${date}</div>
-                        <div><span class="lbl">Flt:</span>  ${fno}</div>
-                        <div>${from} &#8594; ${to}</div>
-                        <div>${to} &#8592; ${from}</div>
-                        <div><b>${cls} ${paxCount}</b></div>
+                        <div><span class="lbl">Flight:</span> ${fno}</div>
+                        <div class="route">${from} → ${to}</div>
+                        <div class="route">${to} ← ${from}</div>
+                        <div class="class-badge" style="background:${isRed ? 'rgba(255,255,255,0.2)' : 'rgba(37,99,235,0.1)'}">${cls} ${paxCount}</div>
                       </div>
-                      <div class="item-name" style="border-top:1px solid ${isRed ? 'rgba(255,255,255,.4)' : '#c7d2e6'};font-size:${nameFs}">
+                      <div class="item-name" style="border-top:1px solid ${isRed ? 'rgba(255,255,255,0.3)' : '#cbd5e1'};font-size:${nameFs}">
                         ${item.name}
                       </div>
                     </div>`;
@@ -885,35 +1515,37 @@
         }
 
         const totalLabels = classes.reduce((s, _) => s + (acItemQtys ? acItemQtys.reduce((a, q) => a + (q || 0), 0) : items.length), 0);
-        const qtyList = items.map((it, i) => `${it.name}×${acItemQtys?.[i] ?? 1}`).join(', ');
-        const pw = window.open('', '_blank', 'width=700,height=900');
-        pw.document.write(`<!DOCTYPE html><html><head><title>Labels &#8211; ${flight.flightNo}</title><style>
+        const pw = window.open('', '_blank', 'width=800,height=900');
+        pw.document.write(`<!DOCTYPE html><html><head><title>Labels - ${flight.flightNo}</title><style>
             *{margin:0;padding:0;box-sizing:border-box;}
-            body{font-family:'Courier New',monospace;padding:10px;background:#e5e7eb;}
-            .wrap{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-start;}
-            .lc{width:200px;min-height:290px;border:2px solid #222;border-radius:4px;
+            body{font-family:'Courier New',monospace;padding:20px;background:#e5e7eb;}
+            .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-start;}
+            .lc{width:200px;height:auto;min-height:280px;border:2px solid;border-radius:8px;
                 overflow:hidden;display:flex;flex-direction:column;page-break-inside:avoid;
-                background:#fff;color:#000;}
-            .logo-box{border:1.5px solid #222;margin:5px;padding:5px 4px;text-align:center;}
-            .logo-name{font-size:14px;font-weight:900;letter-spacing:1px;}
+                background:#fff;box-shadow:0 4px 6px rgba(0,0,0,0.1);}
+            .logo-box{border-bottom:1px solid;margin:0;padding:8px;text-align:center;height:60px;
+                display:flex;align-items:center;justify-content:center;}
+            .logo-name{font-size:16px;font-weight:900;letter-spacing:1px;}
             .logo-sub{font-size:10px;letter-spacing:2px;}
-            .info{padding:6px 8px;font-size:11px;line-height:1.8;flex:1;}
-            .item-name{padding:8px 6px;text-align:center;font-weight:900;font-style:italic;
-                        border-top:1px solid #ccc;font-size:22px;}
-            .np{grid-column:1/-1;text-align:right;margin-bottom:10px;}
-            @media print{.np{display:none;}body{background:#fff;}}
-            .lbl{opacity:.55;font-size:9px;}
+            .info{padding:8px 10px;font-size:11px;line-height:1.8;}
+            .route{display:flex;justify-content:space-between;margin:2px 0;}
+            .class-badge{margin-top:6px;padding:3px 0;text-align:center;border-radius:4px;font-weight:700;}
+            .item-name{padding:10px 8px;text-align:center;font-weight:900;font-style:italic;
+                        border-top:1px solid;font-size:22px;}
+            .np{text-align:right;margin-bottom:15px;}
+            @media print{.np{display:none;}body{background:#fff;padding:0;}}
+            .lbl{opacity:0.6;font-size:9px;}
         </style></head><body>
         <div class="np">
-          <b>${totalLabels} label</b> (${classes.join('+')} × ${qtyList})&nbsp;&nbsp;
-          <button onclick="window.print()" style="padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">&#128424; Print</button>
+          <b>${totalLabels} labels</b>&nbsp;&nbsp;
+          <button onclick="window.print()" style="padding:10px 24px;background:#2563eb;color:#fff;border:none;border-radius:30px;cursor:pointer;font-size:14px;font-weight:600;">🖨 Print All</button>
         </div>
         <div class="wrap">${cards}</div></body></html>`);
         pw.document.close();
     }
 
     /* ============================================
-       12. BATCH BROWSER CARDS BUILDER
+       12. BATCH BROWSER CARDS BUILDER - FIXED RED
     ============================================ */
     function buildBatchBrowserCards(flight, paxData, acItems, acItemQtys) {
         const logoImg = `<img src="${SK.DEFAULT_LOGO}" style="width:100%;height:100%;object-fit:contain;display:block;" onerror="this.style.display='none'">`;
@@ -933,22 +1565,23 @@
                 const qty = (acItemQtys && acItemQtys[i] != null) ? acItemQtys[i] : 1;
                 if (qty < 1) continue;
                 const isRed = (item.bgColor || 'white') === 'red';
-                const bg = isRed ? '#cc1f1f' : '#ffffff';
+                // FIXED: Strong red background
+                const bg = isRed ? '#dc2626' : '#ffffff';
                 const clr = isRed ? '#ffffff' : '#000000';
                 const bor = isRed ? '#991b1b' : '#1e3a8a';
                 const nlen = (item.name || '').length;
-                const nameFs = nlen > 18 ? '13px' : nlen > 12 ? '17px' : '22px';
+                const nameFs = nlen > 18 ? '14px' : nlen > 12 ? '18px' : '22px';
                 for (let c = 0; c < qty; c++) {
                     html += `<div class="lc" style="background:${bg};color:${clr};border-color:${bor}">
-                      <div class="logo-box" style="border-color:${isRed ? 'rgba(255,255,255,.5)' : '#1e3a8a'}">${logoImg}</div>
+                      <div class="logo-box" style="border-color:${isRed ? '#ffffff' : '#1e3a8a'}">${logoImg}</div>
                       <div class="info">
                         <div><span class="lbl">Date:</span> ${date}</div>
-                        <div><span class="lbl">Flt:</span>  ${fno}</div>
-                        <div>${from} → ${to}</div>
-                        <div>${to} ← ${from}</div>
-                        <div><b>${cls} ${paxCount}</b></div>
+                        <div><span class="lbl">Flight:</span> ${fno}</div>
+                        <div class="route">${from} → ${to}</div>
+                        <div class="route">${to} ← ${from}</div>
+                        <div class="class-badge" style="background:${isRed ? 'rgba(255,255,255,0.2)' : 'rgba(37,99,235,0.1)'}">${cls} ${paxCount}</div>
                       </div>
-                      <div class="item-name" style="border-top:1px solid ${isRed ? 'rgba(255,255,255,.4)' : '#c7d2e6'};font-size:${nameFs}">${item.name}</div>
+                      <div class="item-name" style="border-top:1px solid ${isRed ? 'rgba(255,255,255,0.3)' : '#cbd5e1'};font-size:${nameFs}">${item.name}</div>
                     </div>`;
                 }
             }
@@ -957,7 +1590,7 @@
     }
 
     /* ============================================
-       13. DATA FETCH (FIXED PROMISE)
+       13. DATA FETCH
     ============================================ */
     function fetchPaxForFlight(editBtn) {
         return new Promise(resolve => {
@@ -973,8 +1606,8 @@
             const tmr = setTimeout(() => {
                 iframe.remove();
                 if (formEl) formEl.remove();
-                resolve([]); // TIMEOUT RESOLVE
-            }, 20000); // 20 saniyə
+                resolve([]);
+            }, 20000);
 
             iframe.onload = () => {
                 loadCount++;
@@ -1003,17 +1636,17 @@
                         }
                         iframe.remove();
                         if (formEl) formEl.remove();
-                        resolve(paxData); // SUCCESS RESOLVE
+                        resolve(paxData);
 
                     } else if (loadCount > 1) {
                         clearTimeout(tmr);
                         iframe.remove();
                         if (formEl) formEl.remove();
-                        resolve([]); // FALLBACK RESOLVE
+                        resolve([]);
                     }
                 } catch (ex) {
                     console.warn('[batch pax]', ex);
-                    resolve([]); // ERROR RESOLVE
+                    resolve([]);
                 }
             };
 
@@ -1208,7 +1841,7 @@
         const chipsHtml = paxData.map(p => {
             const bg = CLASS_COLORS[p.class] || DEFAULT_COLOR;
             return `<span class="acf8-chip" style="background:${bg}">${p.class} <span class="acf8-chip-v">${p.value}</span></span>`;
-        }).join('') + (total ? `<span class="acf8-chip" style="background:#374151">Total <span class="acf8-chip-v">${total}</span></span>` : '');
+        }).join('') + (total ? `<span class="acf8-chip" style="background:#475569">Total <span class="acf8-chip-v">${total}</span></span>` : '');
 
         const overlay = document.createElement('div');
         overlay.className = 'acf8-overlay';
@@ -1235,11 +1868,11 @@
               <span class="acf8-fb-date">${flightData.date}</span>
               <span class="acf8-fb-order">${flightData.orderNo}</span>
             </div>
-            <div style="display:flex;align-items:center;gap:6px;padding:4px 0;">
-              <span style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Aircraft:</span>
-              <span id="acf8-ac-badge" style="background:#1e3a8a;color:#fff;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;">${flightData.aircraftSeries || '—'}</span>
-              <span style="font-size:10px;color:#6b7280;">${flightData.aircraftType || ''}</span>
-              <span style="font-size:10px;color:#9ca3af;margin-left:4px;">→ config: <b>${acCfg.label}</b></span>
+            <div style="display:flex;align-items:center;gap:8px;padding:4px 0 12px;">
+              <span style="font-size:11px;font-weight:600;color:#64748b;">Aircraft:</span>
+              <span id="acf8-ac-badge" style="background:#1e293b;color:#fff;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;">${flightData.aircraftSeries || '—'}</span>
+              <span style="font-size:12px;color:#64748b;">${flightData.aircraftType || ''}</span>
+              <span style="font-size:11px;color:#94a3b8;margin-left:auto;">config: <b>${acCfg.label}</b></span>
             </div>
             <div class="acf8-print-body">
               <div class="acf8-print-form">
@@ -1260,35 +1893,35 @@
                   ${buildSelect('acf8-sel-printtype', DEFAULT_PRINT_TYPES, gs(SK.PRINT_TYPE, ''), 'Select Print Type')}
                 </div>
                 <div class="acf8-fg">
-                  <label>Label Qty <span style="font-size:9px;color:#9ca3af;font-weight:400;">(per class)</span></label>
-                  <div id="acf8-item-qtys-list" style="display:flex;flex-direction:column;gap:2px;max-height:110px;overflow-y:auto;"></div>
+                  <label>Label Qty <span style="font-size:10px;color:#94a3b8;">(per class)</span></label>
+                  <div id="acf8-item-qtys-list" style="display:flex;flex-direction:column;gap:4px;max-height:120px;overflow-y:auto;"></div>
                 </div>
-                <div class="acf8-fg" style="border-top:1px dashed #e5e7eb;padding-top:6px;">
-                  <label>&#10133; Quick Custom Label</label>
-                  <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
-                    <input type="text" id="acf8-custom-name" placeholder="Item name" style="flex:1;min-width:80px;padding:4px 7px;border:1px solid #d1d5db;border-radius:5px;font-size:11px;">
-                    <select id="acf8-custom-color" style="padding:4px 6px;border:1px solid #d1d5db;border-radius:5px;font-size:11px;width:auto;">
-                      <option value="white">⬜ Ağ</option>
-                      <option value="red">🟥 Qırmızı</option>
+                <div class="acf8-fg" style="border-top:1px dashed #e2e8f0;padding-top:12px;">
+                  <label>➕ Quick Custom Label</label>
+                  <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                    <input type="text" id="acf8-custom-name" placeholder="Item name" style="flex:1;min-width:100px;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;">
+                    <select id="acf8-custom-color" style="padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;">
+                      <option value="white">⬜ White</option>
+                      <option value="red">🔴 Red</option>
                     </select>
                     <div class="acf8-counter">
-                      <button id="acf8-custom-minus">&#8722;</button>
-                      <input type="number" id="acf8-custom-qty" value="1" min="1" max="20" style="width:36px;font-size:11px;padding:3px;border:1px solid #d1d5db;border-radius:4px;text-align:center;">
-                      <button id="acf8-custom-plus">&#43;</button>
+                      <button id="acf8-custom-minus">−</button>
+                      <input type="number" id="acf8-custom-qty" value="1" min="1" max="20" style="width:40px;text-align:center;padding:6px;border:1px solid #e2e8f0;border-radius:6px;">
+                      <button id="acf8-custom-plus">+</button>
                     </div>
-                    <button id="acf8-custom-add" style="padding:4px 9px;background:#2563eb;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">Add</button>
+                    <button id="acf8-custom-add" style="padding:8px 16px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">Add</button>
                   </div>
-                  <div id="acf8-custom-list" style="display:flex;flex-direction:column;gap:2px;margin-top:4px;"></div>
+                  <div id="acf8-custom-list" style="margin-top:8px;"></div>
                 </div>
                 <div class="acf8-fg">
                   <label>Pax by Class</label>
-                  <div class="acf8-chips">${chipsHtml || '<span style="color:#9ca3af;font-size:12px;">No pax data</span>'}</div>
+                  <div class="acf8-chips">${chipsHtml || '<span style="color:#94a3b8;font-size:12px;">No pax data</span>'}</div>
                 </div>
               </div>
               <div class="acf8-preview-col">
-                <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Label Preview</span>
-                <div class="acf8-preview-box" id="acf8-prev-box" style="align-items:flex-start;justify-content:center;overflow-y:auto;padding:8px;"></div>
-                <span style="font-size:11px;color:#9ca3af;text-align:center;">Local render · Zebra ZT411 · 35×80mm</span>
+                <span style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block;">Label Preview</span>
+                <div class="acf8-preview-box" id="acf8-prev-box"></div>
+                <span style="font-size:10px;color:#94a3b8;text-align:center;margin-top:6px;">Zebra ZT411 · 57×83mm</span>
               </div>
             </div>
           </div>
@@ -1305,30 +1938,26 @@
               </div>
               <div class="acf8-fg full">
                 <label>Label Size (mm)</label>
-                <div style="display:flex;gap:8px;align-items:center;">
-                  <span style="font-size:11px;color:#6b7280;">W:</span>
-                  <input type="number" id="acf8-lbl-w" min="30" max="150" value="${gs(SK.LABEL_W_MM, '57')}" style="width:60px;padding:4px 6px;border:1px solid #d1d5db;border-radius:5px;font-size:12px;">
-                  <span style="font-size:11px;color:#6b7280;">H:</span>
-                  <input type="number" id="acf8-lbl-h" min="30" max="200" value="${gs(SK.LABEL_H_MM, '83')}" style="width:60px;padding:4px 6px;border:1px solid #d1d5db;border-radius:5px;font-size:12px;">
-                  <span style="font-size:10px;color:#9ca3af;">mm</span>
+                <div style="display:flex;gap:12px;align-items:center;">
+                  <span style="font-size:12px;color:#64748b;">Width:</span>
+                  <input type="number" id="acf8-lbl-w" min="30" max="150" value="${gs(SK.LABEL_W_MM, '57')}" style="width:70px;padding:6px;border:1px solid #e2e8f0;border-radius:6px;">
+                  <span style="font-size:12px;color:#64748b;">Height:</span>
+                  <input type="number" id="acf8-lbl-h" min="30" max="200" value="${gs(SK.LABEL_H_MM, '83')}" style="width:70px;padding:6px;border:1px solid #e2e8f0;border-radius:6px;">
                 </div>
               </div>
               <div class="acf8-fg full">
-                <label>Print Classes <span style="font-size:9px;color:#9ca3af;font-weight:400;">(comma-separated, e.g. BC,EC)</span></label>
-                <input type="text" id="acf8-print-classes" value="${gs(SK.PRINT_CLASSES, 'BC,EC')}" placeholder="BC,EC" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:12px;width:100%;">
+                <label>Print Classes <span style="font-size:10px;color:#94a3b8;">(comma-separated, e.g. BC,EC)</span></label>
+                <input type="text" id="acf8-print-classes" value="${gs(SK.PRINT_CLASSES, 'BC,EC')}" placeholder="BC,EC" style="padding:8px;border:1px solid #e2e8f0;border-radius:8px;width:100%;">
               </div>
-              <div class="acf8-fg full" style="flex-direction:row;align-items:center;justify-content:space-between;">
-                <label style="text-transform:none;font-size:11px;font-weight:600;color:#374151;cursor:pointer;" for="acf8-qr-toggle">
-                  📷 ZPL Label-də QR Kod (ramp scan)
-                </label>
-                <label style="position:relative;display:inline-block;width:36px;height:20px;">
-                  <input type="checkbox" id="acf8-qr-toggle" ${gs(SK.QR_CODE, 'off') === 'on' ? 'checked' : ''} style="opacity:0;width:0;height:0;">
-                  <span id="acf8-qr-knob" style="position:absolute;cursor:pointer;inset:0;background:${gs(SK.QR_CODE, 'off') === 'on' ? '#2563eb' : '#d1d5db'};border-radius:20px;transition:.2s;"
-                    onclick="const c=this.previousElementSibling;c.checked=!c.checked;this.style.background=c.checked?'#2563eb':'#d1d5db'"></span>
+              <div class="acf8-fg full" style="display:flex;flex-direction:row;align-items:center;justify-content:space-between;">
+                <label style="font-size:13px;font-weight:600;color:#0f172a;">📷 QR Code on ZPL</label>
+                <label class="acf8-toggle">
+                  <input type="checkbox" id="acf8-qr-toggle" ${gs(SK.QR_CODE, 'off') === 'on' ? 'checked' : ''}>
+                  <span class="acf8-toggle-knob ${gs(SK.QR_CODE, 'off') === 'on' ? 'on' : 'off'}" onclick="const c=this.previousElementSibling;c.checked=!c.checked;this.className='acf8-toggle-knob '+(c.checked?'on':'off')"></span>
                 </label>
               </div>
 
-              <div class="acf8-fg full" id="acf8-ip-group" style="${curMethod !== 'network' ? 'opacity:.4;pointer-events:none' : ''}">
+              <div class="acf8-fg full" id="acf8-ip-group" style="${curMethod !== 'network' ? 'opacity:0.5;pointer-events:none' : ''}">
                 <label>Zebra Printer IP</label>
                 <div class="acf8-ip-row">
                   <input type="text" id="acf8-ip" placeholder="192.168.1.100" value="${gs(SK.PRINTER_IP, '')}">
@@ -1341,47 +1970,44 @@
                 <div class="acf8-galley-list" id="acf8-galley-list"></div>
                 <div class="acf8-galley-add">
                   <input type="text" id="acf8-galley-new" placeholder="New galley name">
-                  <button id="acf8-galley-add">+ Add</button>
+                  <button id="acf8-galley-add">Add</button>
                 </div>
               </div>
               <div class="acf8-fg full">
                 <label style="display:flex;align-items:center;justify-content:space-between;">
-                  <span>Aircraft Items Config &nbsp;<span id="acf8-ac-cfg-key" style="background:#1e3a8a;color:#fff;padding:1px 8px;border-radius:8px;font-size:10px;font-weight:700;">${acCfg.key || '—'}</span></span>
-                  <select id="acf8-ac-type-sel" style="padding:3px 6px;border-radius:5px;border:1px solid #d1d5db;font-size:12px;">${Object.entries(getAcConfigs()).map(([k, c]) => `<option value="${k}"${k === acCfg.key ? ' selected' : ''}>${k} – ${c.label}</option>`).join('')}</select>
+                  <span>Aircraft Items</span>
+                  <select id="acf8-ac-type-sel" style="padding:6px;border-radius:8px;border:1px solid #e2e8f0;">${Object.entries(getAcConfigs()).map(([k, c]) => `<option value="${k}"${k === acCfg.key ? ' selected' : ''}>${k} – ${c.label}</option>`).join('')}</select>
                 </label>
-                <div id="acf8-ac-items-list" style="display:flex;flex-direction:column;gap:3px;margin:6px 0;"></div>
-                <div style="display:flex;gap:6px;">
-                  <input type="text" id="acf8-ac-item-name" placeholder="Item name (e.g. Meals)" style="flex:1;padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:12px;">
-                  <input type="text" id="acf8-ac-item-unit" placeholder="Unit" style="width:70px;padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:12px;">
-                  <button id="acf8-ac-item-add" style="padding:5px 12px;background:#2563eb;color:#fff;border:none;border-radius:5px;font-size:12px;cursor:pointer;font-weight:600;">+ Add Item</button>
+                <div id="acf8-ac-items-list" style="margin:8px 0;"></div>
+                <div style="display:flex;gap:8px;">
+                  <input type="text" id="acf8-ac-item-name" placeholder="Item name" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:8px;">
+                  <input type="text" id="acf8-ac-item-unit" placeholder="Unit" style="width:80px;padding:8px;border:1px solid #e2e8f0;border-radius:8px;">
+                  <button id="acf8-ac-item-add" style="padding:8px 16px;background:#2563eb;color:#fff;border:none;border-radius:8px;cursor:pointer;">Add</button>
                 </div>
               </div>
-              <div class="acf8-fg full" style="flex-direction:row;align-items:center;justify-content:space-between;">
-                <label style="text-transform:none;font-size:11px;font-weight:600;color:#374151;cursor:pointer;">⚡ ZPL Batch Göndərmə (daha sürətli)</label>
-                <label style="position:relative;display:inline-block;width:36px;height:20px;">
-                  <input type="checkbox" id="acf8-batch-toggle" ${gs(SK.ZPL_BATCH_MODE, 'sequential') === 'batch' ? 'checked' : ''} style="opacity:0;width:0;height:0;">
-                  <span id="acf8-batch-knob" style="position:absolute;cursor:pointer;inset:0;background:${gs(SK.ZPL_BATCH_MODE, 'sequential') === 'batch' ? '#2563eb' : '#d1d5db'};border-radius:20px;transition:.2s;"
-                    onclick="const c=this.previousElementSibling;c.checked=!c.checked;this.style.background=c.checked?'#2563eb':'#d1d5db'"></span>
+              <div class="acf8-fg full" style="display:flex;flex-direction:row;align-items:center;justify-content:space-between;">
+                <label style="font-size:13px;font-weight:600;color:#0f172a;">⚡ ZPL Batch Mode</label>
+                <label class="acf8-toggle">
+                  <input type="checkbox" id="acf8-batch-toggle" ${gs(SK.ZPL_BATCH_MODE, 'sequential') === 'batch' ? 'checked' : ''}>
+                  <span class="acf8-toggle-knob ${gs(SK.ZPL_BATCH_MODE, 'sequential') === 'batch' ? 'on' : 'off'}" onclick="const c=this.previousElementSibling;c.checked=!c.checked;this.className='acf8-toggle-knob '+(c.checked?'on':'off')"></span>
                 </label>
               </div>
               <div class="acf8-layout-section">
-                <div class="acf8-ls-title">
-                  <span style="font-size:11px;font-weight:700;color:#374151;">📐 Label Layout Editor <span>(ZPL koordinatları, dots)</span></span>
-                  <button id="acf8-layout-reset" class="acf8-layout-reset-btn">↺ Reset</button>
+                <div class="acf8-ls-title" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                  <span style="font-size:13px;font-weight:600;color:#0f172a;">📐 Label Layout Editor</span>
+                  <button id="acf8-layout-reset" class="acf8-layout-reset-btn">Reset</button>
                 </div>
                 <div id="acf8-layout-editor" class="acf8-layout-editor"></div>
               </div>
-              <div class="acf8-fg full" style="border-top:1px solid #e5e7eb;padding-top:10px;">
-                <label>🔄 Versiya Yoxlaması</label>
-                <div style="display:flex;gap:6px;">
-                  <button id="acf8-check-update" style="flex:1;padding:5px 10px;background:#7c3aed;color:#fff;border:none;border-radius:5px;font-size:11px;cursor:pointer;font-weight:700;">🔄 Yeniləmələri yoxla</button>
-                </div>
+              <div class="acf8-fg full" style="border-top:1px solid #e2e8f0;padding-top:16px;">
+                <label>🔄 Version Check</label>
+                <button id="acf8-check-update" style="width:100%;padding:10px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Check for Updates</button>
               </div>
-              <div class="acf8-fg full" style="border-top:1px solid #e5e7eb;padding-top:10px;">
+              <div class="acf8-fg full" style="border-top:1px solid #e2e8f0;padding-top:16px;">
                 <label>Config Export / Import</label>
-                <div style="display:flex;gap:6px;">
-                  <button id="acf8-export-btn" style="flex:1;padding:5px 10px;background:#0f766e;color:#fff;border:none;border-radius:5px;font-size:11px;cursor:pointer;font-weight:700;">&#11015; Export JSON</button>
-                  <label for="acf8-import-file" style="flex:1;padding:5px 10px;background:#4f46e5;color:#fff;border-radius:5px;font-size:11px;cursor:pointer;font-weight:700;text-align:center;">&#11014; Import JSON
+                <div style="display:flex;gap:8px;">
+                  <button id="acf8-export-btn" style="flex:1;padding:10px;background:#0f766e;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;">Export JSON</button>
+                  <label for="acf8-import-file" style="flex:1;padding:10px;background:#4f46e5;color:#fff;border-radius:8px;font-size:13px;cursor:pointer;text-align:center;">Import JSON
                     <input type="file" id="acf8-import-file" accept=".json" style="display:none;">
                   </label>
                 </div>
@@ -1412,11 +2038,10 @@
             el.innerHTML = '';
             customItems.forEach((ci, idx) => {
                 const isRed = (ci.bgColor || 'white') === 'red';
-                const dotClr = isRed ? '#dc2626' : '#9ca3af';
-                const bgRow = isRed ? '#fef2f2' : '#f0f4ff';
+                const bgRow = isRed ? '#fef2f2' : '#f8fafc';
                 const row = document.createElement('div');
-                row.style.cssText = `display:flex;align-items:center;gap:5px;font-size:11px;background:${bgRow};border-radius:4px;padding:2px 6px;`;
-                row.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:${dotClr};flex-shrink:0;"></span><span style="flex:1;">${ci.name} <b style="color:#2563eb;">×${ci._qty}</b></span><button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;">×</button>`;
+                row.style.cssText = `display:flex;align-items:center;gap:8px;padding:6px 10px;background:${bgRow};border-radius:6px;font-size:12px;`;
+                row.innerHTML = `<span style="width:10px;height:10px;border-radius:50%;background:${isRed ? '#dc2626' : '#94a3b8'};"></span><span style="flex:1;">${ci.name} <b style="color:#2563eb;">×${ci._qty}</b></span><button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:14px;">×</button>`;
                 row.querySelector('button').onclick = () => {
                     customItems.splice(idx, 1);
                     renderCustomList();
@@ -1450,7 +2075,9 @@
                     const upd = getGalleys().filter(x => x !== g);
                     ss(SK.GALLEY_LIST, JSON.stringify(upd));
                     const sel = overlay.querySelector('#acf8-sel-galley');
-                    if (sel) sel.innerHTML = upd.map(x => `<option value="${x}">${x}</option>`).join('');
+                    if (sel) {
+                        sel.innerHTML = '<option value="">Select Galley</option>' + upd.map(x => `<option value="${x}"${x === selGalley ? ' selected' : ''}>${x}</option>`).join('');
+                    }
                     renderGalleyList();
                 };
                 el.appendChild(item);
@@ -1463,9 +2090,10 @@
             if (!el) return;
             el.innerHTML = '';
             acItems.forEach((item, idx) => {
+                const isRed = (item.bgColor || 'white') === 'red';
                 const row = document.createElement('div');
-                row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:3px 6px;background:#f3f4f6;border-radius:5px;font-size:12px;';
-                row.innerHTML = `<span style="flex:1">${item.name}</span><span style="color:#6b7280;width:50px;text-align:right">${item.unit || ''}</span><button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:14px;line-height:1">&times;</button>`;
+                row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;background:#f8fafc;border-radius:6px;';
+                row.innerHTML = `<span style="width:10px;height:10px;border-radius:50%;background:${isRed ? '#dc2626' : '#94a3b8'};"></span><span style="flex:1;">${item.name}</span><span style="color:#64748b;font-size:11px;">${item.unit || ''}</span><button style="background:none;border:none;color:#ef4444;cursor:pointer;">×</button>`;
                 row.querySelector('button').onclick = () => {
                     acItems.splice(idx, 1);
                     acItemQtys.splice(idx, 1);
@@ -1525,15 +2153,15 @@
             el.innerHTML = '';
             acItems.forEach((item, i) => {
                 const isRed = (item.bgColor || 'white') === 'red';
-                const dot = isRed ? '#dc2626' : '#9ca3af';
+                const dot = isRed ? '#dc2626' : '#94a3b8';
                 const row = document.createElement('div');
-                row.style.cssText = 'display:flex;align-items:center;gap:5px;padding:2px 3px;';
+                row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:4px;';
                 row.innerHTML = `
-                    <span style="width:8px;height:8px;border-radius:50%;background:${dot};flex-shrink:0;"></span>
-                    <span style="flex:1;font-size:11px;">${item.name}</span>
-                    <button style="width:22px;height:22px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:15px;line-height:1;color:#374151;">&#8722;</button>
-                    <span id="acf8-iq-v-${i}" style="min-width:24px;text-align:center;font-size:12px;font-weight:700;">${acItemQtys[i] ?? 1}</span>
-                    <button style="width:22px;height:22px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:15px;line-height:1;color:#374151;">+</button>`;
+                    <span style="width:8px;height:8px;border-radius:50%;background:${dot};"></span>
+                    <span style="flex:1;font-size:12px;">${item.name}</span>
+                    <button style="width:26px;height:26px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;cursor:pointer;">−</button>
+                    <span id="acf8-iq-v-${i}" style="min-width:24px;text-align:center;font-size:13px;font-weight:600;">${acItemQtys[i] ?? 1}</span>
+                    <button style="width:26px;height:26px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;cursor:pointer;">+</button>`;
                 const [minBtn, plusBtn] = row.querySelectorAll('button');
                 minBtn.onclick = () => {
                     acItemQtys[i] = Math.max(0, (acItemQtys[i] ?? 1) - 1);
@@ -1607,14 +2235,9 @@
         overlay.querySelectorAll('.acf8-tab').forEach(tab => {
             tab.onclick = () => {
                 overlay.querySelectorAll('.acf8-tab').forEach(t => t.classList.remove('active'));
-                overlay.querySelectorAll('.acf8-panel').forEach(p => {
-                    p.classList.remove('active');
-                    p.style.display = 'none';
-                });
+                overlay.querySelectorAll('.acf8-panel').forEach(p => p.classList.remove('active'));
                 tab.classList.add('active');
-                const panel = overlay.querySelector(`#acf8-panel-${tab.dataset.tab}`);
-                panel.classList.add('active');
-                panel.style.display = 'flex';
+                overlay.querySelector(`#acf8-panel-${tab.dataset.tab}`).classList.add('active');
                 curTab = tab.dataset.tab;
                 actionBtn.textContent = curTab === 'settings' ? 'Save Settings' : 'Print';
                 actionBtn.className = 'acf8-btn ' + (curTab === 'settings' ? 'acf8-btn-save' : 'acf8-btn-print');
@@ -1627,7 +2250,7 @@
                 btn.classList.add('active');
                 curMethod = btn.dataset.method;
                 const ipG = overlay.querySelector('#acf8-ip-group');
-                ipG.style.opacity = curMethod === 'network' ? '1' : '.4';
+                ipG.style.opacity = curMethod === 'network' ? '1' : '0.5';
                 ipG.style.pointerEvents = curMethod === 'network' ? 'auto' : 'none';
             };
         });
@@ -1658,7 +2281,9 @@
             list.push(name);
             ss(SK.GALLEY_LIST, JSON.stringify(list));
             const sel = overlay.querySelector('#acf8-sel-galley');
-            if (sel) sel.innerHTML = list.map(g => `<option value="${g}">${g}</option>`).join('');
+            if (sel) {
+                sel.innerHTML = '<option value="">Select Galley</option>' + list.map(g => `<option value="${g}"${g === selGalley ? ' selected' : ''}>${g}</option>`).join('');
+            }
             inp.value = '';
             renderGalleyList();
             toast('Galley added: ' + name, 'success');
@@ -1669,17 +2294,16 @@
             schedulePreview();
         };
 
-        /* --- Layout Editor (Feature 4) --- */
         function renderLayoutEditor() {
             const el = overlay.querySelector('#acf8-layout-editor');
             if (!el) return;
             el.innerHTML = '';
             const layout = getLabelLayout();
             const fieldLabels = {
-                logo: 'Logo box', header1: 'AZERBAIJAN', header2: '- AIRLINES -',
-                divider1: 'Line 1', date: 'Date', flight: 'Flight No',
-                routeFrom: 'From→To', routeTo: 'To←From', classPax: 'Class/Pax',
-                divider2: 'Line 2', itemName: 'Item Name'
+                logo: 'Logo', header1: 'AZERBAIJAN', header2: 'AIRLINES',
+                divider1: 'Line 1', date: 'Date', flight: 'Flight',
+                routeFrom: 'From→To', routeTo: 'To←From', classPax: 'Class',
+                divider2: 'Line 2', itemName: 'Item'
             };
             Object.keys(DEFAULT_LABEL_LAYOUT).forEach(key => {
                 const item = layout[key] || DEFAULT_LABEL_LAYOUT[key];
@@ -1704,7 +2328,6 @@
             toast('Layout reset to default', 'success');
         });
 
-        /* --- Check for Updates button (Feature 5) --- */
         overlay.querySelector('#acf8-check-update')?.addEventListener('click', () => {
             checkForUpdates(true);
             toast('Versiya yoxlanır...', 'info', 2000);
@@ -1725,7 +2348,7 @@
                 if (qrEl) ss(SK.QR_CODE, qrEl.checked ? 'on' : 'off');
                 const batchEl = overlay.querySelector('#acf8-batch-toggle');
                 if (batchEl) ss(SK.ZPL_BATCH_MODE, batchEl.checked ? 'batch' : 'sequential');
-                /* Save layout coords */
+                
                 const layoutEd = overlay.querySelector('#acf8-layout-editor');
                 if (layoutEd) {
                     const layout = getLabelLayout();
@@ -1737,8 +2360,7 @@
                         if (!isNaN(val)) layout[k][p] = val;
                     });
                     saveLabelLayout(layout);
-                    console.log('[AeroChef] Layout saved:', JSON.stringify(layout));
-                    toast('📐 Layout saxlanıldı ✔', 'success', 2500);
+                    toast('📐 Layout saved', 'success', 2500);
                 }
                 const key = overlay.querySelector('#acf8-ac-type-sel')?.value || acCfg.key;
                 const cfgs = getAcConfigs();
@@ -1746,7 +2368,7 @@
                     cfgs[key].items = [...acItems];
                     saveAcConfigs(cfgs);
                 }
-                toast('Settings saved ✔', 'success');
+                toast('Settings saved', 'success');
                 schedulePreview();
                 return;
             }
@@ -1858,7 +2480,7 @@
     }
 
     /* ============================================
-       15. MAIN - BATCH PRINT FIXED
+       15. MAIN - BATCH PRINT
     ============================================ */
     setTimeout(() => {
         checkForUpdates(false);
@@ -1869,9 +2491,9 @@
         batchBtn.id = 'acf8-batch-btn';
         batchBtn.style.cssText = [
             'position:fixed;bottom:24px;right:24px;z-index:2147483646;',
-            'display:none;padding:10px 20px;background:#1a73e8;color:#fff;',
-            'border:none;border-radius:24px;font-size:13px;font-weight:700;cursor:pointer;',
-            'box-shadow:0 4px 16px rgba(26,115,232,.45);transition:opacity .2s;',
+            'display:none;padding:12px 24px;background:#2563eb;color:#fff;',
+            'border:none;border-radius:40px;font-size:14px;font-weight:600;cursor:pointer;',
+            'box-shadow:0 10px 15px -3px rgba(37,99,235,0.3);transition:all 0.2s;',
         ].join('');
         batchBtn.textContent = '🖨 Print Selected (0)';
         document.body.appendChild(batchBtn);
@@ -1892,17 +2514,15 @@
             const thPrint = document.createElement('th');
             thPrint.scope = 'col';
             thPrint.style.cssText = 'width:1%;text-align:center;padding:4px;';
-            thPrint.innerHTML = '<span style="color:#1a73e8;font-size:15px;" title="Print Labels">🏷</span>';
+            thPrint.innerHTML = '<span style="color:#2563eb;font-size:16px;">🏷</span>';
             headerRow.insertBefore(thPrint, last);
 
             const thCb = document.createElement('th');
             thCb.scope = 'col';
             thCb.style.cssText = 'width:1%;text-align:center;padding:4px;';
-            thCb.title = 'Select all for batch print';
             const allCb = document.createElement('input');
             allCb.type = 'checkbox';
             allCb.className = 'acf8-cb';
-            allCb.title = 'Select/Deselect All';
             allCb.onchange = () => {
                 table.querySelectorAll('.acf8-row-cb').forEach(cb => {
                     cb.checked = allCb.checked;
@@ -1922,7 +2542,7 @@
             printTd.style.cssText = 'text-align:center;vertical-align:middle;padding:2px 4px;width:1%;';
 
             if (!editBtn) {
-                printTd.innerHTML = '<span style="color:#d1d5db;">—</span>';
+                printTd.innerHTML = '<span style="color:#cbd5e1;">—</span>';
                 row.insertBefore(printTd, lastTd);
                 const cbTdBlank = document.createElement('td');
                 cbTdBlank.style.cssText = 'text-align:center;vertical-align:middle;padding:2px 4px;width:1%;';
@@ -1964,7 +2584,6 @@
             cbTd.style.cssText = 'text-align:center;vertical-align:middle;padding:2px 4px;width:1%;';
             const cb = document.createElement('input');
             cb.type = 'checkbox';
-            cb.className = 'acf8-row-cb';
             cb.className = 'acf8-row-cb acf8-cb';
             cb.onchange = () => {
                 if (cb.checked) selectedRows.set(row, { editBtn, printBtn, flightData: { ...flightData } });
@@ -1984,7 +2603,7 @@
             const galleys = getGalleys();
 
             const flightChips = selected.map(({ flightData: fd2 }) =>
-                `<span class="acf8-bm-chip">${fd2.flightNo || '?'} <span>${fd2.route || ''} ${fd2.date || ''}</span></span>`
+                `<span class="acf8-bm-chip">${fd2.flightNo || '?'} <span>${fd2.route || ''}</span></span>`
             ).join('');
 
             const bModal = document.createElement('div');
@@ -1994,56 +2613,55 @@
               <div class="acf8-bm-header">
                 <div>
                   <div class="acf8-bm-title">🖨 Batch Print</div>
-                  <div class="acf8-bm-subtitle">${selected.length} uçuş seçilib</div>
+                  <div class="acf8-bm-subtitle">${selected.length} flights selected</div>
                 </div>
                 <button id="acf8-bm-close" class="acf8-bm-close">&times;</button>
               </div>
-              <div class="acf8-bm-section">
-                <div class="acf8-label-text" style="margin-bottom:6px;">Seçilmiş uçuşlar</div>
-                <div style="display:flex;flex-wrap:wrap;gap:5px;">${flightChips}</div>
-              </div>
               <div class="acf8-bm-body">
-                <div class="acf8-stack">
-                  <label class="acf8-label-text">Aircraft Config</label>
-                  <select id="acf8-bm-ac" class="acf8-input">
+                <div style="margin-bottom:16px;">
+                  <div style="font-size:12px;font-weight:600;color:#475569;margin-bottom:8px;">Selected Flights</div>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px;">${flightChips}</div>
+                </div>
+                <div style="margin-bottom:16px;">
+                  <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:6px;">Aircraft Config</label>
+                  <select id="acf8-bm-ac" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;">
                     ${Object.entries(acCfgs).map(([k, c]) => `<option value="${k}"${k === curAcKey ? ' selected' : ''}>${k} – ${c.label}</option>`).join('')}
                   </select>
                 </div>
-                <div class="acf8-stack">
-                  <label class="acf8-label-text">Galley</label>
-                  <select id="acf8-bm-galley" class="acf8-input">
+                <div style="margin-bottom:16px;">
+                  <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:6px;">Galley</label>
+                  <select id="acf8-bm-galley" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;">
                     ${galleys.map(g => `<option value="${g}"${g === gs(SK.GALLEY, galleys[0]) ? ' selected' : ''}>${g}</option>`).join('')}
                   </select>
                 </div>
-                <div class="acf8-stack">
-                  <label class="acf8-label-text">Print Method</label>
-                  <div style="display:flex;gap:6px;">
-                    <button class="acf8-bm-meth acf8-bm-method-btn ${curMethod === 'network' ? 'on' : 'off'}" data-m="network">🌐 Network ZPL</button>
-                    <button class="acf8-bm-meth acf8-bm-method-btn ${curMethod === 'browser' ? 'on' : 'off'}" data-m="browser">🖨 Browser Print</button>
+                <div style="margin-bottom:16px;">
+                  <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:6px;">Print Method</label>
+                  <div style="display:flex;gap:8px;">
+                    <button class="acf8-bm-method-btn ${curMethod === 'network' ? 'on' : 'off'}" data-m="network">🌐 Network</button>
+                    <button class="acf8-bm-method-btn ${curMethod === 'browser' ? 'on' : 'off'}" data-m="browser">🖨 Browser</button>
                   </div>
                 </div>
-                <div class="acf8-row" style="justify-content:space-between;">
-                  <label style="font-size:11px;font-weight:600;color:var(--acf-text-secondary);">📷 ZPL QR Kod</label>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                  <label style="font-size:13px;font-weight:600;color:#0f172a;">📷 QR Code</label>
                   <label class="acf8-toggle">
                     <input type="checkbox" id="acf8-bm-qr" ${gs(SK.QR_CODE, 'off') === 'on' ? 'checked' : ''}>
-                    <span id="acf8-bm-qr-knob" class="acf8-toggle-knob ${gs(SK.QR_CODE, 'off') === 'on' ? 'on' : 'off'}"
-                      onclick="const c=this.previousElementSibling;c.checked=!c.checked;this.className='acf8-toggle-knob '+(c.checked?'on':'off')"></span>
+                    <span class="acf8-toggle-knob ${gs(SK.QR_CODE, 'off') === 'on' ? 'on' : 'off'}" onclick="const c=this.previousElementSibling;c.checked=!c.checked;this.className='acf8-toggle-knob '+(c.checked?'on':'off')"></span>
                   </label>
                 </div>
-                <div id="acf8-bm-status" class="acf8-bm-status"></div>
+                <div id="acf8-bm-status" style="font-size:12px;color:#64748b;min-height:16px;"></div>
               </div>
               <div class="acf8-bm-footer">
-                <button id="acf8-bm-cancel" class="acf8-bm-cancel">İptal</button>
-                <button id="acf8-bm-start" class="acf8-bm-start">Çap başlat (${selected.length} uçuş)</button>
+                <button id="acf8-bm-cancel" class="acf8-bm-cancel">Cancel</button>
+                <button id="acf8-bm-start" class="acf8-bm-start">Start Print (${selected.length})</button>
               </div>
             </div>`;
             document.body.appendChild(bModal);
 
             let bmMethod = curMethod;
-            bModal.querySelectorAll('.acf8-bm-meth').forEach(b => {
+            bModal.querySelectorAll('.acf8-bm-method-btn').forEach(b => {
                 b.onclick = () => {
                     bmMethod = b.dataset.m;
-                    bModal.querySelectorAll('.acf8-bm-meth').forEach(x => {
+                    bModal.querySelectorAll('.acf8-bm-method-btn').forEach(x => {
                         const on = x.dataset.m === bmMethod;
                         x.classList.toggle('on', on);
                         x.classList.toggle('off', !on);
@@ -2067,7 +2685,7 @@
                 const bmQR = bModal.querySelector('#acf8-bm-qr').checked ? 'on' : 'off';
                 ss(SK.QR_CODE, bmQR);
 
-                const acCfg2 = (getAcConfigs())[acKey2] || getSelectedAcConfig();
+                const acCfg2 = (getAcConfigs())[acKey2] || matchAcConfig('', '');
                 const acItems2 = [...(acCfg2.items || [])];
                 const acItemQtys2 = acItems2.map(() => 1);
 
@@ -2078,7 +2696,7 @@
 
                 let fetched = 0;
                 for (const { editBtn, printBtn, flightData } of selected) {
-                    statusEl.textContent = `⏳ PAX yüklənir: ${fetched + 1} / ${selected.length}`;
+                    statusEl.textContent = `⏳ Loading PAX: ${fetched + 1} / ${selected.length}`;
                     try {
                         const origClass = printBtn.className;
                         printBtn.classList.add('loading');
@@ -2092,7 +2710,7 @@
                     fetched++;
                 }
 
-                statusEl.textContent = '🖨 Göndərilir…';
+                statusEl.textContent = '🖨 Sending...';
 
                 if (bmMethod === 'browser') {
                     const pw = window.open('', '_blank', 'width=800,height=900');
@@ -2108,7 +2726,7 @@
                     }
 
                     if (!hasCards) {
-                        toast('Heç bir label yaradılmadı! Pax məlumatlarını yoxlayın.', 'error');
+                        toast('No labels generated! Check PAX data.', 'error');
                         startBtn.disabled = false;
                         batchBtn.disabled = false;
                         updateBatchBtn();
@@ -2121,32 +2739,33 @@
                         <title>Batch Labels</title>
                         <style>
                             *{margin:0;padding:0;box-sizing:border-box;}
-                            body{font-family:'Courier New',monospace;padding:10px;background:#e0e7ef;}
-                            .wrap{display:flex;flex-wrap:wrap;gap:10px;}
-                            .lc{width:200px;height:292px;border:2px solid #1e3a8a;border-radius:5px;
+                            body{font-family:'Courier New',monospace;padding:20px;background:#e5e7eb;}
+                            .wrap{display:flex;flex-wrap:wrap;gap:12px;}
+                            .lc{width:200px;height:auto;min-height:280px;border:2px solid;border-radius:8px;
                                 overflow:hidden;display:flex;flex-direction:column;page-break-inside:avoid;
-                                background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15);}
-                            .logo-box{border:1.5px solid #1e3a8a;margin:5px 5px 3px;height:62px;
-                                overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
-                            .logo-box img{max-width:100%;max-height:100%;object-fit:contain;}
-                            .info{padding:4px 8px;font-size:11px;line-height:1.75;flex-shrink:0;border-bottom:1px solid #c7d2e6;}
-                            .info .lbl{font-size:9px;color:#64748b;}
-                            .item-name{flex:1;display:flex;align-items:center;justify-content:center;
-                                padding:6px;text-align:center;font-weight:900;font-style:italic;font-size:22px;}
-                            .np{text-align:right;margin-bottom:10px;}
-                            @media print{.np{display:none;}body{background:#fff;}}
+                                background:#fff;box-shadow:0 4px 6px rgba(0,0,0,0.1);}
+                            .logo-box{border-bottom:1px solid;margin:0;padding:8px;text-align:center;height:60px;
+                                display:flex;align-items:center;justify-content:center;}
+                            .info{padding:8px 10px;font-size:11px;line-height:1.8;}
+                            .route{display:flex;justify-content:space-between;margin:2px 0;}
+                            .class-badge{margin-top:6px;padding:3px 0;text-align:center;border-radius:4px;font-weight:700;}
+                            .item-name{padding:10px 8px;text-align:center;font-weight:900;font-style:italic;
+                                        border-top:1px solid;font-size:22px;}
+                            .np{text-align:right;margin-bottom:15px;}
+                            @media print{.np{display:none;}body{background:#fff;padding:0;}}
+                            .lbl{opacity:0.6;font-size:9px;}
                         </style>
                     </head>
                     <body>
                         <div class="np">
-                            <button onclick="window.print()" style="padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🖨 Print All</button>
+                            <button onclick="window.print()" style="padding:10px 24px;background:#2563eb;color:#fff;border:none;border-radius:30px;cursor:pointer;font-size:14px;">🖨 Print All</button>
                         </div>
                         <div class="wrap">${allCards}</div>
                     </body>
                     </html>`);
 
                     pw.document.close();
-                    toast(`✓ ${selected.length} uçuş üçün browser print açıldı`, 'success');
+                    toast(`✓ ${selected.length} flights browser print opened`, 'success');
                     closeModal();
                     selectedRows.clear();
                     batchBtn.disabled = false;
@@ -2169,7 +2788,7 @@
                     }
 
                     if (!zplList.length) {
-                        toast('Göndəriləcək label yoxdur', 'error');
+                        toast('No labels to send', 'error');
                         startBtn.disabled = false;
                         batchBtn.disabled = false;
                         updateBatchBtn();
@@ -2178,16 +2797,16 @@
 
                     const useBatch2 = gs(SK.ZPL_BATCH_MODE, 'sequential') === 'batch';
                     if (useBatch2) {
-                        statusEl.textContent = `Batch göndərilir: ${zplList.length} label…`;
+                        statusEl.textContent = `Batch sending: ${zplList.length} labels...`;
                         sendZplBatch(ip, zplList,
                             (count) => {
                                 batchBtn.disabled = false; updateBatchBtn();
-                                toast(`✓ ${count} label batch ZT411-ə göndərildi`, 'success');
+                                toast(`✓ ${count} labels batch sent to ZT411`, 'success');
                                 selectedRows.clear(); closeModal();
                             },
                             (err) => {
                                 batchBtn.disabled = false; updateBatchBtn();
-                                toast(`Batch xəta: ${err}`, 'error');
+                                toast(`Batch error: ${err}`, 'error');
                             }
                         );
                     } else {
@@ -2195,10 +2814,10 @@
                         function batchSendNext() {
                             if (sent2 + fail2 >= zplList.length) {
                                 batchBtn.disabled = false; updateBatchBtn();
-                                toast(`✓ ${sent2}/${zplList.length} label ZT411-ə göndərildi`, 'success');
+                                toast(`✓ ${sent2}/${zplList.length} labels sent to ZT411`, 'success');
                                 selectedRows.clear(); closeModal(); return;
                             }
-                            statusEl.textContent = `🖨 ${sent2 + fail2 + 1} / ${zplList.length} göndərilir…`;
+                            statusEl.textContent = `🖨 ${sent2 + fail2 + 1} / ${zplList.length} sending...`;
                             sendZplToZebra(ip, zplList[sent2 + fail2],
                                 () => { sent2++; batchSendNext(); },
                                 () => { fail2++; batchSendNext(); });
