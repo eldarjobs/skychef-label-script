@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         AeroChef Paxload – Print Labels (V9)
+// @name         AeroChef Paxload â€“ Print Labels (V9)
 // @namespace    http://tampermonkey.net/
-// @version      10
+// @version      10.1
 // @description  Local HTML preview, aircraft-type items config (Meals/Beverages/Breads), Zebra ZT411 ZPL print.
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -15,9 +15,9 @@
 (function () {
     'use strict';
 
-    /* ════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        1. STORAGE HELPERS
-    ════════════════════════════════════════ */
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     const SK = {
         PRINTER_IP: 'acf9_printer_ip',
         PRINT_METHOD: 'acf9_print_method',   // 'network' | 'browser'
@@ -39,7 +39,7 @@
     const gs = (k, d = '') => { try { return GM_getValue(k, d); } catch { return localStorage.getItem(k) ?? d; } };
     const ss = (k, v) => { try { GM_setValue(k, v); } catch { localStorage.setItem(k, v); } };
 
-    /* ── Export / Import all settings as JSON ── */
+    /* â”€â”€ Export / Import all settings as JSON â”€â”€ */
     function exportSettings() {
         const keys = Object.values(SK).filter(v => v.startsWith('acf9_'));
         const data = {};
@@ -57,13 +57,13 @@
             try {
                 const data = JSON.parse(e.target.result);
                 Object.entries(data).forEach(([k, v]) => ss(k, v));
-                toast(`✓ ${Object.keys(data).length} ayar import edildi — sayfanı yeniləyin`, 'success', 5000);
-            } catch { toast('Import xətası: JSON formatı düzgün deyil', 'error'); }
+                toast(`âœ“ ${Object.keys(data).length} ayar import edildi â€” sayfanÄ± yenilÉ™yin`, 'success', 5000);
+            } catch { toast('Import xÉ™tasÄ±: JSON formatÄ± dÃ¼zgÃ¼n deyil', 'error'); }
         };
         reader.readAsText(file);
     }
 
-    /* ── Conditional item qty: checks item.rules array against paxData ── */
+    /* â”€â”€ Conditional item qty: checks item.rules array against paxData â”€â”€ */
     function resolveItemQty(item, paxData, manualQty) {
         if (manualQty != null && manualQty !== '') return parseInt(manualQty) || 0;
         if (!item.rules || !item.rules.length) return 1;
@@ -88,11 +88,11 @@
 
     const IP_REGEX = /^(\d{1,3}\.){3}\d{1,3}$/;
 
-    /* ════════════════════════════════════════
-       AIRCRAFT ITEM CONFIGS  (uçuş tipinə görə items)
-       Hər config: { label, items: [ {name, unit} ] }
-    ════════════════════════════════════════ */
-    // bgColor: 'red' = qırmızı label kağızı / dark ZPL fill; 'white' = normal
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+       AIRCRAFT ITEM CONFIGS  (uÃ§uÅŸ tipinÉ™ gÃ¶rÉ™ items)
+       HÉ™r config: { label, items: [ {name, unit} ] }
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    // bgColor: 'red' = qÄ±rmÄ±zÄ± label kaÄŸÄ±zÄ± / dark ZPL fill; 'white' = normal
     const DEFAULT_AC_CONFIGS = {
         'A320': {
             label: 'Airbus A320',
@@ -174,8 +174,8 @@
         return cfgs[key] || Object.values(cfgs)[0] || DEFAULT_AC_CONFIGS.A320;
     }
 
-    /* matchAcConfig: uçuş cərgəsindən ox undulan aircraftSeries / aircraftType əsasənda
-       en uyğun konfiqurasiyanı tapır. Öncə series-ə görə, sonra type-a görə axtarır. */
+    /* matchAcConfig: uÃ§uÅŸ cÉ™rgÉ™sindÉ™n ox undulan aircraftSeries / aircraftType É™sasÉ™nda
+       en uyÄŸun konfiqurasiyanÄ± tapÄ±r. Ã–ncÉ™ series-É™ gÃ¶rÉ™, sonra type-a gÃ¶rÉ™ axtarÄ±r. */
     function matchAcConfig(series, type) {
         const cfgs = getAcConfigs();
         const s = (series || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -200,15 +200,15 @@
         return { key: 'A320', ...(cfgs['A320'] || Object.values(cfgs)[0]) };
     }
 
-    /* ════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        2. CLASS COLOURS (same as V7)
-    ════════════════════════════════════════ */
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     const CLASS_COLORS = { BC: '#6610f2', PE: '#fd7e14', EC: '#28a745', CT: '#e67e22', CP: '#17a2b8', CC: '#007bff', VP: '#e83e8c' };
     const DEFAULT_COLOR = '#6c757d';
 
-    /* ════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        3. SVG ICONS
-    ════════════════════════════════════════ */
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     const ICO = {
         printer: '<svg viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>',
         loading: '<svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>',
@@ -217,9 +217,9 @@
         cog: '<svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.03-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>',
     };
 
-    /* ════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        4. TOAST
-    ════════════════════════════════════════ */
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     let _tw = document.getElementById('acf8-toast-wrap');
     if (!_tw) {
         _tw = document.createElement('div');
@@ -236,16 +236,16 @@
         setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .4s'; setTimeout(() => t.remove(), 400); }, ms);
     }
 
-    /* ════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        5. CSS
-    ════════════════════════════════════════ */
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     const style = document.createElement('style');
     style.textContent = `
     @keyframes acf8fi  { from{opacity:0} to{opacity:1} }
     @keyframes acf8su  { from{transform:translateY(-10px);opacity:0} to{transform:translateY(0);opacity:1} }
     @keyframes acf8spin{ to{transform:rotate(360deg)} }
 
-    /* ── trigger button ── */
+    /* â”€â”€ trigger button â”€â”€ */
     .acf8-printer{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;background:none;border:none;border-radius:4px;cursor:pointer;transition:background .15s;padding:0;vertical-align:middle;}
     .acf8-printer:hover{background:rgba(26,115,232,.1);}
     .acf8-printer svg{width:18px;height:18px;fill:#1a73e8;}
@@ -253,10 +253,10 @@
     .acf8-printer.loading svg{fill:#f9a825;}
     .acf8-printer.error svg{fill:#dc2626!important;}
 
-    /* ── overlay ── */
+    /* â”€â”€ overlay â”€â”€ */
     .acf8-overlay{position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:2147483647;display:flex;align-items:center;justify-content:center;animation:acf8fi .15s ease;}
 
-    /* ── modal  (compact) ── */
+    /* â”€â”€ modal  (compact) â”€â”€ */
     .acf8-modal{background:#fff;border-radius:10px;width:680px;max-width:96vw;max-height:88vh;box-shadow:0 16px 50px rgba(0,0,0,.28);display:flex;flex-direction:column;overflow:hidden;animation:acf8su .18s ease;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:12px;}
     .acf8-modal *{box-sizing:border-box;margin:0;}
 
@@ -316,7 +316,7 @@
     .acf8-prev-ph svg{width:30px;height:30px;fill:#d1d5db;}
     .acf8-spinner{width:24px;height:24px;border:3px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;animation:acf8spin .7s linear infinite;}
 
-    /* settings panel – compact 2-col grid */
+    /* settings panel â€“ compact 2-col grid */
     .acf8-settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;}
     .acf8-settings-grid .full{grid-column:1/-1;}
     .acf8-method-row{display:flex;gap:6px;}
@@ -361,14 +361,14 @@
     `;
     document.head.appendChild(style);
 
-    /* ════════════════════════════════════════
-       6.  ZPL GENERATOR  – Azerbaijan Airlines format
-           Label: 57mm × 83mm @ 203dpi ≈ 455 × 662 dots
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+       6.  ZPL GENERATOR  â€“ Azerbaijan Airlines format
+           Label: 57mm Ã— 83mm @ 203dpi â‰ˆ 455 Ã— 662 dots
            One label per ITEM per PAX-CLASS.
            Red items: fill black + ^FR (reverse = white text on black)
-    ════════════════════════════════════════ */
-    /* ── Label size helpers ── */
-    // Converts mm → dots at 203 dpi
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    /* â”€â”€ Label size helpers â”€â”€ */
+    // Converts mm â†’ dots at 203 dpi
     const mm2dots = mm => Math.round(mm * 203 / 25.4);
 
     function getLabelDims() {
@@ -377,7 +377,7 @@
         return { LW: mm2dots(w), LH: mm2dots(h) };
     }
 
-    /* ── Class filter ── */
+    /* â”€â”€ Class filter â”€â”€ */
     // Only classes in PRINT_CLASSES list (default BC, EC) with pax > 0
     function getPrintClasses(paxData) {
         const allowed = gs(SK.PRINT_CLASSES, 'BC,EC').split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
@@ -387,7 +387,7 @@
     }
 
     function _dateFmt(raw) {
-        // "25-Feb-2026" or "2026-02-25" → "25 / Feb / 2026"
+        // "25-Feb-2026" or "2026-02-25" â†’ "25 / Feb / 2026"
         if (!raw) return '________';
         const p = raw.split(/[-\/\s]+/);
         return p.length === 3 ? `${p[0]} / ${p[1]} / ${p[2]}` : raw;
@@ -415,11 +415,11 @@
 ^LL${LH}
 ^LH0,0
 `;
-        // ── Red fill ──
+        // â”€â”€ Red fill â”€â”€
         if (isRed) z += `^FO0,0^GB${LW},${LH},${LH}^FS
 `;
 
-        // ── Logo border box ──
+        // â”€â”€ Logo border box â”€â”€
         z += `^FO4,4^GB${LW - 8},72,2^FS
 `;
         // Logo text  (centered approx)
@@ -428,11 +428,11 @@
         z += `^FO110,36${FR}^A0N,18,18^FD- AIRLINES -^FS
 `;
 
-        // ── Divider ──
+        // â”€â”€ Divider â”€â”€
         z += `^FO4,79^GB${LW - 8},2,2^FS
 `;
 
-        // ── Flight info block ──
+        // â”€â”€ Flight info block â”€â”€
         z += `^FO8,88${FR}^A0N,17,17^FDDate: ${date}^FS
 `;
         z += `^FO8,110${FR}^A0N,17,17^FDFlight No. : ${fno}^FS
@@ -444,15 +444,15 @@
         z += `^FO8,174${FR}^A0N,17,17^FD${classCode} ${paxCount || ''} -^FS
 `;
 
-        // ── Divider before item name ──
+        // â”€â”€ Divider before item name â”€â”€
         z += `^FO4,580^GB${LW - 8},2,2^FS
 `;
 
-        // ── Item name (large, bold, italic via FI) ──
+        // â”€â”€ Item name (large, bold, italic via FI) â”€â”€
         z += `^FO8,595^FI${FR}^A0N,${nameFz},${nameFz}^FD${item.name}^FS
 `;
 
-        // ── QR Code (optional, bottom-right corner) ──
+        // â”€â”€ QR Code (optional, bottom-right corner) â”€â”€
         if (gs(SK.QR_CODE, 'off') === 'on') {
             const qrData = `${fno}|${date}|${classCode}|${item.name}`;
             z += `^FO${LW - 110},${LH - 110}^BQN,2,3^FDMM,${qrData}^FS
@@ -464,7 +464,7 @@
         return z;
     }
 
-    /* Build ALL labels: each item × each pax class × per-item qty */
+    /* Build ALL labels: each item Ã— each pax class Ã— per-item qty */
     function buildAllLabelsZPL(flight, paxData, acItems, itemQtys) {
         let all = '';
         const classes = getPrintClasses(paxData);
@@ -482,10 +482,10 @@
         return all;
     }
 
-    /* ════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        7. LOCAL HTML LABEL PREVIEW
        Shows per-item miniature cards (AzAL format).
-    ════════════════════════════════════════ */
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     function renderLocalPreview(previewBox, flight, paxData, galley, _unused, acItems) {
         const route = flight.route || '';
         const parts = route.split('-');
@@ -494,7 +494,7 @@
         const date = _dateFmt(flight.date);
         const fno = flight.flightNo || '-';
 
-        // Build ordered label list: class × item × qty
+        // Build ordered label list: class Ã— item Ã— qty
         const printCls = getPrintClasses(paxData);
         const allItems = (acItems && acItems.length) ? acItems : [{ name: '(no items)', bgColor: 'white', _qty: 1 }];
 
@@ -572,7 +572,7 @@
             const info = document.createElement('div');
             info.style.cssText = 'font-size:9px;color:#64748b;text-align:center;letter-spacing:.3px;';
             const lbl = labels[cur];
-            info.textContent = `${lbl.cls} • ${lbl.item.name}`;
+            info.textContent = `${lbl.cls} â€¢ ${lbl.item.name}`;
             previewBox.appendChild(info);
 
             previewBox.querySelector('#acf8-prev-lbl').onclick = () => { cur = (cur - 1 + labels.length) % labels.length; render(); };
@@ -582,9 +582,9 @@
         render();
     }
 
-    /* ════════════════════════════════════════
-       8. NETWORK PRINT → ZEBRA ZT411
-    ════════════════════════════════════════ */
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+       8. NETWORK PRINT â†’ ZEBRA ZT411
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     function sendZplToZebra(ip, zpl, onOk, onErr) {
         GM_xmlhttpRequest({
             method: 'POST',
@@ -593,15 +593,15 @@
             headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
             timeout: 8000,
             onload: r => r.status < 400 ? onOk() : onErr(`HTTP ${r.status}`),
-            onerror: () => onErr('Network error – printer offline?'),
+            onerror: () => onErr('Network error â€“ printer offline?'),
             ontimeout: () => onErr('Timeout'),
         });
     }
 
-    /* ════════════════════════════════════════
-       9. BROWSER PRINT FALLBACK  – AzAL format
-          One <div> per item × per pax-class × labelCount copies.
-    ════════════════════════════════════════ */
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+       9. BROWSER PRINT FALLBACK  â€“ AzAL format
+          One <div> per item Ã— per pax-class Ã— labelCount copies.
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     function browserPrint(flight, paxData, acItemQtys, acItems) {
         const route = flight.route || '';
         const parts = route.split('-');
@@ -613,7 +613,7 @@
         const items = (acItems && acItems.length) ? acItems : [];
         if (!classes.length || !items.length) {
             const pw = window.open('', '_blank');
-            pw?.document.write('<p style="font-family:sans-serif;padding:20px;">BC/EC pax yoxdur və ya item konfiqurasiya edilməyib.</p>');
+            pw?.document.write('<p style="font-family:sans-serif;padding:20px;">BC/EC pax yoxdur vÉ™ ya item konfiqurasiya edilmÉ™yib.</p>');
             pw?.document.close();
             return;
         }
@@ -657,7 +657,7 @@
         }
 
         const totalLabels = classes.reduce((s, _) => s + (acItemQtys ? acItemQtys.reduce((a, q) => a + (q || 0), 0) : items.length), 0);
-        const qtyList = items.map((it, i) => `${it.name}×${acItemQtys?.[i] ?? 1}`).join(', ');
+        const qtyList = items.map((it, i) => `${it.name}Ã—${acItemQtys?.[i] ?? 1}`).join(', ');
         const pw = window.open('', '_blank', 'width=700,height=900');
         pw.document.write(`<!DOCTYPE html><html><head><title>Labels &#8211; ${flight.flightNo}</title><style>
             *{margin:0;padding:0;box-sizing:border-box;}
@@ -677,16 +677,16 @@
             .lbl{opacity:.55;font-size:9px;}
         </style></head><body>
         <div class="np">
-          <b>${totalLabels} label</b> (${classes.join('+')} × ${qtyList})&nbsp;&nbsp;
+          <b>${totalLabels} label</b> (${classes.join('+')} Ã— ${qtyList})&nbsp;&nbsp;
           <button onclick="window.print()" style="padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">&#128424; Print</button>
         </div>
         <div class="wrap">${cards}</div></body></html>`);
         pw.document.close();
     }
 
-    /* ════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        10. MODAL
-    ════════════════════════════════════════ */
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     function buildSelect(id, options, savedVal, placeholder) {
         let h = `<select id="${id}"><option value="">${placeholder}</option>`;
         options.forEach(o => h += `<option value="${o}"${o === savedVal ? ' selected' : ''}>${o}</option>`);
@@ -743,9 +743,9 @@
             <!-- Aircraft badge -->
             <div style="display:flex;align-items:center;gap:6px;padding:4px 0;">
               <span style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Aircraft:</span>
-              <span id="acf8-ac-badge" style="background:#1e3a8a;color:#fff;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;">${flightData.aircraftSeries || '—'}</span>
+              <span id="acf8-ac-badge" style="background:#1e3a8a;color:#fff;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;">${flightData.aircraftSeries || 'â€”'}</span>
               <span style="font-size:10px;color:#6b7280;">${flightData.aircraftType || ''}</span>
-              <span style="font-size:10px;color:#9ca3af;margin-left:4px;">→ config: <b>${acCfg.label}</b></span>
+              <span style="font-size:10px;color:#9ca3af;margin-left:4px;">â†’ config: <b>${acCfg.label}</b></span>
             </div>
             <div class="acf8-print-body">
               <div class="acf8-print-form">
@@ -791,7 +791,7 @@
               <div class="acf8-preview-col">
                 <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Label Preview</span>
                 <div class="acf8-preview-box" id="acf8-prev-box" style="align-items:flex-start;justify-content:center;overflow-y:auto;padding:8px;"></div>
-                <span style="font-size:11px;color:#9ca3af;text-align:center;">Local render · Zebra ZT411 · 35×80mm</span>
+                <span style="font-size:11px;color:#9ca3af;text-align:center;">Local render Â· Zebra ZT411 Â· 35Ã—80mm</span>
               </div>
             </div>
           </div>
@@ -802,8 +802,8 @@
               <div class="acf8-fg full">
                 <label>Print Method</label>
                 <div class="acf8-method-row">
-                  <button class="acf8-method-btn${curMethod === 'network' ? ' active' : ''}" data-method="network">🌐 Network (ZT411 TCP)</button>
-                  <button class="acf8-method-btn${curMethod === 'browser' ? ' active' : ''}" data-method="browser">🖨 Browser Print</button>
+                  <button class="acf8-method-btn${curMethod === 'network' ? ' active' : ''}" data-method="network">ðŸŒ Network (ZT411 TCP)</button>
+                  <button class="acf8-method-btn${curMethod === 'browser' ? ' active' : ''}" data-method="browser">ðŸ–¨ Browser Print</button>
                 </div>
               </div>
               <!-- Label Size -->
@@ -825,7 +825,7 @@
               <!-- QR toggle -->
               <div class="acf8-fg full" style="flex-direction:row;align-items:center;justify-content:space-between;">
                 <label style="text-transform:none;font-size:11px;font-weight:600;color:#374151;cursor:pointer;" for="acf8-qr-toggle">
-                  📷 ZPL Label-də QR Kod (ramp scan)
+                  ðŸ“· ZPL Label-dÉ™ QR Kod (ramp scan)
                 </label>
                 <label style="position:relative;display:inline-block;width:36px;height:20px;">
                   <input type="checkbox" id="acf8-qr-toggle" ${gs(SK.QR_CODE, 'off') === 'on' ? 'checked' : ''} style="opacity:0;width:0;height:0;">
@@ -853,8 +853,8 @@
               <!-- Aircraft Items Config -->
               <div class="acf8-fg full">
                 <label style="display:flex;align-items:center;justify-content:space-between;">
-                  <span>Aircraft Items Config &nbsp;<span id="acf8-ac-cfg-key" style="background:#1e3a8a;color:#fff;padding:1px 8px;border-radius:8px;font-size:10px;font-weight:700;">${acCfg.key || '—'}</span></span>
-                  <select id="acf8-ac-type-sel" style="padding:3px 6px;border-radius:5px;border:1px solid #d1d5db;font-size:12px;">${Object.entries(getAcConfigs()).map(([k, c]) => `<option value="${k}"${k === acCfg.key ? ' selected' : ''}>${k} – ${c.label}</option>`).join('')}</select>
+                  <span>Aircraft Items Config &nbsp;<span id="acf8-ac-cfg-key" style="background:#1e3a8a;color:#fff;padding:1px 8px;border-radius:8px;font-size:10px;font-weight:700;">${acCfg.key || 'â€”'}</span></span>
+                  <select id="acf8-ac-type-sel" style="padding:3px 6px;border-radius:5px;border:1px solid #d1d5db;font-size:12px;">${Object.entries(getAcConfigs()).map(([k, c]) => `<option value="${k}"${k === acCfg.key ? ' selected' : ''}>${k} â€“ ${c.label}</option>`).join('')}</select>
                 </label>
                 <div id="acf8-ac-items-list" style="display:flex;flex-direction:column;gap:3px;margin:6px 0;"></div>
                 <div style="display:flex;gap:6px;">
@@ -887,12 +887,12 @@
 
         document.body.appendChild(overlay);
 
-        /* ── Refs ── */
+        /* â”€â”€ Refs â”€â”€ */
         const prevBox = overlay.querySelector('#acf8-prev-box');
         const ftrStatus = overlay.querySelector('#acf8-ftr-status');
         const actionBtn = overlay.querySelector('#acf8-btn-action');
 
-        /* ── Custom label items ── */
+        /* â”€â”€ Custom label items â”€â”€ */
         const customItems = [];  // {name, bgColor:'white', _qty:N}
 
         function renderCustomList() {
@@ -902,13 +902,13 @@
             customItems.forEach((ci, idx) => {
                 const row = document.createElement('div');
                 row.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:11px;background:#f0f4ff;border-radius:4px;padding:2px 6px;';
-                row.innerHTML = `<span style="flex:1;">${ci.name} <b style="color:#2563eb;">×${ci._qty}</b></span><button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;">×</button>`;
+                row.innerHTML = `<span style="flex:1;">${ci.name} <b style="color:#2563eb;">Ã—${ci._qty}</b></span><button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;">Ã—</button>`;
                 row.querySelector('button').onclick = () => { customItems.splice(idx, 1); renderCustomList(); schedulePreview(); };
                 el.appendChild(row);
             });
         }
 
-        /* ── Local preview renderer ── */
+        /* â”€â”€ Local preview renderer â”€â”€ */
         function schedulePreview() {
             clearTimeout(prevTimer);
             prevTimer = setTimeout(() => {
@@ -922,7 +922,7 @@
             }, 300);
         }
 
-        /* ── Galley list render ── */
+        /* â”€â”€ Galley list render â”€â”€ */
         function renderGalleyList() {
             const list = getGalleys();
             const el = overlay.querySelector('#acf8-galley-list');
@@ -943,7 +943,7 @@
         }
         renderGalleyList();
 
-        /* ── AC items list render (Settings tab) ── */
+        /* â”€â”€ AC items list render (Settings tab) â”€â”€ */
         function renderAcItemsList() {
             const el = overlay.querySelector('#acf8-ac-items-list');
             if (!el) return;
@@ -963,7 +963,7 @@
             });
         }
 
-        /* ── AC type selector change ── */
+        /* â”€â”€ AC type selector change â”€â”€ */
         const acTypeSel = overlay.querySelector('#acf8-ac-type-sel');
         if (acTypeSel) {
             acTypeSel.onchange = () => {
@@ -982,7 +982,7 @@
             };
         }
 
-        /* ── Add item ── */
+        /* â”€â”€ Add item â”€â”€ */
         const addItemBtn = overlay.querySelector('#acf8-ac-item-add');
         if (addItemBtn) {
             addItemBtn.onclick = () => {
@@ -990,7 +990,7 @@
                 const unitI = overlay.querySelector('#acf8-ac-item-unit');
                 const name = nameI.value.trim();
                 const unit = unitI.value.trim() || 'pcs';
-                if (!name) { toast('Item adı daxil edin', 'error'); return; }
+                if (!name) { toast('Item adÄ± daxil edin', 'error'); return; }
                 acItems.push({ name, bgColor: 'white' });
                 acItemQtys.push(1);
                 nameI.value = '';
@@ -998,13 +998,13 @@
                 renderAcItemsList();
                 renderItemQtys();
                 schedulePreview();
-                toast(`➕ ${name} əlavə edildi`, 'success');
+                toast(`âž• ${name} É™lavÉ™ edildi`, 'success');
             };
         }
 
         renderAcItemsList();
 
-        /* ── Item qty counters (Print tab) ── */
+        /* â”€â”€ Item qty counters (Print tab) â”€â”€ */
         function renderItemQtys() {
             const el = overlay.querySelector('#acf8-item-qtys-list');
             if (!el) return;
@@ -1038,20 +1038,20 @@
         }
         renderItemQtys();
 
-        /* ── Custom label buttons ── */
+        /* â”€â”€ Custom label buttons â”€â”€ */
         const customAddBtn = overlay.querySelector('#acf8-custom-add');
         if (customAddBtn) {
             customAddBtn.onclick = () => {
                 const nameI = overlay.querySelector('#acf8-custom-name');
                 const qtyI = overlay.querySelector('#acf8-custom-qty');
                 const name = (nameI.value || '').trim();
-                if (!name) { toast('Custom item adı daxil edin', 'error'); return; }
+                if (!name) { toast('Custom item adÄ± daxil edin', 'error'); return; }
                 const qty = Math.max(1, parseInt(qtyI.value) || 1);
                 customItems.push({ name, bgColor: 'white', _qty: qty });
                 nameI.value = ''; qtyI.value = 1;
                 renderCustomList();
                 schedulePreview();
-                toast(`➕ Custom: ${name} ×${qty}`, 'success', 2000);
+                toast(`âž• Custom: ${name} Ã—${qty}`, 'success', 2000);
             };
             overlay.querySelector('#acf8-custom-minus').onclick = () => {
                 const i = overlay.querySelector('#acf8-custom-qty');
@@ -1063,26 +1063,26 @@
             };
         }
 
-        /* ── Export / Import ── */
+        /* â”€â”€ Export / Import â”€â”€ */
         overlay.querySelector('#acf8-export-btn')?.addEventListener('click', exportSettings);
         overlay.querySelector('#acf8-import-file')?.addEventListener('change', e => {
             if (e.target.files[0]) importSettings(e.target.files[0]);
         });
 
-        /* ── Close ── */
+        /* â”€â”€ Close â”€â”€ */
         const close = () => { clearTimeout(prevTimer); overlay.remove(); document.removeEventListener('keydown', kbH); };
         overlay.querySelector('.acf8-close').onclick = close;
         overlay.querySelector('#acf8-btn-cancel').onclick = close;
         overlay.onclick = e => { if (e.target === overlay) close(); };
 
-        /* ── Keyboard ── */
+        /* â”€â”€ Keyboard â”€â”€ */
         function kbH(e) {
             if (e.key === 'Escape') close();
             if (e.key === 'Enter' && !['INPUT', 'SELECT'].includes(e.target.tagName)) { e.preventDefault(); actionBtn.click(); }
         }
         document.addEventListener('keydown', kbH);
 
-        /* ── Tabs ── */
+        /* â”€â”€ Tabs â”€â”€ */
         overlay.querySelectorAll('.acf8-tab').forEach(tab => {
             tab.onclick = () => {
                 overlay.querySelectorAll('.acf8-tab').forEach(t => t.classList.remove('active'));
@@ -1097,7 +1097,7 @@
             };
         });
 
-        /* ── Method toggle ── */
+        /* â”€â”€ Method toggle â”€â”€ */
         overlay.querySelectorAll('.acf8-method-btn').forEach(btn => {
             btn.onclick = () => {
                 overlay.querySelectorAll('.acf8-method-btn').forEach(b => b.classList.remove('active'));
@@ -1109,17 +1109,17 @@
             };
         });
 
-        /* ── IP Save ── */
+        /* â”€â”€ IP Save â”€â”€ */
         overlay.querySelector('#acf8-ip-save').onclick = () => {
             const ip = overlay.querySelector('#acf8-ip').value.trim();
             const st = overlay.querySelector('#acf8-ip-status');
-            if (!IP_REGEX.test(ip)) { st.textContent = '✗ Invalid IP'; st.className = 'acf8-ip-status err'; return; }
+            if (!IP_REGEX.test(ip)) { st.textContent = 'âœ— Invalid IP'; st.className = 'acf8-ip-status err'; return; }
             ss(SK.PRINTER_IP, ip);
-            st.textContent = '✓ Saved'; st.className = 'acf8-ip-status ok';
+            st.textContent = 'âœ“ Saved'; st.className = 'acf8-ip-status ok';
             toast('Printer IP saved: ' + ip, 'success');
         };
 
-        /* ── Galley add ── */
+        /* â”€â”€ Galley add â”€â”€ */
         overlay.querySelector('#acf8-galley-add').onclick = () => {
             const inp = overlay.querySelector('#acf8-galley-new');
             const name = inp.value.trim();
@@ -1135,15 +1135,15 @@
             toast('Galley added: ' + name, 'success');
         };
 
-        /* ── Galley + select changes ── */
+        /* â”€â”€ Galley + select changes â”€â”€ */
         overlay.querySelector('#acf8-sel-galley').onchange = () => {
             ss(SK.GALLEY, overlay.querySelector('#acf8-sel-galley').value);
             schedulePreview();
         };
 
-        /* ── Action button ── */
+        /* â”€â”€ Action button â”€â”€ */
         actionBtn.onclick = () => {
-            // SETTINGS TAB → Save
+            // SETTINGS TAB â†’ Save
             if (curTab === 'settings') {
                 ss(SK.PRINT_METHOD, curMethod);
                 // Label size
@@ -1160,14 +1160,14 @@
                 const key = overlay.querySelector('#acf8-ac-type-sel')?.value || acCfg.key;
                 const cfgs = getAcConfigs();
                 if (cfgs[key]) { cfgs[key].items = [...acItems]; saveAcConfigs(cfgs); }
-                toast('Settings saved ✔', 'success');
+                toast('Settings saved âœ”', 'success');
                 schedulePreview();
                 return;
             }
 
             // PRINT TAB
             const printType = overlay.querySelector('#acf8-sel-printtype').value;
-            if (!printType) { toast('Print Type seçilməlidir!', 'error'); return; }
+            if (!printType) { toast('Print Type seÃ§ilmÉ™lidir!', 'error'); return; }
             if (!paxData.length) { toast('Pax data yoxdur', 'error'); return; }
 
             const galley = overlay.querySelector('#acf8-sel-galley').value || 'Galley 1';
@@ -1189,12 +1189,12 @@
                 const qtysForPrint = allForPrint.map(it => it._qty || 1);
                 browserPrint(flightData, paxData, qtysForPrint, allForPrint);
                 close();
-                toast('Browser print açıldı', 'success');
+                toast('Browser print aÃ§Ä±ldÄ±', 'success');
                 return;
             }
 
-            // Network ZPL – send labels ONE BY ONE to printer
-            if (!IP_REGEX.test(ip)) { toast('Əvvəlcə Settings-də Printer IP daxil edin', 'error'); return; }
+            // Network ZPL â€“ send labels ONE BY ONE to printer
+            if (!IP_REGEX.test(ip)) { toast('ÆvvÉ™lcÉ™ Settings-dÉ™ Printer IP daxil edin', 'error'); return; }
 
             // Build a flat array of individual ZPL strings (acItems + customItems)
             const printCls2 = getPrintClasses(paxData);
@@ -1217,7 +1217,7 @@
                 }
             }
 
-            if (!zplList.length) { toast('Göndəriləcək label yoxdur', 'error'); return; }
+            if (!zplList.length) { toast('GÃ¶ndÉ™rilÉ™cÉ™k label yoxdur', 'error'); return; }
 
             actionBtn.disabled = true;
             let sent = 0;
@@ -1227,16 +1227,16 @@
                 if (sent + failed >= zplList.length) {
                     actionBtn.disabled = false;
                     if (failed === 0) {
-                        toast(`✓ ${sent}/${zplList.length} label ZT411-ə göndərildi (${ip})`, 'success');
+                        toast(`âœ“ ${sent}/${zplList.length} label ZT411-É™ gÃ¶ndÉ™rildi (${ip})`, 'success');
                         close();
                     } else {
-                        ftrStatus.textContent = `${sent} ok, ${failed} xəta`;
-                        toast(`${failed} label göndərilmədi`, 'error');
+                        ftrStatus.textContent = `${sent} ok, ${failed} xÉ™ta`;
+                        toast(`${failed} label gÃ¶ndÉ™rilmÉ™di`, 'error');
                     }
                     return;
                 }
                 const idx = sent + failed;
-                ftrStatus.textContent = `Göndərilir: ${idx + 1} / ${zplList.length}…`;
+                ftrStatus.textContent = `GÃ¶ndÉ™rilir: ${idx + 1} / ${zplList.length}â€¦`;
                 sendZplToZebra(ip, zplList[idx],
                     () => { sent++; sendNext(); },
                     (err) => { failed++; console.warn('ZPL err:', err); sendNext(); }
@@ -1249,9 +1249,64 @@
         schedulePreview();
     }
 
-    /* ════════════════════════════════════════
-       11. DATA FETCH  ← V7 orijinal məntiq (saxlanılıb)
-    ════════════════════════════════════════ */
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+       11. DATA FETCH
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    /* Silent pax fetch used by batch print. Returns Promise<paxData[]>. */
+    function fetchPaxForFlight(editBtn) {
+        return new Promise(resolve => {
+            const iframeName = 'acf8_sp_' + Math.random().toString(36).slice(2);
+            const iframe = document.createElement('iframe');
+            iframe.name = iframeName; iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+            let loadCount = 0;
+            let formEl = null;
+            const tmr = setTimeout(() => { iframe.remove(); if (formEl) formEl.remove(); resolve([]); }, 15000);
+            iframe.onload = () => {
+                loadCount++;
+                try {
+                    const doc = iframe.contentDocument || iframe.contentWindow.document;
+                    if (!doc.body || doc.URL === 'about:blank' || !doc.body.innerHTML) return;
+                    const classTable = doc.getElementById('ctl00_CphMaster_gdvClass');
+                    if (doc.title.includes('Pax Load') || classTable) {
+                        clearTimeout(tmr);
+                        const paxData = [];
+                        if (classTable) {
+                            classTable.querySelectorAll('tr.acf-griddetail-normalrow, tr.acf-griddetail-alternaterow').forEach(row => {
+                                const ci = row.querySelector('input[id*="hidClassCode"]'); if (!ci) return;
+                                const cn = ci.value.trim();
+                                const pi = row.querySelector('input[id*="txtTotalPaxLoad"]');
+                                let v = 0; if (pi) { v = parseInt(pi.value.trim()); if (isNaN(v)) v = 0; }
+                                if (cn) paxData.push({ class: cn, value: v });
+                            });
+                        }
+                        iframe.remove(); if (formEl) formEl.remove(); resolve(paxData);
+                    } else if (loadCount > 1) {
+                        clearTimeout(tmr); iframe.remove(); if (formEl) formEl.remove(); resolve([]);
+                    }
+                } catch (ex) { console.warn('[batch pax]', ex); }
+            };
+            const mainForm = document.forms[0];
+            if (!mainForm) { clearTimeout(tmr); iframe.remove(); resolve([]); return; }
+            formEl = document.createElement('form');
+            formEl.method = 'POST'; formEl.action = window.location.href; formEl.target = iframeName;
+            new FormData(mainForm).forEach((v, k) => {
+                const inp = document.createElement('input'); inp.type = 'hidden'; inp.name = k; inp.value = v; formEl.appendChild(inp);
+            });
+            const href = editBtn.getAttribute('href') || '';
+            const m = href.match(/__doPostBack\(['"]([^'"]*)['"]/);
+            if (m?.[1]) {
+                let et = formEl.querySelector('[name="__EVENTTARGET"]');
+                if (!et) { et = document.createElement('input'); et.type = 'hidden'; et.name = '__EVENTTARGET'; formEl.appendChild(et); }
+                et.value = m[1];
+                let ea = formEl.querySelector('[name="__EVENTARGUMENT"]');
+                if (!ea) { ea = document.createElement('input'); ea.type = 'hidden'; ea.name = '__EVENTARGUMENT'; formEl.appendChild(ea); }
+                ea.value = '';
+            }
+            document.body.appendChild(formEl); formEl.submit();
+        });
+    }
+
     function fetchAndShowPax(editBtn, printBtn, flightData) {
         printBtn.classList.add('loading');
         printBtn.classList.remove('error');
@@ -1385,14 +1440,14 @@
         return html;
     }
 
-    /* ────────────────────────────────────────
+    /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        12. MAIN
-    ──────────────────────────────────────── */
+    â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     setTimeout(() => {
         const table = document.querySelector('table.acf-grid-common') || document.getElementById('ctl00_CphMaster_gdvList');
         if (!table) return;
 
-        /* ── Floating Batch Print button ── */
+        /* â”€â”€ Floating Batch Print button â”€â”€ */
         const batchBtn = document.createElement('button');
         batchBtn.id = 'acf8-batch-btn';
         batchBtn.style.cssText = [
@@ -1401,7 +1456,7 @@
             'border:none;border-radius:24px;font-size:13px;font-weight:700;cursor:pointer;',
             'box-shadow:0 4px 16px rgba(26,115,232,.45);transition:opacity .2s;',
         ].join('');
-        batchBtn.textContent = '🖨 Print Selected (0)';
+        batchBtn.textContent = 'ðŸ–¨ Print Selected (0)';
         document.body.appendChild(batchBtn);
 
         let selectedRows = new Map(); // rowEl -> flightData
@@ -1409,10 +1464,10 @@
         function updateBatchBtn() {
             const n = selectedRows.size;
             batchBtn.style.display = n > 0 ? 'block' : 'none';
-            batchBtn.textContent = `🖨 Print Selected (${n})`;
+            batchBtn.textContent = `ðŸ–¨ Print Selected (${n})`;
         }
 
-        /* ── Header ── */
+        /* â”€â”€ Header â”€â”€ */
         const headerRow = table.querySelector('tr.acf-grid-header');
         if (headerRow) {
             const ths = headerRow.querySelectorAll(':scope > th');
@@ -1422,7 +1477,7 @@
             const thPrint = document.createElement('th');
             thPrint.scope = 'col';
             thPrint.style.cssText = 'width:1%;text-align:center;padding:4px;';
-            thPrint.innerHTML = '<span style="color:#1a73e8;font-size:15px;" title="Print Labels">🏷</span>';
+            thPrint.innerHTML = '<span style="color:#1a73e8;font-size:15px;" title="Print Labels">ðŸ·</span>';
             headerRow.insertBefore(thPrint, last);
 
             // Checkbox select-all column header
@@ -1444,18 +1499,18 @@
             headerRow.insertBefore(thCb, thPrint);
         }
 
-        /* ── Rows ── */
+        /* â”€â”€ Rows â”€â”€ */
         table.querySelectorAll('tr.acf-grid-normalrow, tr.acf-grid-alternaterow').forEach(row => {
             const allTds = row.querySelectorAll(':scope > td');
             const lastTd = allTds[allTds.length - 1];
             const editBtn = row.querySelector('[id*="lnkbtnDetails"]');
 
-            // ── Print button column ──
+            // â”€â”€ Print button column â”€â”€
             const printTd = document.createElement('td');
             printTd.style.cssText = 'text-align:center;vertical-align:middle;padding:2px 4px;width:1%;';
 
             if (!editBtn) {
-                printTd.innerHTML = '<span style="color:#d1d5db;">—</span>';
+                printTd.innerHTML = '<span style="color:#d1d5db;">â€”</span>';
                 row.insertBefore(printTd, lastTd);
                 // still need a blank checkbox cell
                 const cbTdBlank = document.createElement('td');
@@ -1496,7 +1551,7 @@
             printTd.appendChild(printBtn);
             row.insertBefore(printTd, lastTd);
 
-            // ── Checkbox column ──
+            // â”€â”€ Checkbox column â”€â”€
             const cbTd = document.createElement('td');
             cbTd.style.cssText = 'text-align:center;vertical-align:middle;padding:2px 4px;width:1%;';
             const cb = document.createElement('input');
@@ -1512,7 +1567,7 @@
             row.insertBefore(cbTd, printTd);
         });
 
-        /* ── Batch print action – opens settings modal first ── */
+        /* â”€â”€ Batch print action â€“ opens settings modal first â”€â”€ */
         batchBtn.onclick = () => {
             if (!selectedRows.size) return;
             const selected = [...selectedRows.values()];
@@ -1535,14 +1590,14 @@
               <!-- Header -->
               <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #e5e7eb;">
                 <div>
-                  <div style="font-size:15px;font-weight:700;color:#111;">🖨 Batch Print</div>
-                  <div style="font-size:11px;color:#6b7280;margin-top:2px;">${selected.length} uçuş seçilib</div>
+                  <div style="font-size:15px;font-weight:700;color:#111;">ðŸ–¨ Batch Print</div>
+                  <div style="font-size:11px;color:#6b7280;margin-top:2px;">${selected.length} uÃ§uÅŸ seÃ§ilib</div>
                 </div>
                 <button id="acf8-bm-close" style="background:none;border:none;font-size:22px;cursor:pointer;color:#9ca3af;line-height:1;">&times;</button>
               </div>
               <!-- Flight list -->
               <div style="padding:12px 18px;border-bottom:1px solid #e5e7eb;">
-                <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Seçilmiş uçuşlar</div>
+                <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">SeÃ§ilmiÅŸ uÃ§uÅŸlar</div>
                 <div style="display:flex;flex-wrap:wrap;gap:5px;">${flightChips}</div>
               </div>
               <!-- Settings -->
@@ -1551,7 +1606,7 @@
                 <div style="display:flex;flex-direction:column;gap:4px;">
                   <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Aircraft Config</label>
                   <select id="acf8-bm-ac" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;color:#374151;">
-                    ${Object.entries(acCfgs).map(([k, c]) => `<option value="${k}"${k === curAcKey ? ' selected' : ''}>${k} – ${c.label}</option>`).join('')}
+                    ${Object.entries(acCfgs).map(([k, c]) => `<option value="${k}"${k === curAcKey ? ' selected' : ''}>${k} â€“ ${c.label}</option>`).join('')}
                   </select>
                 </div>
                 <!-- Galley -->
@@ -1565,13 +1620,13 @@
                 <div style="display:flex;flex-direction:column;gap:4px;">
                   <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Print Method</label>
                   <div style="display:flex;gap:6px;">
-                    <button class="acf8-bm-meth${curMethod === 'network' ? ' acf8-bm-active' : ''}" data-m="network" style="flex:1;padding:7px;border-radius:6px;font-size:11px;font-weight:600;border:1.5px solid ${curMethod === 'network' ? '#2563eb' : '#e5e7eb'};background:${curMethod === 'network' ? '#eff6ff' : '#fff'};color:${curMethod === 'network' ? '#2563eb' : '#6b7280'};cursor:pointer;">🌐 Network ZPL</button>
-                    <button class="acf8-bm-meth${curMethod === 'browser' ? ' acf8-bm-active' : ''}" data-m="browser" style="flex:1;padding:7px;border-radius:6px;font-size:11px;font-weight:600;border:1.5px solid ${curMethod === 'browser' ? '#2563eb' : '#e5e7eb'};background:${curMethod === 'browser' ? '#eff6ff' : '#fff'};color:${curMethod === 'browser' ? '#2563eb' : '#6b7280'};cursor:pointer;">🖨 Browser Print</button>
+                    <button class="acf8-bm-meth${curMethod === 'network' ? ' acf8-bm-active' : ''}" data-m="network" style="flex:1;padding:7px;border-radius:6px;font-size:11px;font-weight:600;border:1.5px solid ${curMethod === 'network' ? '#2563eb' : '#e5e7eb'};background:${curMethod === 'network' ? '#eff6ff' : '#fff'};color:${curMethod === 'network' ? '#2563eb' : '#6b7280'};cursor:pointer;">ðŸŒ Network ZPL</button>
+                    <button class="acf8-bm-meth${curMethod === 'browser' ? ' acf8-bm-active' : ''}" data-m="browser" style="flex:1;padding:7px;border-radius:6px;font-size:11px;font-weight:600;border:1.5px solid ${curMethod === 'browser' ? '#2563eb' : '#e5e7eb'};background:${curMethod === 'browser' ? '#eff6ff' : '#fff'};color:${curMethod === 'browser' ? '#2563eb' : '#6b7280'};cursor:pointer;">ðŸ–¨ Browser Print</button>
                   </div>
                 </div>
                 <!-- QR -->
                 <div style="display:flex;align-items:center;justify-content:space-between;">
-                  <label style="font-size:11px;font-weight:600;color:#374151;">📷 ZPL QR Kod</label>
+                  <label style="font-size:11px;font-weight:600;color:#374151;">ðŸ“· ZPL QR Kod</label>
                   <label style="position:relative;display:inline-block;width:36px;height:20px;">
                     <input type="checkbox" id="acf8-bm-qr" ${gs(SK.QR_CODE, 'off') === 'on' ? 'checked' : ''} style="opacity:0;width:0;height:0;">
                     <span id="acf8-bm-qr-knob" style="position:absolute;cursor:pointer;inset:0;background:${gs(SK.QR_CODE, 'off') === 'on' ? '#2563eb' : '#d1d5db'};border-radius:20px;transition:.2s;"
@@ -1583,8 +1638,8 @@
               </div>
               <!-- Footer -->
               <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid #e5e7eb;">
-                <button id="acf8-bm-cancel" style="padding:7px 16px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;font-size:12px;cursor:pointer;color:#6b7280;font-weight:600;">İptal</button>
-                <button id="acf8-bm-start" style="padding:7px 18px;border:none;border-radius:6px;background:#1a73e8;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Çap başlat (${selected.length} uçuş)</button>
+                <button id="acf8-bm-cancel" style="padding:7px 16px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;font-size:12px;cursor:pointer;color:#6b7280;font-weight:600;">Ä°ptal</button>
+                <button id="acf8-bm-start" style="padding:7px 18px;border:none;border-radius:6px;background:#1a73e8;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Ã‡ap baÅŸlat (${selected.length} uÃ§uÅŸ)</button>
               </div>
             </div>`;
             document.body.appendChild(bModal);
@@ -1612,7 +1667,7 @@
             bModal.querySelector('#acf8-bm-start').onclick = async () => {
                 const ip = gs(SK.PRINTER_IP, '');
                 if (bmMethod === 'network' && !IP_REGEX.test(ip)) {
-                    toast('Settings-də Printer IP təyin edin', 'error'); return;
+                    toast('Settings-dÉ™ Printer IP tÉ™yin edin', 'error'); return;
                 }
                 const acKey2 = bModal.querySelector('#acf8-bm-ac').value;
                 const bmQR = bModal.querySelector('#acf8-bm-qr').checked ? 'on' : 'off';
@@ -1630,62 +1685,25 @@
                 // Fetch pax for each flight
                 let fetched = 0;
                 for (const { editBtn, printBtn, flightData } of selected) {
-                    statusEl.textContent = `⏳ PAX yüklənir: ${fetched + 1} / ${selected.length}`;
+                    statusEl.textContent = `â³ PAX yÃ¼klÉ™nir: ${fetched + 1} / ${selected.length}`;
                     try {
-                        await new Promise(resolve => {
-                            const origClass = printBtn.className;
-                            printBtn.classList.add('loading');
-                            const iframeName = 'acf8_batch_' + Math.random().toString(36).slice(2);
-                            const ifrm = document.createElement('iframe');
-                            ifrm.name = iframeName; ifrm.style.display = 'none';
-                            document.body.appendChild(ifrm);
-                            const form = document.querySelector('form');
-                            if (!form) { resolve(); return; }
-                            const fd = new FormData(form);
-                            fd.set('__EVENTTARGET', ''); fd.set('__EVENTARGUMENT', '');
-                            const href = editBtn.getAttribute('href') || '';
-                            const m2 = href.match(/__doPostBack\(['\"](.*?)['\"]/);
-                            if (m2?.[1]) fd.set('__EVENTTARGET', m2[1]);
-                            const tf = document.createElement('form');
-                            tf.method = 'POST'; tf.action = window.location.href; tf.target = iframeName;
-                            for (const [k, v] of fd.entries()) {
-                                const inp = document.createElement('input');
-                                inp.type = 'hidden'; inp.name = k; inp.value = v; tf.appendChild(inp);
-                            }
-                            document.body.appendChild(tf); tf.submit();
-                            ifrm.onload = () => {
-                                try {
-                                    const iDoc = ifrm.contentDocument || ifrm.contentWindow.document;
-                                    const paxRows = iDoc.querySelectorAll('table[id*="gdvPax"] tr, table[id*="Pax"] tr, .pax-row');
-                                    const paxData = [];
-                                    paxRows.forEach(tr => {
-                                        const tds = tr.querySelectorAll('td');
-                                        if (tds.length >= 2) {
-                                            const cls = tds[0]?.textContent.trim();
-                                            const val = parseInt(tds[1]?.textContent.trim());
-                                            if (cls && !isNaN(val)) paxData.push({ class: cls, value: val });
-                                        }
-                                    });
-                                    flightData.paxData = paxData;
-                                } catch (ex) { console.warn('batch pax err', ex); }
-                                printBtn.className = origClass;
-                                tf.remove(); ifrm.remove(); resolve();
-                            };
-                            setTimeout(() => { tf.remove(); ifrm.remove(); resolve(); }, 6000);
-                        });
+                        const origClass = printBtn.className;
+                        printBtn.classList.add('loading');
+                        flightData.paxData = await fetchPaxForFlight(editBtn);
+                        printBtn.className = origClass;
                     } catch (ex) { console.warn(ex); }
                     fetched++;
                 }
 
-                statusEl.textContent = '🖨 Göndərilir…';
+statusEl.textContent = 'ðŸ–¨ GÃ¶ndÉ™rilirâ€¦';
 
-                if (bmMethod === 'browser') {
-                    const pw = window.open('', '_blank', 'width=800,height=900');
-                    let allCards = '';
-                    for (const { flightData: fd2 } of selected) {
-                        allCards += buildBatchBrowserCards(fd2, fd2.paxData || [], acItems2, acItemQtys2);
-                    }
-                    pw.document.write(`<!DOCTYPE html><html><head><title>Batch Labels</title><style>
+if (bmMethod === 'browser') {
+    const pw = window.open('', '_blank', 'width=800,height=900');
+    let allCards = '';
+    for (const { flightData: fd2 } of selected) {
+        allCards += buildBatchBrowserCards(fd2, fd2.paxData || [], acItems2, acItemQtys2);
+    }
+    pw.document.write(`<!DOCTYPE html><html><head><title>Batch Labels</title><style>
                         *{margin:0;padding:0;box-sizing:border-box;}
                         body{font-family:'Courier New',monospace;padding:10px;background:#e0e7ef;}
                         .wrap{display:flex;flex-wrap:wrap;gap:10px;}
@@ -1699,47 +1717,47 @@
                     </style></head><body>
                     <div class="np"><button onclick="window.print()" style="padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">&#128424; Print All</button></div>
                     <div class="wrap">${allCards}</div></body></html>`);
-                    pw.document.close();
-                    toast(`✓ ${selected.length} uçuş üçün browser print açıldı`, 'success');
-                    closeModal();
-                    batchBtn.disabled = false; updateBatchBtn();
-                } else {
-                    // ZPL one by one
-                    const zplList = [];
-                    for (const { flightData: fd2 } of selected) {
-                        const pax2 = fd2.paxData || [];
-                        const cls2 = getPrintClasses(pax2);
-                        for (const cls of cls2) {
-                            const paxCnt = pax2.find(p => p.class === cls)?.value ?? '';
-                            for (let i = 0; i < acItems2.length; i++) {
-                                const qty = acItemQtys2[i] || 1;
-                                for (let c = 0; c < qty; c++) {
-                                    zplList.push(buildItemLabelZPL(fd2, acItems2[i], cls, paxCnt));
-                                }
-                            }
-                        }
-                    }
-                    if (!zplList.length) {
-                        toast('Göndəriləcək label yoxdur', 'error');
-                        startBtn.disabled = false; batchBtn.disabled = false; updateBatchBtn(); return;
-                    }
-                    let sent2 = 0, fail2 = 0;
-                    function batchSendNext() {
-                        if (sent2 + fail2 >= zplList.length) {
-                            batchBtn.disabled = false; updateBatchBtn();
-                            toast(`✓ ${sent2}/${zplList.length} label ZT411-ə göndərildi`, 'success');
-                            closeModal(); return;
-                        }
-                        statusEl.textContent = `🖨 ${sent2 + fail2 + 1} / ${zplList.length} göndərilir…`;
-                        sendZplToZebra(ip, zplList[sent2 + fail2],
-                            () => { sent2++; batchSendNext(); },
-                            () => { fail2++; batchSendNext(); });
-                    }
-                    batchSendNext();
+    pw.document.close();
+    toast(`âœ“ ${selected.length} uÃ§uÅŸ Ã¼Ã§Ã¼n browser print aÃ§Ä±ldÄ±`, 'success');
+    closeModal();
+    batchBtn.disabled = false; updateBatchBtn();
+} else {
+    // ZPL one by one
+    const zplList = [];
+    for (const { flightData: fd2 } of selected) {
+        const pax2 = fd2.paxData || [];
+        const cls2 = getPrintClasses(pax2);
+        for (const cls of cls2) {
+            const paxCnt = pax2.find(p => p.class === cls)?.value ?? '';
+            for (let i = 0; i < acItems2.length; i++) {
+                const qty = acItemQtys2[i] || 1;
+                for (let c = 0; c < qty; c++) {
+                    zplList.push(buildItemLabelZPL(fd2, acItems2[i], cls, paxCnt));
                 }
+            }
+        }
+    }
+    if (!zplList.length) {
+        toast('GÃ¶ndÉ™rilÉ™cÉ™k label yoxdur', 'error');
+        startBtn.disabled = false; batchBtn.disabled = false; updateBatchBtn(); return;
+    }
+    let sent2 = 0, fail2 = 0;
+    function batchSendNext() {
+        if (sent2 + fail2 >= zplList.length) {
+            batchBtn.disabled = false; updateBatchBtn();
+            toast(`âœ“ ${sent2}/${zplList.length} label ZT411-É™ gÃ¶ndÉ™rildi`, 'success');
+            closeModal(); return;
+        }
+        statusEl.textContent = `ðŸ–¨ ${sent2 + fail2 + 1} / ${zplList.length} gÃ¶ndÉ™rilirâ€¦`;
+        sendZplToZebra(ip, zplList[sent2 + fail2],
+            () => { sent2++; batchSendNext(); },
+            () => { fail2++; batchSendNext(); });
+    }
+    batchSendNext();
+}
             };
         };
 
     }, 2000);
 
-})();
+}) ();
