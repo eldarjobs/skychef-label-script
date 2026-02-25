@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V9)
 // @namespace    http://tampermonkey.net/
-// @version      9.8.1
+// @version      9.8.2
 // @description  Local HTML preview, aircraft-type items config (Meals/Beverages/Breads), Zebra ZT411 ZPL print.
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -33,6 +33,7 @@
         LABEL_H_MM: 'acf9_label_h_mm',    // label height in mm (default 83)
         PRINT_CLASSES: 'acf9_print_classes',  // comma-sep class codes to print
         LOGO_URL: 'acf9_logo_url',       // raw GitHub URL to logo image
+        DEFAULT_LOGO: 'https://raw.githubusercontent.com/eldarjobs/skychef-label-script/main/AZAL.logo.png',
     };
     const gs = (k, d = '') => { try { return GM_getValue(k, d); } catch { return localStorage.getItem(k) ?? d; } };
     const ss = (k, v) => { try { GM_setValue(k, v); } catch { localStorage.setItem(k, v); } };
@@ -475,7 +476,7 @@
             const txtClr = isRed ? '#fff' : '#111';
             const borClr = isRed ? '#991b1b' : '#1e3a8a';
             const divClr = isRed ? 'rgba(255,255,255,.35)' : '#c7d2e6';
-            const logoUrl = gs(SK.LOGO_URL, '');
+            const logoUrl = gs(SK.LOGO_URL, SK.DEFAULT_LOGO);
             // Dynamic font for item name
             const nlen = (item.name || '').length;
             const nameFz = nlen > 18 ? '9px' : nlen > 12 ? '11px' : '14px';
@@ -575,7 +576,7 @@
             return;
         }
 
-        const logoUrl = gs(SK.LOGO_URL, '');
+        const logoUrl = gs(SK.LOGO_URL, SK.DEFAULT_LOGO);
         const logoHtmlBP = logoUrl
             ? `<img src="${logoUrl}" style="max-height:28px;max-width:90%;object-fit:contain;display:block;margin:0 auto;" onerror="this.style.display='none'">`
             : `<div class="logo-name">AZERBAIJAN</div><div class="logo-sub">&#8211; AIRLINES &#8211;</div>`;
