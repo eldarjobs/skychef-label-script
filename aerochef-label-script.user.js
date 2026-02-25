@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V9)
 // @namespace    http://tampermonkey.net/
-// @version      9.8.6
+// @version      9.8.7
 // @description  Local HTML preview, aircraft-type items config (Meals/Beverages/Breads), Zebra ZT411 ZPL print.
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -33,7 +33,7 @@
         LABEL_H_MM: 'acf9_label_h_mm',    // label height in mm (default 83)
         PRINT_CLASSES: 'acf9_print_classes',  // comma-sep class codes to print
         LOGO_URL: 'acf9_logo_url',       // raw GitHub URL to logo image
-        DEFAULT_LOGO: 'https://raw.githubusercontent.com/eldarjobs/skychef-label-script/main/AZAL.logos.png',
+        DEFAULT_LOGO: 'https://raw.githubusercontent.com/eldarjobs/skychef-label-script/main/AZAL.logo.png',
     };
     const gs = (k, d = '') => { try { return GM_getValue(k, d); } catch { return localStorage.getItem(k) ?? d; } };
     const ss = (k, v) => { try { GM_setValue(k, v); } catch { localStorage.setItem(k, v); } };
@@ -570,9 +570,7 @@
         }
 
         const logoUrl = SK.DEFAULT_LOGO;
-        const logoHtmlBP = logoUrl
-            ? `<img src="${logoUrl}" style="max-height:28px;max-width:90%;object-fit:contain;display:block;margin:0 auto;" onerror="this.style.display='none'">`
-            : `<div class="logo-name">AZERBAIJAN</div><div class="logo-sub">&#8211; AIRLINES &#8211;</div>`;
+        const logoHtmlBP = `<img src="${logoUrl}" style="width:100%;height:100%;object-fit:contain;display:block;" onerror="this.style.display='none'">`;
 
         let cards = '';
         for (const cls of classes) {
@@ -612,20 +610,22 @@
         const pw = window.open('', '_blank', 'width=700,height=900');
         pw.document.write(`<!DOCTYPE html><html><head><title>Labels &#8211; ${flight.flightNo}</title><style>
             *{margin:0;padding:0;box-sizing:border-box;}
-            body{font-family:'Courier New',monospace;padding:10px;background:#e5e7eb;}
-            .wrap{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-start;}
-            .lc{width:200px;min-height:290px;border:2px solid #222;border-radius:4px;
+            body{font-family:'Courier New',monospace;padding:10px;background:#e0e7ef;}
+            .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-start;}
+            .lc{width:200px;height:292px;border:2px solid #1e3a8a;border-radius:5px;
                 overflow:hidden;display:flex;flex-direction:column;page-break-inside:avoid;
-                background:#fff;color:#000;}
-            .logo-box{border:1.5px solid #222;margin:5px;padding:5px 4px;text-align:center;}
+                background:#fff;color:#000;box-shadow:0 2px 8px rgba(0,0,0,.15);}
+            .logo-box{border:1.5px solid #1e3a8a;margin:5px 5px 3px;height:62px;
+                      overflow:hidden;flex-shrink:0;}
             .logo-name{font-size:14px;font-weight:900;letter-spacing:1px;}
             .logo-sub{font-size:10px;letter-spacing:2px;}
-            .info{padding:6px 8px;font-size:11px;line-height:1.8;flex:1;}
-            .item-name{padding:8px 6px;text-align:center;font-weight:900;font-style:italic;
-                        border-top:1px solid #ccc;font-size:22px;}
-            .np{grid-column:1/-1;text-align:right;margin-bottom:10px;}
-            @media print{.np{display:none;}body{background:#fff;}}
-            .lbl{opacity:.55;font-size:9px;}
+            .info{padding:4px 8px;font-size:11px;line-height:1.75;flex-shrink:0;
+                  border-bottom:1px solid #c7d2e6;}
+            .info .lbl{font-size:9px;color:#64748b;}
+            .item-name{flex:1;display:flex;align-items:center;justify-content:center;
+                        padding:6px;text-align:center;font-weight:900;font-style:italic;}
+            .np{text-align:right;margin-bottom:10px;}
+            @media print{.np{display:none;}body{background:#fff;padding:4px;}}
         </style></head><body>
         <div class="np">
           <b>${totalLabels} label</b> (${classes.join('+')} × ${qtyList})&nbsp;&nbsp;
