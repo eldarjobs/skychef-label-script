@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V11.0)
 // @namespace    http://tampermonkey.net/
-// @version      11.0
+// @version      11.1
 // @description  V11: Custom colors, auto-update, batch ZPL, label layout editor, version check
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -266,7 +266,7 @@
 
     .acf8-overlay{position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:2147483647;display:flex;align-items:center;justify-content:center;animation:acf8fi .15s ease;}
 
-    .acf8-modal{background:#fff;border-radius:10px;width:680px;max-width:96vw;max-height:88vh;box-shadow:0 16px 50px rgba(0,0,0,.28);display:flex;flex-direction:column;overflow:hidden;animation:acf8su .18s ease;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:12px;}
+    .acf8-modal{background:#fff;border-radius:10px;width:780px;max-width:96vw;max-height:92vh;box-shadow:0 16px 50px rgba(0,0,0,.28);display:flex;flex-direction:column;overflow:hidden;animation:acf8su .18s ease;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:12px;}
     .acf8-modal *{box-sizing:border-box;margin:0;}
 
     .acf8-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0;border-bottom:1px solid #e5e7eb;flex-shrink:0;}
@@ -354,6 +354,12 @@
     .acf8-btn-print:disabled{background:#93c5fd;cursor:not-allowed;}
     .acf8-btn-save{background:#10b981;color:#fff;}
     .acf8-btn-save:hover{background:#059669;}
+
+    .acf8-layout-row{display:flex;align-items:center;gap:6px;padding:4px 8px;background:#f8fafc;border-radius:5px;border:1px solid #e5e7eb;}
+    .acf8-layout-row b{min-width:72px;font-size:11px;color:#1e3a8a;}
+    .acf8-layout-row label{font-size:9px!important;color:#9ca3af!important;font-weight:600!important;text-transform:none!important;letter-spacing:0!important;margin:0!important;padding:0!important;}
+    .acf8-layout-row input[type=number]{width:50px!important;padding:3px 5px!important;border:1px solid #d1d5db!important;border-radius:4px!important;font-size:11px!important;color:#374151!important;background:#fff!important;text-align:center!important;}
+    .acf8-layout-row input[type=number]:focus{border-color:#3b82f6!important;box-shadow:0 0 0 2px rgba(59,130,246,.15)!important;outline:none!important;}
     `;
     document.head.appendChild(style);
 
@@ -399,7 +405,8 @@
         const fno = flight.flightNo || '-';
 
         const nameLen = (item.name || '').length;
-        const nameFz = nameLen > 18 ? 34 : nameLen > 12 ? 42 : 50;
+        const autoFz = nameLen > 18 ? 34 : nameLen > 12 ? 42 : 50;
+        const nameFz = (L.itemName.fz != null && L.itemName.fz !== 50) ? L.itemName.fz : autoFz;
 
         let z = `^XA
 ^CI28
@@ -612,7 +619,7 @@
         routeTo: { x: 8, y: 152, fz: 17 },
         classPax: { x: 8, y: 174, fz: 17 },
         divider2: { x: 4, y: 580 },
-        itemName: { x: 8, y: 595 },
+        itemName: { x: 8, y: 595, fz: 50 },
     };
 
     function getLabelLayout() {
@@ -1165,11 +1172,11 @@
                 </label>
               </div>
               <div class="acf8-fg full" style="border-top:1px solid #e5e7eb;padding-top:10px;">
-                <label>📐 Label Layout Editor <span style="font-size:9px;color:#9ca3af;font-weight:400;">(ZPL koordinatları)</span></label>
-                <div id="acf8-layout-editor" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;max-height:160px;overflow-y:auto;"></div>
-                <div style="display:flex;gap:6px;margin-top:4px;">
-                  <button id="acf8-layout-reset" style="flex:1;padding:4px 8px;background:#ef4444;color:#fff;border:none;border-radius:5px;font-size:11px;cursor:pointer;font-weight:600;">↺ Reset Default</button>
-                </div>
+                <label style="display:flex;align-items:center;justify-content:space-between;">
+                  <span>📐 Label Layout Editor <span style="font-size:9px;color:#9ca3af;font-weight:400;">(ZPL koordinatları, dots)</span></span>
+                  <button id="acf8-layout-reset" style="padding:3px 10px;background:#ef4444;color:#fff;border:none;border-radius:5px;font-size:10px;cursor:pointer;font-weight:600;">↺ Reset</button>
+                </label>
+                <div id="acf8-layout-editor" style="display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;padding:4px 0;"></div>
               </div>
               <div class="acf8-fg full" style="border-top:1px solid #e5e7eb;padding-top:10px;">
                 <label>🔄 Versiya Yoxlaması</label>
@@ -1475,16 +1482,24 @@
             if (!el) return;
             el.innerHTML = '';
             const layout = getLabelLayout();
-            const keys = Object.keys(DEFAULT_LABEL_LAYOUT);
-            keys.forEach(key => {
+            const fieldLabels = {
+                logo: 'Logo box', header1: 'AZERBAIJAN', header2: '- AIRLINES -',
+                divider1: 'Line 1', date: 'Date', flight: 'Flight No',
+                routeFrom: 'From→To', routeTo: 'To←From', classPax: 'Class/Pax',
+                divider2: 'Line 2', itemName: 'Item Name'
+            };
+            Object.keys(DEFAULT_LABEL_LAYOUT).forEach(key => {
                 const item = layout[key] || DEFAULT_LABEL_LAYOUT[key];
+                const def = DEFAULT_LABEL_LAYOUT[key];
                 const row = document.createElement('div');
-                row.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:10px;color:#374151;';
-                let fields = `<b style="min-width:60px;">${key}</b> X:<input type="number" data-lk="${key}" data-lp="x" value="${item.x ?? 0}" style="width:42px;padding:2px 3px;border:1px solid #d1d5db;border-radius:3px;font-size:10px;"> Y:<input type="number" data-lk="${key}" data-lp="y" value="${item.y ?? 0}" style="width:42px;padding:2px 3px;border:1px solid #d1d5db;border-radius:3px;font-size:10px;">`;
-                if (item.fz != null) fields += ` Fz:<input type="number" data-lk="${key}" data-lp="fz" value="${item.fz}" style="width:36px;padding:2px 3px;border:1px solid #d1d5db;border-radius:3px;font-size:10px;">`;
-                if (item.w != null) fields += ` W:<input type="number" data-lk="${key}" data-lp="w" value="${item.w}" style="width:42px;padding:2px 3px;border:1px solid #d1d5db;border-radius:3px;font-size:10px;">`;
-                if (item.h != null) fields += ` H:<input type="number" data-lk="${key}" data-lp="h" value="${item.h}" style="width:42px;padding:2px 3px;border:1px solid #d1d5db;border-radius:3px;font-size:10px;">`;
-                row.innerHTML = fields;
+                row.className = 'acf8-layout-row';
+                let html = `<b>${fieldLabels[key] || key}</b>`;
+                html += `<label>X</label><input type="number" data-lk="${key}" data-lp="x" value="${item.x ?? 0}">`;
+                html += `<label>Y</label><input type="number" data-lk="${key}" data-lp="y" value="${item.y ?? 0}">`;
+                if (def.fz != null) html += `<label>Fz</label><input type="number" data-lk="${key}" data-lp="fz" value="${item.fz ?? def.fz}">`;
+                if (def.w != null) html += `<label>W</label><input type="number" data-lk="${key}" data-lp="w" value="${item.w ?? def.w}">`;
+                if (def.h != null) html += `<label>H</label><input type="number" data-lk="${key}" data-lp="h" value="${item.h ?? def.h}">`;
+                row.innerHTML = html;
                 el.appendChild(row);
             });
         }
