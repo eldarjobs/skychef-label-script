@@ -33,7 +33,7 @@
         LABEL_H_MM: 'acf9_label_h_mm',    // label height in mm (default 83)
         PRINT_CLASSES: 'acf9_print_classes',  // comma-sep class codes to print
         LOGO_URL: 'acf9_logo_url',       // raw GitHub URL to logo image
-        DEFAULT_LOGO: 'https://raw.githubusercontent.com/eldarjobs/skychef-label-script/main/AZAL.logo.png',
+        DEFAULT_LOGO: 'https://raw.githubusercontent.com/eldarjobs/skychef-label-script/main/AZAL.logos.png',
     };
     const gs = (k, d = '') => { try { return GM_getValue(k, d); } catch { return localStorage.getItem(k) ?? d; } };
     const ss = (k, v) => { try { GM_setValue(k, v); } catch { localStorage.setItem(k, v); } };
