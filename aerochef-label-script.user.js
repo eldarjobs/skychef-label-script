@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V9)
 // @namespace    http://tampermonkey.net/
-// @version      9.1
+// @version      9.2
 // @description  Local HTML preview, aircraft-type items config (Meals/Beverages/Breads), Zebra ZT411 ZPL print.
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -17,6 +17,7 @@
        1. STORAGE HELPERS
     ════════════════════════════════════════ */
     const SK = {
+        PRINTER_IP: 'acf9_printer_ip',
         PRINTER_IP: 'acf9_printer_ip',
         PRINT_METHOD: 'acf9_print_method',   // 'network' | 'browser'
         GALLEY: 'acf9_galley',
