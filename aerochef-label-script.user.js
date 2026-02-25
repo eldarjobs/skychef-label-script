@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V11.0)
 // @namespace    http://tampermonkey.net/
-// @version      11.6
+// @version      11.7
 // @description  V11: Custom colors, auto-update, batch ZPL, label layout editor, version check
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -1489,7 +1489,12 @@
             body{font-family:'Courier New',monospace;padding:20px;background:#e5e7eb;}
             .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-start;}
             .np{text-align:right;margin-bottom:15px;width:100%;}
-            @media print{.np{display:none;}body{background:#fff;padding:0;} .wrap{gap:8px;} }
+            @media print{
+                .np{display:none;}
+                body{background:#fff;padding:0;}
+                .wrap{gap:8px;justify-content:flex-start;flex-direction:row;}
+                @page { margin: 10mm; }
+            }
         </style></head><body>
         <div class="np">
           <b>${totalLabels} labels</b>&nbsp;&nbsp;
@@ -2670,9 +2675,14 @@
                         <style>
                             *{margin:0;padding:0;box-sizing:border-box;}
                             body{font-family:'Courier New',monospace;padding:20px;background:#e5e7eb;}
-                            .wrap{display:flex;flex-wrap:wrap;gap:12px;}
+                            .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-start;}
                             .np{text-align:right;margin-bottom:15px;width:100%;}
-                            @media print{.np{display:none;}body{background:#fff;padding:0;} .wrap{gap:8px;} }
+                            @media print{
+                                .np{display:none;}
+                                body{background:#fff;padding:0;}
+                                .wrap{gap:8px;justify-content:flex-start;flex-direction:row;}
+                                @page { margin: 10mm; }
+                            }
                         </style>
                     </head>
                     <body>
