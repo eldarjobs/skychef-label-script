@@ -18,7 +18,6 @@
     ════════════════════════════════════════ */
     const SK = {
         PRINTER_IP: 'acf9_printer_ip',
-        PRINTER_IP: 'acf9_printer_ip',
         PRINT_METHOD: 'acf9_print_method',   // 'network' | 'browser'
         GALLEY: 'acf9_galley',
         GALLEY_LIST: 'acf9_galley_list',
