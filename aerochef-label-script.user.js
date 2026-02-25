@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V9)
 // @namespace    http://tampermonkey.net/
-// @version      9.8.8
+// @version      9.9
 // @description  Local HTML preview, aircraft-type items config (Meals/Beverages/Breads), Zebra ZT411 ZPL print.
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -1344,37 +1344,123 @@
         setTimeout(() => formClone.remove(), 1200);
     }
 
-    /* ════════════════════════════════════════
-       12. MAIN  ← V7 orijinal məntiq (saxlanılıb)
-    ════════════════════════════════════════ */
+    /* Build HTML card strings for ONE flight (used by batch browser print) */
+    function buildBatchBrowserCards(flight, paxData, acItems, acItemQtys) {
+        const logoImg = `<img src="${SK.DEFAULT_LOGO}" style="width:100%;height:100%;object-fit:contain;display:block;" onerror="this.style.display='none'">`;
+        const route = flight.route || '';
+        const parts = route.split('-');
+        const from = parts[0] || '';
+        const to = parts[1] || '';
+        const date = _dateFmt(flight.date);
+        const fno = flight.flightNo || '-';
+        const classes = getPrintClasses(paxData);
+        let html = '';
+        for (const cls of classes) {
+            const paxCount = paxData.find(p => p.class === cls)?.value ?? '';
+            for (let i = 0; i < acItems.length; i++) {
+                const item = acItems[i];
+                const qty = (acItemQtys && acItemQtys[i] != null) ? acItemQtys[i] : 1;
+                if (qty < 1) continue;
+                const isRed = (item.bgColor || 'white') === 'red';
+                const bg = isRed ? '#cc1f1f' : '#ffffff';
+                const clr = isRed ? '#ffffff' : '#000000';
+                const bor = isRed ? '#991b1b' : '#1e3a8a';
+                const nlen = (item.name || '').length;
+                const nameFs = nlen > 18 ? '13px' : nlen > 12 ? '17px' : '22px';
+                for (let c = 0; c < qty; c++) {
+                    html += `<div class="lc" style="background:${bg};color:${clr};border-color:${bor}">
+                      <div class="logo-box" style="border-color:${isRed ? 'rgba(255,255,255,.5)' : '#1e3a8a'}">${logoImg}</div>
+                      <div class="info">
+                        <div><span class="lbl">Date:</span> ${date}</div>
+                        <div><span class="lbl">Flt:</span>  ${fno}</div>
+                        <div>${from} &#8594; ${to}</div>
+                        <div>${to} &#8592; ${from}</div>
+                        <div><b>${cls} ${paxCount}</b></div>
+                      </div>
+                      <div class="item-name" style="border-top:1px solid ${isRed ? 'rgba(255,255,255,.4)' : '#c7d2e6'};font-size:${nameFs}">${item.name}</div>
+                    </div>`;
+                }
+            }
+        }
+        return html;
+    }
+
+    /* ────────────────────────────────────────
+       12. MAIN
+    ──────────────────────────────────────── */
     setTimeout(() => {
         const table = document.querySelector('table.acf-grid-common') || document.getElementById('ctl00_CphMaster_gdvList');
         if (!table) return;
 
-        // Header th
+        /* ── Floating Batch Print button ── */
+        const batchBtn = document.createElement('button');
+        batchBtn.id = 'acf8-batch-btn';
+        batchBtn.style.cssText = [
+            'position:fixed;bottom:24px;right:24px;z-index:2147483646;',
+            'display:none;padding:10px 20px;background:#1a73e8;color:#fff;',
+            'border:none;border-radius:24px;font-size:13px;font-weight:700;cursor:pointer;',
+            'box-shadow:0 4px 16px rgba(26,115,232,.45);transition:opacity .2s;',
+        ].join('');
+        batchBtn.textContent = '🖨 Print Selected (0)';
+        document.body.appendChild(batchBtn);
+
+        let selectedRows = new Map(); // rowEl -> flightData
+
+        function updateBatchBtn() {
+            const n = selectedRows.size;
+            batchBtn.style.display = n > 0 ? 'block' : 'none';
+            batchBtn.textContent = `🖨 Print Selected (${n})`;
+        }
+
+        /* ── Header ── */
         const headerRow = table.querySelector('tr.acf-grid-header');
         if (headerRow) {
             const ths = headerRow.querySelectorAll(':scope > th');
             const last = ths[ths.length - 1];
-            const th = document.createElement('th');
-            th.scope = 'col';
-            th.style.cssText = 'width:1%;text-align:center;padding:4px;';
-            th.innerHTML = '<span style="color:#1a73e8;font-size:15px;" title="Print Labels">🏷</span>';
-            headerRow.insertBefore(th, last);
+
+            // Print column header
+            const thPrint = document.createElement('th');
+            thPrint.scope = 'col';
+            thPrint.style.cssText = 'width:1%;text-align:center;padding:4px;';
+            thPrint.innerHTML = '<span style="color:#1a73e8;font-size:15px;" title="Print Labels">🏷</span>';
+            headerRow.insertBefore(thPrint, last);
+
+            // Checkbox select-all column header
+            const thCb = document.createElement('th');
+            thCb.scope = 'col';
+            thCb.style.cssText = 'width:1%;text-align:center;padding:4px;';
+            thCb.title = 'Select all for batch print';
+            const allCb = document.createElement('input');
+            allCb.type = 'checkbox';
+            allCb.style.cssText = 'width:14px;height:14px;cursor:pointer;accent-color:#1a73e8;';
+            allCb.title = 'Select/Deselect All';
+            allCb.onchange = () => {
+                table.querySelectorAll('.acf8-row-cb').forEach(cb => {
+                    cb.checked = allCb.checked;
+                    cb.dispatchEvent(new Event('change'));
+                });
+            };
+            thCb.appendChild(allCb);
+            headerRow.insertBefore(thCb, thPrint);
         }
 
-        // Rows
+        /* ── Rows ── */
         table.querySelectorAll('tr.acf-grid-normalrow, tr.acf-grid-alternaterow').forEach(row => {
             const allTds = row.querySelectorAll(':scope > td');
             const lastTd = allTds[allTds.length - 1];
             const editBtn = row.querySelector('[id*="lnkbtnDetails"]');
 
-            const newTd = document.createElement('td');
-            newTd.style.cssText = 'text-align:center;vertical-align:middle;padding:2px 4px;width:1%;';
+            // ── Print button column ──
+            const printTd = document.createElement('td');
+            printTd.style.cssText = 'text-align:center;vertical-align:middle;padding:2px 4px;width:1%;';
 
             if (!editBtn) {
-                newTd.innerHTML = '<span style="color:#d1d5db;">—</span>';
-                row.insertBefore(newTd, lastTd);
+                printTd.innerHTML = '<span style="color:#d1d5db;">—</span>';
+                row.insertBefore(printTd, lastTd);
+                // still need a blank checkbox cell
+                const cbTdBlank = document.createElement('td');
+                cbTdBlank.style.cssText = 'text-align:center;vertical-align:middle;padding:2px 4px;width:1%;';
+                row.insertBefore(cbTdBlank, printTd);
                 return;
             }
 
@@ -1382,8 +1468,8 @@
             const cells = row.querySelectorAll(':scope > td');
             const dateText = cells[1]?.textContent.trim() || '';
             const orderNo = cells[2]?.textContent.trim() || '';
-            const aircraftType = cells[5]?.textContent.trim() || '';   // e.g. NARROW BODY
-            const aircraftSeries = cells[6]?.textContent.trim() || '';   // e.g. E-190
+            const aircraftType = cells[5]?.textContent.trim() || '';
+            const aircraftSeries = cells[6]?.textContent.trim() || '';
             const flightSpan = row.querySelector('[id*="lblFlight"]');
             const flightFull = flightSpan?.textContent.trim() || '';
             const parts = flightFull.split('|').map(s => s.trim());
@@ -1391,23 +1477,186 @@
             const route = parts[1] || '';
             const odInput = row.querySelector('input[id*="hidDailyOrderDetailId"]');
 
-            const flightData = { route, flightNo, date: dateText, orderNo, orderDetailId: odInput?.value || '', aircraftType, aircraftSeries, paxData: [] };
+            const flightData = {
+                route, flightNo, date: dateText, orderNo,
+                orderDetailId: odInput?.value || '',
+                aircraftType, aircraftSeries, paxData: []
+            };
 
             // Printer button
             const printBtn = document.createElement('button');
             printBtn.className = 'acf8-printer';
             printBtn.innerHTML = ICO.printer;
             printBtn.title = 'Print Labels';
-
             printBtn.addEventListener('click', e => {
                 e.preventDefault(); e.stopPropagation();
                 if (printBtn.classList.contains('loading')) return;
                 fetchAndShowPax(editBtn, printBtn, flightData);
             });
+            printTd.appendChild(printBtn);
+            row.insertBefore(printTd, lastTd);
 
-            newTd.appendChild(printBtn);
-            row.insertBefore(newTd, lastTd);
+            // ── Checkbox column ──
+            const cbTd = document.createElement('td');
+            cbTd.style.cssText = 'text-align:center;vertical-align:middle;padding:2px 4px;width:1%;';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.className = 'acf8-row-cb';
+            cb.style.cssText = 'width:14px;height:14px;cursor:pointer;accent-color:#1a73e8;';
+            cb.onchange = () => {
+                if (cb.checked) selectedRows.set(row, { editBtn, printBtn, flightData: { ...flightData } });
+                else selectedRows.delete(row);
+                updateBatchBtn();
+            };
+            cbTd.appendChild(cb);
+            row.insertBefore(cbTd, printTd);
         });
+
+        /* ── Batch print action ── */
+        batchBtn.onclick = async () => {
+            if (!selectedRows.size) return;
+            const selected = [...selectedRows.values()];
+            const method = gs(SK.PRINT_METHOD, 'network');
+            const ip = gs(SK.PRINTER_IP, '');
+
+            if (method === 'network' && !IP_REGEX.test(ip)) {
+                toast('Settings-də Printer IP təyin edin', 'error'); return;
+            }
+
+            batchBtn.disabled = true;
+            batchBtn.textContent = `⏳ 0 / ${selected.length} hazırlanır…`;
+
+            // Fetch pax for each row sequentially and collect all labels
+            const allZpl = [];
+            const allBrowserItems = [];  // {flightData, paxData, items}
+            let fetched = 0;
+
+            for (const { editBtn, printBtn, flightData } of selected) {
+                batchBtn.textContent = `⏳ ${fetched + 1} / ${selected.length} PAX yüklənir…`;
+                try {
+                    await new Promise((resolve) => {
+                        // Temporarily override fetchAndShowPax for silent fetch
+                        const origClass = printBtn.className;
+                        printBtn.classList.add('loading');
+                        // Build iframe to get pax data silently
+                        const iframeName = 'acf8_batch_' + Math.random().toString(36).slice(2);
+                        const ifrm = document.createElement('iframe');
+                        ifrm.name = iframeName;
+                        ifrm.style.display = 'none';
+                        document.body.appendChild(ifrm);
+
+                        const form = document.querySelector('form');
+                        if (!form) { resolve(); return; }
+                        const fd = new FormData(form);
+                        fd.set('__EVENTTARGET', '');
+                        fd.set('__EVENTARGUMENT', '');
+                        const href = editBtn.getAttribute('href') || '';
+                        const m = href.match(/__doPostBack\(['"](.*?)['"]/);
+                        if (m?.[1]) fd.set('__EVENTTARGET', m[1]);
+
+                        const tempForm = document.createElement('form');
+                        tempForm.method = 'POST';
+                        tempForm.action = window.location.href;
+                        tempForm.target = iframeName;
+                        for (const [k, v] of fd.entries()) {
+                            const inp = document.createElement('input'); inp.type = 'hidden'; inp.name = k; inp.value = v;
+                            tempForm.appendChild(inp);
+                        }
+                        document.body.appendChild(tempForm);
+                        tempForm.submit();
+
+                        ifrm.onload = () => {
+                            try {
+                                const iDoc = ifrm.contentDocument || ifrm.contentWindow.document;
+                                const paxRows = iDoc.querySelectorAll('table[id*="gdvPax"] tr, table[id*="Pax"] tr, .pax-row, [class*="pax"] tr');
+                                const paxData = [];
+                                paxRows.forEach(tr => {
+                                    const tds = tr.querySelectorAll('td');
+                                    if (tds.length >= 2) {
+                                        const cls = tds[0]?.textContent.trim();
+                                        const val = parseInt(tds[1]?.textContent.trim());
+                                        if (cls && !isNaN(val)) paxData.push({ class: cls, value: val });
+                                    }
+                                });
+                                flightData.paxData = paxData;
+                            } catch (ex) { console.warn('batch pax parse err', ex); }
+                            printBtn.className = origClass;
+                            tempForm.remove();
+                            ifrm.remove();
+                            resolve();
+                        };
+                        // Fallback timeout
+                        setTimeout(() => { tempForm.remove(); ifrm.remove(); resolve(); }, 6000);
+                    });
+                } catch (ex) { console.warn(ex); }
+                fetched++;
+            }
+
+            // Now we have all paxData collected — print
+            batchBtn.textContent = `🖨 Göndərilir…`;
+            const acCfg2 = getSelectedAcConfig();
+            const acItems2 = [...(acCfg2.items || [])];
+            const acItemQtys2 = acItems2.map(() => 1);
+
+            if (method === 'browser') {
+                // Open one browser print page with all flights combined
+                const pw = window.open('', '_blank', 'width=800,height=900');
+                let allCards = '';
+                for (const { flightData: fd2 } of selected) {
+                    allCards += buildBatchBrowserCards(fd2, fd2.paxData || [], acItems2, acItemQtys2);
+                }
+                pw.document.write(`<!DOCTYPE html><html><head><title>Batch Labels</title><style>
+                    *{margin:0;padding:0;box-sizing:border-box;}
+                    body{font-family:'Courier New',monospace;padding:10px;background:#e0e7ef;}
+                    .wrap{display:flex;flex-wrap:wrap;gap:10px;}
+                    .lc{width:200px;height:292px;border:2px solid #1e3a8a;border-radius:5px;overflow:hidden;display:flex;flex-direction:column;page-break-inside:avoid;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15);}
+                    .logo-box{border:1.5px solid #1e3a8a;margin:5px 5px 3px;height:62px;overflow:hidden;flex-shrink:0;}
+                    .info{padding:4px 8px;font-size:11px;line-height:1.75;flex-shrink:0;border-bottom:1px solid #c7d2e6;}
+                    .info .lbl{font-size:9px;color:#64748b;}
+                    .item-name{flex:1;display:flex;align-items:center;justify-content:center;padding:6px;text-align:center;font-weight:900;font-style:italic;}
+                    .np{text-align:right;margin-bottom:10px;}
+                    @media print{.np{display:none;}body{background:#fff;}}
+                </style></head><body>
+                <div class="np"><button onclick="window.print()" style="padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">&#128424; Print All</button></div>
+                <div class="wrap">${allCards}</div></body></html>`);
+                pw.document.close();
+                toast(`✓ ${selected.length} uçuş üçün browser print açıldı`, 'success');
+            } else {
+                // ZPL one by one
+                const zplList = [];
+                for (const { flightData: fd2 } of selected) {
+                    const pax2 = fd2.paxData || [];
+                    const cls2 = getPrintClasses(pax2);
+                    for (const cls of cls2) {
+                        const paxCnt = pax2.find(p => p.class === cls)?.value ?? '';
+                        for (let i = 0; i < acItems2.length; i++) {
+                            const qty = acItemQtys2[i] || 1;
+                            for (let c = 0; c < qty; c++) {
+                                zplList.push(buildItemLabelZPL(fd2, acItems2[i], cls, paxCnt));
+                            }
+                        }
+                    }
+                }
+                if (!zplList.length) { toast('Göndəriləcək label yoxdur', 'error'); batchBtn.disabled = false; updateBatchBtn(); return; }
+                let sent2 = 0, fail2 = 0;
+                function batchSendNext() {
+                    if (sent2 + fail2 >= zplList.length) {
+                        batchBtn.disabled = false;
+                        updateBatchBtn();
+                        toast(`✓ ${sent2}/${zplList.length} label ZT411-ə göndərildi`, 'success');
+                        return;
+                    }
+                    batchBtn.textContent = `🖨 ${sent2 + fail2 + 1}/${zplList.length} göndərilir…`;
+                    sendZplToZebra(ip, zplList[sent2 + fail2],
+                        () => { sent2++; batchSendNext(); },
+                        () => { fail2++; batchSendNext(); });
+                }
+                batchSendNext();
+                return;
+            }
+            batchBtn.disabled = false;
+            updateBatchBtn();
+        };
 
     }, 2000);
 
