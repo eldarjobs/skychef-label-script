@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V9)
 // @namespace    http://tampermonkey.net/
-// @version      9.8.7
+// @version      9.8.8
 // @description  Local HTML preview, aircraft-type items config (Meals/Beverages/Breads), Zebra ZT411 ZPL print.
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -33,10 +33,51 @@
         LABEL_H_MM: 'acf9_label_h_mm',    // label height in mm (default 83)
         PRINT_CLASSES: 'acf9_print_classes',  // comma-sep class codes to print
         LOGO_URL: 'acf9_logo_url',       // raw GitHub URL to logo image
-        DEFAULT_LOGO: 'https://raw.githubusercontent.com/eldarjobs/skychef-label-script/main/AZAL.logos.png',
+        DEFAULT_LOGO: 'https://raw.githubusercontent.com/eldarjobs/skychef-label-script/main/AZAL.logo.png',
+        QR_CODE: 'acf9_qr_code',    // 'on' | 'off'
     };
     const gs = (k, d = '') => { try { return GM_getValue(k, d); } catch { return localStorage.getItem(k) ?? d; } };
     const ss = (k, v) => { try { GM_setValue(k, v); } catch { localStorage.setItem(k, v); } };
+
+    /* ── Export / Import all settings as JSON ── */
+    function exportSettings() {
+        const keys = Object.values(SK).filter(v => v.startsWith('acf9_'));
+        const data = {};
+        keys.forEach(k => { const v = gs(k, null); if (v !== null && v !== '') data[k] = v; });
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'aerochef_settings.json';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+    function importSettings(file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            try {
+                const data = JSON.parse(e.target.result);
+                Object.entries(data).forEach(([k, v]) => ss(k, v));
+                toast(`✓ ${Object.keys(data).length} ayar import edildi — sayfanı yeniləyin`, 'success', 5000);
+            } catch { toast('Import xətası: JSON formatı düzgün deyil', 'error'); }
+        };
+        reader.readAsText(file);
+    }
+
+    /* ── Conditional item qty: checks item.rules array against paxData ── */
+    function resolveItemQty(item, paxData, manualQty) {
+        if (manualQty != null && manualQty !== '') return parseInt(manualQty) || 0;
+        if (!item.rules || !item.rules.length) return 1;
+        for (const rule of item.rules) {
+            const pax = paxData.find(p => p.class.toUpperCase() === (rule.class || '').toUpperCase());
+            const val = pax ? (pax.value || 0) : 0;
+            const thr = rule.val || 0;
+            const pass = rule.op === '>' ? val > thr : rule.op === '>=' ? val >= thr
+                : rule.op === '<' ? val < thr : rule.op === '<=' ? val <= thr
+                    : rule.op === '=' ? val === thr : false;
+            if (pass) return rule.qty || 1;
+        }
+        return item.defaultQty || 1;
+    }
 
     const DEFAULT_GALLEYS = ['Galley 1', 'Galley 2', 'Galley 3', 'Galley 4', 'Galley 5'];
     const DEFAULT_ETAT_TYPES = ['Standard', 'Detailed', 'Summary'];
@@ -411,7 +452,15 @@
         z += `^FO8,595^FI${FR}^A0N,${nameFz},${nameFz}^FD${item.name}^FS
 `;
 
-        z += `^XZ\n`;
+        // ── QR Code (optional, bottom-right corner) ──
+        if (gs(SK.QR_CODE, 'off') === 'on') {
+            const qrData = `${fno}|${date}|${classCode}|${item.name}`;
+            z += `^FO${LW - 110},${LH - 110}^BQN,2,3^FDMM,${qrData}^FS
+`;
+        }
+
+        z += `^XZ
+`;
         return z;
     }
 
@@ -570,7 +619,9 @@
         }
 
         const logoUrl = SK.DEFAULT_LOGO;
-        const logoHtmlBP = `<img src="${logoUrl}" style="width:100%;height:100%;object-fit:contain;display:block;" onerror="this.style.display='none'">`;
+        const logoHtmlBP = logoUrl
+            ? `<img src="${logoUrl}" style="max-height:28px;max-width:90%;object-fit:contain;display:block;margin:0 auto;" onerror="this.style.display='none'">`
+            : `<div class="logo-name">AZERBAIJAN</div><div class="logo-sub">&#8211; AIRLINES &#8211;</div>`;
 
         let cards = '';
         for (const cls of classes) {
@@ -610,22 +661,20 @@
         const pw = window.open('', '_blank', 'width=700,height=900');
         pw.document.write(`<!DOCTYPE html><html><head><title>Labels &#8211; ${flight.flightNo}</title><style>
             *{margin:0;padding:0;box-sizing:border-box;}
-            body{font-family:'Courier New',monospace;padding:10px;background:#e0e7ef;}
-            .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-start;}
-            .lc{width:200px;height:292px;border:2px solid #1e3a8a;border-radius:5px;
+            body{font-family:'Courier New',monospace;padding:10px;background:#e5e7eb;}
+            .wrap{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-start;}
+            .lc{width:200px;min-height:290px;border:2px solid #222;border-radius:4px;
                 overflow:hidden;display:flex;flex-direction:column;page-break-inside:avoid;
-                background:#fff;color:#000;box-shadow:0 2px 8px rgba(0,0,0,.15);}
-            .logo-box{border:1.5px solid #1e3a8a;margin:5px 5px 3px;height:62px;
-                      overflow:hidden;flex-shrink:0;}
+                background:#fff;color:#000;}
+            .logo-box{border:1.5px solid #222;margin:5px;padding:5px 4px;text-align:center;}
             .logo-name{font-size:14px;font-weight:900;letter-spacing:1px;}
             .logo-sub{font-size:10px;letter-spacing:2px;}
-            .info{padding:4px 8px;font-size:11px;line-height:1.75;flex-shrink:0;
-                  border-bottom:1px solid #c7d2e6;}
-            .info .lbl{font-size:9px;color:#64748b;}
-            .item-name{flex:1;display:flex;align-items:center;justify-content:center;
-                        padding:6px;text-align:center;font-weight:900;font-style:italic;}
-            .np{text-align:right;margin-bottom:10px;}
-            @media print{.np{display:none;}body{background:#fff;padding:4px;}}
+            .info{padding:6px 8px;font-size:11px;line-height:1.8;flex:1;}
+            .item-name{padding:8px 6px;text-align:center;font-weight:900;font-style:italic;
+                        border-top:1px solid #ccc;font-size:22px;}
+            .np{grid-column:1/-1;text-align:right;margin-bottom:10px;}
+            @media print{.np{display:none;}body{background:#fff;}}
+            .lbl{opacity:.55;font-size:9px;}
         </style></head><body>
         <div class="np">
           <b>${totalLabels} label</b> (${classes.join('+')} × ${qtyList})&nbsp;&nbsp;
@@ -720,6 +769,20 @@
                   <label>Label Qty <span style="font-size:9px;color:#9ca3af;font-weight:400;">(per class)</span></label>
                   <div id="acf8-item-qtys-list" style="display:flex;flex-direction:column;gap:2px;max-height:110px;overflow-y:auto;"></div>
                 </div>
+                <!-- Custom Label -->
+                <div class="acf8-fg" style="border-top:1px dashed #e5e7eb;padding-top:6px;">
+                  <label>&#10133; Quick Custom Label</label>
+                  <div style="display:flex;gap:5px;align-items:center;">
+                    <input type="text" id="acf8-custom-name" placeholder="Item name" style="flex:1;padding:4px 7px;border:1px solid #d1d5db;border-radius:5px;font-size:11px;">
+                    <div class="acf8-counter">
+                      <button id="acf8-custom-minus">&#8722;</button>
+                      <input type="number" id="acf8-custom-qty" value="1" min="1" max="20" style="width:36px;font-size:11px;padding:3px;border:1px solid #d1d5db;border-radius:4px;text-align:center;">
+                      <button id="acf8-custom-plus">&#43;</button>
+                    </div>
+                    <button id="acf8-custom-add" style="padding:4px 9px;background:#2563eb;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">Add</button>
+                  </div>
+                  <div id="acf8-custom-list" style="display:flex;flex-direction:column;gap:2px;margin-top:4px;"></div>
+                </div>
                 <div class="acf8-fg">
                   <label>Pax by Class</label>
                   <div class="acf8-chips">${chipsHtml || '<span style="color:#9ca3af;font-size:12px;">No pax data</span>'}</div>
@@ -759,6 +822,17 @@
                 <label>Print Classes <span style="font-size:9px;color:#9ca3af;font-weight:400;">(comma-separated, e.g. BC,EC)</span></label>
                 <input type="text" id="acf8-print-classes" value="${gs(SK.PRINT_CLASSES, 'BC,EC')}" placeholder="BC,EC" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:12px;width:100%;">
               </div>
+              <!-- QR toggle -->
+              <div class="acf8-fg full" style="flex-direction:row;align-items:center;justify-content:space-between;">
+                <label style="text-transform:none;font-size:11px;font-weight:600;color:#374151;cursor:pointer;" for="acf8-qr-toggle">
+                  📷 ZPL Label-də QR Kod (ramp scan)
+                </label>
+                <label style="position:relative;display:inline-block;width:36px;height:20px;">
+                  <input type="checkbox" id="acf8-qr-toggle" ${gs(SK.QR_CODE, 'off') === 'on' ? 'checked' : ''} style="opacity:0;width:0;height:0;">
+                  <span id="acf8-qr-knob" style="position:absolute;cursor:pointer;inset:0;background:${gs(SK.QR_CODE, 'off') === 'on' ? '#2563eb' : '#d1d5db'};border-radius:20px;transition:.2s;"
+                    onclick="const c=this.previousElementSibling;c.checked=!c.checked;this.style.background=c.checked?'#2563eb':'#d1d5db'"></span>
+                </label>
+              </div>
 
               <div class="acf8-fg full" id="acf8-ip-group" style="${curMethod !== 'network' ? 'opacity:.4;pointer-events:none' : ''}">
                 <label>Zebra Printer IP</label>
@@ -789,6 +863,16 @@
                   <button id="acf8-ac-item-add" style="padding:5px 12px;background:#2563eb;color:#fff;border:none;border-radius:5px;font-size:12px;cursor:pointer;font-weight:600;">+ Add Item</button>
                 </div>
               </div>
+              <!-- Export / Import -->
+              <div class="acf8-fg full" style="border-top:1px solid #e5e7eb;padding-top:10px;">
+                <label>Config Export / Import</label>
+                <div style="display:flex;gap:6px;">
+                  <button id="acf8-export-btn" style="flex:1;padding:5px 10px;background:#0f766e;color:#fff;border:none;border-radius:5px;font-size:11px;cursor:pointer;font-weight:700;">&#11015; Export JSON</button>
+                  <label for="acf8-import-file" style="flex:1;padding:5px 10px;background:#4f46e5;color:#fff;border-radius:5px;font-size:11px;cursor:pointer;font-weight:700;text-align:center;">&#11014; Import JSON
+                    <input type="file" id="acf8-import-file" accept=".json" style="display:none;">
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -808,13 +892,32 @@
         const ftrStatus = overlay.querySelector('#acf8-ftr-status');
         const actionBtn = overlay.querySelector('#acf8-btn-action');
 
+        /* ── Custom label items ── */
+        const customItems = [];  // {name, bgColor:'white', _qty:N}
+
+        function renderCustomList() {
+            const el = overlay.querySelector('#acf8-custom-list');
+            if (!el) return;
+            el.innerHTML = '';
+            customItems.forEach((ci, idx) => {
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:11px;background:#f0f4ff;border-radius:4px;padding:2px 6px;';
+                row.innerHTML = `<span style="flex:1;">${ci.name} <b style="color:#2563eb;">×${ci._qty}</b></span><button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;">×</button>`;
+                row.querySelector('button').onclick = () => { customItems.splice(idx, 1); renderCustomList(); schedulePreview(); };
+                el.appendChild(row);
+            });
+        }
+
         /* ── Local preview renderer ── */
         function schedulePreview() {
             clearTimeout(prevTimer);
             prevTimer = setTimeout(() => {
                 const galley = overlay.querySelector('#acf8-sel-galley').value || 'Galley 1';
-                // Tag items with their qty for preview badge
-                const tagged = acItems.map((it, i) => ({ ...it, _qty: acItemQtys[i] ?? 1 }));
+                // merge acItems + customItems, tag with qty for preview
+                const tagged = [
+                    ...acItems.map((it, i) => ({ ...it, _qty: acItemQtys[i] ?? 1 })),
+                    ...customItems,
+                ];
                 renderLocalPreview(prevBox, flightData, paxData, galley, 1, tagged);
             }, 300);
         }
@@ -935,6 +1038,37 @@
         }
         renderItemQtys();
 
+        /* ── Custom label buttons ── */
+        const customAddBtn = overlay.querySelector('#acf8-custom-add');
+        if (customAddBtn) {
+            customAddBtn.onclick = () => {
+                const nameI = overlay.querySelector('#acf8-custom-name');
+                const qtyI = overlay.querySelector('#acf8-custom-qty');
+                const name = (nameI.value || '').trim();
+                if (!name) { toast('Custom item adı daxil edin', 'error'); return; }
+                const qty = Math.max(1, parseInt(qtyI.value) || 1);
+                customItems.push({ name, bgColor: 'white', _qty: qty });
+                nameI.value = ''; qtyI.value = 1;
+                renderCustomList();
+                schedulePreview();
+                toast(`➕ Custom: ${name} ×${qty}`, 'success', 2000);
+            };
+            overlay.querySelector('#acf8-custom-minus').onclick = () => {
+                const i = overlay.querySelector('#acf8-custom-qty');
+                i.value = Math.max(1, parseInt(i.value) - 1);
+            };
+            overlay.querySelector('#acf8-custom-plus').onclick = () => {
+                const i = overlay.querySelector('#acf8-custom-qty');
+                i.value = Math.min(20, parseInt(i.value) + 1);
+            };
+        }
+
+        /* ── Export / Import ── */
+        overlay.querySelector('#acf8-export-btn')?.addEventListener('click', exportSettings);
+        overlay.querySelector('#acf8-import-file')?.addEventListener('change', e => {
+            if (e.target.files[0]) importSettings(e.target.files[0]);
+        });
+
         /* ── Close ── */
         const close = () => { clearTimeout(prevTimer); overlay.remove(); document.removeEventListener('keydown', kbH); };
         overlay.querySelector('.acf8-close').onclick = close;
@@ -1019,6 +1153,9 @@
                 // Print classes
                 const pcEl = overlay.querySelector('#acf8-print-classes');
                 if (pcEl) ss(SK.PRINT_CLASSES, pcEl.value.trim());
+                // QR Code toggle
+                const qrEl = overlay.querySelector('#acf8-qr-toggle');
+                if (qrEl) ss(SK.QR_CODE, qrEl.checked ? 'on' : 'off');
                 // Save current acItems to config
                 const key = overlay.querySelector('#acf8-ac-type-sel')?.value || acCfg.key;
                 const cfgs = getAcConfigs();
@@ -1045,7 +1182,12 @@
 
             // Browser print
             if (method === 'browser') {
-                browserPrint(flightData, paxData, acItemQtys, acItems);
+                const allForPrint = [
+                    ...acItems.map((it, i) => ({ ...it, _qty: acItemQtys[i] ?? 1 })),
+                    ...customItems,
+                ];
+                const qtysForPrint = allForPrint.map(it => it._qty || 1);
+                browserPrint(flightData, paxData, qtysForPrint, allForPrint);
                 close();
                 toast('Browser print açıldı', 'success');
                 return;
@@ -1054,15 +1196,23 @@
             // Network ZPL – send labels ONE BY ONE to printer
             if (!IP_REGEX.test(ip)) { toast('Əvvəlcə Settings-də Printer IP daxil edin', 'error'); return; }
 
-            // Build a flat array of individual ZPL strings
+            // Build a flat array of individual ZPL strings (acItems + customItems)
             const printCls2 = getPrintClasses(paxData);
             const zplList = [];
             for (const cls of printCls2) {
                 const paxCnt = paxData.find(p => p.class === cls)?.value ?? '';
+                // Regular items
                 for (let i = 0; i < acItems.length; i++) {
                     const qty = (acItemQtys && acItemQtys[i] != null) ? acItemQtys[i] : 1;
                     for (let c = 0; c < qty; c++) {
                         zplList.push(buildItemLabelZPL(flightData, acItems[i], cls, paxCnt));
+                    }
+                }
+                // Custom items
+                for (const ci of customItems) {
+                    const qty = ci._qty || 1;
+                    for (let c = 0; c < qty; c++) {
+                        zplList.push(buildItemLabelZPL(flightData, ci, cls, paxCnt));
                     }
                 }
             }
