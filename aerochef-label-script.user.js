@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V9)
 // @namespace    http://tampermonkey.net/
-// @version      9.8
+// @version      9.8.1
 // @description  Local HTML preview, aircraft-type items config (Meals/Beverages/Breads), Zebra ZT411 ZPL print.
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -11,7 +11,6 @@
 // @downloadURL  https://raw.githubusercontent.com/eldarjobs/skychef-label-script/master/aerochef-label-script.user.js
 // @connect      *
 // ==/UserScript==
-
 
 (function () {
     'use strict';
@@ -33,6 +32,7 @@
         LABEL_W_MM: 'acf9_label_w_mm',    // label width  in mm (default 57)
         LABEL_H_MM: 'acf9_label_h_mm',    // label height in mm (default 83)
         PRINT_CLASSES: 'acf9_print_classes',  // comma-sep class codes to print
+        LOGO_URL: 'acf9_logo_url',       // raw GitHub URL to logo image
     };
     const gs = (k, d = '') => { try { return GM_getValue(k, d); } catch { return localStorage.getItem(k) ?? d; } };
     const ss = (k, v) => { try { GM_setValue(k, v); } catch { localStorage.setItem(k, v); } };
@@ -471,53 +471,63 @@
         function buildCard(lbl) {
             const { cls, paxCount, item } = lbl;
             const isRed = (item.bgColor || 'white') === 'red';
-            const bg = isRed ? '#dc2626' : '#ffffff';
+            const bg = isRed ? '#cc1f1f' : '#ffffff';
             const txtClr = isRed ? '#fff' : '#111';
-            const borClr = isRed ? '#b91c1c' : '#374151';
-            const divClr = isRed ? 'rgba(255,255,255,.4)' : '#ccc';
-            const nameFz = (item.name || '').length > 14 ? 10 : 12;
+            const borClr = isRed ? '#991b1b' : '#1e3a8a';
+            const divClr = isRed ? 'rgba(255,255,255,.35)' : '#c7d2e6';
+            const logoUrl = gs(SK.LOGO_URL, '');
+            // Dynamic font for item name
+            const nlen = (item.name || '').length;
+            const nameFz = nlen > 18 ? '9px' : nlen > 12 ? '11px' : '14px';
+
+            const logoHtml = logoUrl
+                ? `<img src="${logoUrl}" style="max-height:26px;max-width:90%;object-fit:contain;" onerror="this.style.display='none'">`
+                : `<div style="font-size:10px;font-weight:900;letter-spacing:.5px;line-height:1.2;">AZERBAIJAN<br><span style="font-size:8px;letter-spacing:2px;">&#8210; AIRLINES &#8210;</span></div>`;
+
             return `
-            <div style="width:160px;min-height:220px;border:1.5px solid ${borClr};border-radius:4px;
+            <div style="width:168px;height:246px;border:2px solid ${borClr};border-radius:5px;
                  overflow:hidden;font-family:'Courier New',monospace;background:${bg};color:${txtClr};
-                 display:flex;flex-direction:column;">
-              <div style="border:1.5px solid ${borClr};margin:3px;padding:4px 3px;text-align:center;font-size:9.5px;font-weight:900;line-height:1.3;">
-                AZERBAIJAN<br><span style="font-size:8px;font-weight:600;letter-spacing:1px;">─ AIRLINES ─</span>
+                 display:flex;flex-direction:column;box-shadow:0 3px 10px rgba(0,0,0,.18);flex-shrink:0;">
+              <!-- Logo header -->
+              <div style="border:1.5px solid ${borClr};margin:4px 4px 2px;flex-shrink:0;
+                   display:flex;align-items:center;justify-content:center;
+                   padding:4px 3px;min-height:46px;text-align:center;">
+                ${logoHtml}
               </div>
-              <div style="padding:5px 5px 0;font-size:8.5px;line-height:1.65;flex:1;">
-                <div>Date: ${date}</div>
-                <div>Flt: ${fno}</div>
-                <div>${from} ${to}</div>
-                <div>${to} – ${from}</div>
-                <div><b>${cls} ${paxCount} –</b></div>
+              <!-- Flight info -->
+              <div style="padding:3px 7px;font-size:8px;line-height:1.65;flex-shrink:0;border-bottom:1px solid ${divClr};">
+                <div><span style="opacity:.7;">Date:</span> ${date}</div>
+                <div><span style="opacity:.7;">Flt:</span>  ${fno}</div>
+                <div>${from} &#8594; ${to}</div>
+                <div>${to} &#8592; ${from}</div>
+                <div style="font-weight:700;">${cls} ${paxCount}</div>
               </div>
-              <div style="border-top:1px solid ${divClr};padding:5px 3px;text-align:center;
-                   font-size:${nameFz}px;font-weight:900;font-style:italic;">
-                ${item.name}
+              <!-- Item name -->
+              <div style="flex:1;display:flex;align-items:center;justify-content:center;
+                   padding:6px 5px;text-align:center;flex-direction:column;gap:2px;">
+                <span style="font-size:${nameFz};font-weight:900;font-style:italic;line-height:1.2;">${item.name}</span>
               </div>
             </div>`;
         }
 
         function render() {
             previewBox.innerHTML = '';
-            previewBox.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:6px;gap:6px;';
+            previewBox.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;gap:8px;background:#f1f5f9;border-radius:6px;';
 
-            // Card
             const cardWrap = document.createElement('div');
             cardWrap.innerHTML = buildCard(labels[cur]);
             previewBox.appendChild(cardWrap);
 
-            // Nav row
             const nav = document.createElement('div');
-            nav.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;color:#374151;';
+            nav.style.cssText = 'display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;color:#1e3a8a;';
             nav.innerHTML = `
-                <button id="acf8-prev-lbl" style="width:26px;height:26px;border:1px solid #d1d5db;border-radius:5px;background:#fff;cursor:pointer;font-size:14px;">‹</button>
-                <span style="min-width:64px;text-align:center;">${cur + 1} / ${labels.length}</span>
-                <button id="acf8-next-lbl" style="width:26px;height:26px;border:1px solid #d1d5db;border-radius:5px;background:#fff;cursor:pointer;font-size:14px;">›</button>`;
+                <button id="acf8-prev-lbl" style="width:28px;height:28px;border:1.5px solid #1e3a8a;border-radius:6px;background:#fff;cursor:pointer;font-size:16px;color:#1e3a8a;line-height:1;">&#8249;</button>
+                <span style="min-width:68px;text-align:center;">${cur + 1} &nbsp;/&nbsp; ${labels.length}</span>
+                <button id="acf8-next-lbl" style="width:28px;height:28px;border:1.5px solid #1e3a8a;border-radius:6px;background:#fff;cursor:pointer;font-size:16px;color:#1e3a8a;line-height:1;">&#8250;</button>`;
             previewBox.appendChild(nav);
 
-            // Label info badge
             const info = document.createElement('div');
-            info.style.cssText = 'font-size:9px;color:#9ca3af;text-align:center;';
+            info.style.cssText = 'font-size:9px;color:#64748b;text-align:center;letter-spacing:.3px;';
             const lbl = labels[cur];
             info.textContent = `${lbl.cls} • ${lbl.item.name}`;
             previewBox.appendChild(info);
@@ -565,6 +575,11 @@
             return;
         }
 
+        const logoUrl = gs(SK.LOGO_URL, '');
+        const logoHtmlBP = logoUrl
+            ? `<img src="${logoUrl}" style="max-height:28px;max-width:90%;object-fit:contain;display:block;margin:0 auto;" onerror="this.style.display='none'">`
+            : `<div class="logo-name">AZERBAIJAN</div><div class="logo-sub">&#8211; AIRLINES &#8211;</div>`;
+
         let cards = '';
         for (const cls of classes) {
             const paxCount = paxData.find(p => p.class === cls)?.value ?? '';
@@ -573,23 +588,24 @@
                 const qty = (acItemQtys && acItemQtys[i] != null) ? acItemQtys[i] : 1;
                 if (qty < 1) continue;
                 const isRed = (item.bgColor || 'white') === 'red';
-                const bg = isRed ? '#dc2626' : '#ffffff';
+                const bg = isRed ? '#cc1f1f' : '#ffffff';
                 const clr = isRed ? '#ffffff' : '#000000';
-                const nameFs = (item.name || '').length > 18 ? '16px' : (item.name || '').length > 12 ? '20px' : '24px';
+                const borClr = isRed ? '#991b1b' : '#1e3a8a';
+                const nlen = (item.name || '').length;
+                const nameFs = nlen > 18 ? '13px' : nlen > 12 ? '17px' : '22px';
                 for (let c = 0; c < qty; c++) {
-                    cards += `<div class="lc" style="background:${bg};color:${clr};border-color:${isRed ? '#b91c1c' : '#222'}">
-                      <div class="logo-box" style="border-color:${isRed ? 'rgba(255,255,255,.6)' : '#222'}">
-                        <div class="logo-name">AZERBAIJAN</div>
-                        <div class="logo-sub">&#8211; AIRLINES &#8211;</div>
+                    cards += `<div class="lc" style="background:${bg};color:${clr};border-color:${borClr}">
+                      <div class="logo-box" style="border-color:${isRed ? 'rgba(255,255,255,.5)' : '#1e3a8a'}">
+                        ${logoHtmlBP}
                       </div>
                       <div class="info">
-                        <div>Date: ${date}</div>
-                        <div>Flight No. : ${fno}</div>
-                        <div>${from} ${to}</div>
-                        <div>${to} &#8211; ${from}</div>
-                        <div>${cls} ${paxCount} &#8211;</div>
+                        <div><span class="lbl">Date:</span> ${date}</div>
+                        <div><span class="lbl">Flt:</span>  ${fno}</div>
+                        <div>${from} &#8594; ${to}</div>
+                        <div>${to} &#8592; ${from}</div>
+                        <div><b>${cls} ${paxCount}</b></div>
                       </div>
-                      <div class="item-name" style="border-top:1px solid ${isRed ? 'rgba(255,255,255,.5)' : '#ccc'};font-size:${nameFs}">
+                      <div class="item-name" style="border-top:1px solid ${isRed ? 'rgba(255,255,255,.4)' : '#c7d2e6'};font-size:${nameFs}">
                         ${item.name}
                       </div>
                     </div>`;
@@ -615,6 +631,7 @@
                         border-top:1px solid #ccc;font-size:22px;}
             .np{grid-column:1/-1;text-align:right;margin-bottom:10px;}
             @media print{.np{display:none;}body{background:#fff;}}
+            .lbl{opacity:.55;font-size:9px;}
         </style></head><body>
         <div class="np">
           <b>${totalLabels} label</b> (${classes.join('+')} × ${qtyList})&nbsp;&nbsp;
@@ -747,6 +764,11 @@
               <div class="acf8-fg full">
                 <label>Print Classes <span style="font-size:9px;color:#9ca3af;font-weight:400;">(comma-separated, e.g. BC,EC)</span></label>
                 <input type="text" id="acf8-print-classes" value="${gs(SK.PRINT_CLASSES, 'BC,EC')}" placeholder="BC,EC" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:12px;width:100%;">
+              </div>
+              <!-- Logo URL -->
+              <div class="acf8-fg full">
+                <label>Logo URL <span style="font-size:9px;color:#9ca3af;font-weight:400;">(raw GitHub link, e.g. https://raw.githubusercontent.com/USER/REPO/main/logo.png)</span></label>
+                <input type="text" id="acf8-logo-url" value="${gs(SK.LOGO_URL, '')}" placeholder="https://raw.githubusercontent.com/..." style="padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:11px;width:100%;">
               </div>
               <div class="acf8-fg full" id="acf8-ip-group" style="${curMethod !== 'network' ? 'opacity:.4;pointer-events:none' : ''}">
                 <label>Zebra Printer IP</label>
@@ -1007,6 +1029,9 @@
                 // Print classes
                 const pcEl = overlay.querySelector('#acf8-print-classes');
                 if (pcEl) ss(SK.PRINT_CLASSES, pcEl.value.trim());
+                // Logo URL
+                const luEl = overlay.querySelector('#acf8-logo-url');
+                if (luEl) ss(SK.LOGO_URL, luEl.value.trim());
                 // Save current acItems to config
                 const key = overlay.querySelector('#acf8-ac-type-sel')?.value || acCfg.key;
                 const cfgs = getAcConfigs();
@@ -1227,4 +1252,3 @@
     }, 2000);
 
 })();
-
