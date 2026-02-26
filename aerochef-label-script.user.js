@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         AeroChef Paxload – Print Labels (V12.0 - Single Route Line, Custom Class Filter)
+// @name         AeroChef Paxload – Print Labels (V12.3 - Single Route Line, Custom Class Filter)
 // @namespace    http://tampermonkey.net/
-// @version      12.2
+// @version      12.3
 // @description  Single route line on sticker, custom label class selector, batch fixes
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -498,7 +498,8 @@
         printCls.forEach(cls => {
             const paxCount = paxData.find(p => p.class === cls)?.value ?? 0;
             allItems.forEach(item => {
-                const manualQty = item._qty || 1;
+                const manualQty = item._qty ?? 1;
+                if (manualQty <= 0) return; // skip items user set to 0
                 const qty = (perLabel > 0 && paxCount > 0) ? Math.ceil(paxCount / perLabel) : manualQty;
                 const paxSplit = splitPaxAcrossLabels(paxCount, qty, perLabel);
                 for (let q = 0; q < qty; q++) labels.push({ cls, paxCount: paxSplit[q], item });
@@ -528,20 +529,20 @@
                 : `<div style="font-size:10px;font-weight:900;letter-spacing:.5px;line-height:1.2;">AZERBAIJAN<br><span style="font-size:8px;letter-spacing:2px;">&#8210; AIRLINES &#8210;</span></div>`;
 
             return `
-            <div style="width:168px;height:246px;border:2px solid ${borClr};border-radius:5px;
+            <div style="width:120px;height:175px;border:1.5px solid ${borClr};border-radius:4px;
                  overflow:hidden;font-family:'Courier New',monospace;background:${bg};color:${txtClr};
-                 display:flex;flex-direction:column;box-shadow:0 3px 10px rgba(0,0,0,.18);flex-shrink:0;">
-              <div style="border:1.5px solid ${borClr};margin:4px 4px 2px;flex-shrink:0;overflow:hidden;height:50px;">
+                 display:flex;flex-direction:column;box-shadow:0 2px 6px rgba(0,0,0,.12);flex-shrink:0;">
+              <div style="border:1px solid ${borClr};margin:3px 3px 1px;flex-shrink:0;overflow:hidden;height:32px;">
                 ${logoHtml}
               </div>
-              <div style="padding:3px 7px;font-size:8px;line-height:1.65;flex-shrink:0;border-bottom:1px solid ${divClr};">
+              <div style="padding:2px 5px;font-size:7px;line-height:1.55;flex-shrink:0;border-bottom:1px solid ${divClr};">
                 <div><span style="opacity:.7;">Date:</span> ${date}</div>
                 <div><span style="opacity:.7;">Flt:</span>  ${fno}</div>
                 <div>${route}</div>
                 <div style="font-weight:700;">${cls} ${paxCount}</div>
               </div>
-              <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:6px 5px;text-align:center;flex-direction:column;gap:2px;">
-                <span style="font-size:${nameFz};font-weight:900;font-style:italic;line-height:1.2;">${item.name}</span>
+              <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:4px 3px;text-align:center;">
+                <span style="font-size:${nameFz};font-weight:900;font-style:italic;line-height:1.15;">${item.name}</span>
               </div>
             </div>`;
         }
@@ -1323,16 +1324,13 @@
             if (!el) return;
             el.innerHTML = '';
             acItems.forEach((item, i) => {
-                const isRed = (item.bgColor || 'white') === 'red';
-                const dot = isRed ? '#dc2626' : '#9ca3af';
                 const row = document.createElement('div');
-                row.style.cssText = 'display:flex;align-items:center;gap:5px;padding:2px 3px;';
+                row.style.cssText = 'display:flex;align-items:center;gap:4px;padding:2px 0;';
                 row.innerHTML = `
-                    <span style="width:8px;height:8px;border-radius:50%;background:${dot};flex-shrink:0;"></span>
-                    <span style="flex:1;font-size:11px;">${item.name}</span>
-                    <button style="width:22px;height:22px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:15px;line-height:1;color:#374151;">&#8722;</button>
-                    <span id="acf8-iq-v-${i}" style="min-width:24px;text-align:center;font-size:12px;font-weight:700;">${acItemQtys[i] ?? 1}</span>
-                    <button style="width:22px;height:22px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:15px;line-height:1;color:#374151;">+</button>`;
+                    <span style="flex:1;font-size:11px;color:#374151;">${item.name}</span>
+                    <button style="width:20px;height:20px;border:1px solid #d1d5db;border-radius:3px;background:#fff;cursor:pointer;font-size:14px;line-height:1;color:#374151;">&#8722;</button>
+                    <span id="acf8-iq-v-${i}" style="min-width:22px;text-align:center;font-size:12px;font-weight:700;color:#111;">${acItemQtys[i] ?? 1}</span>
+                    <button style="width:20px;height:20px;border:1px solid #d1d5db;border-radius:3px;background:#fff;cursor:pointer;font-size:14px;line-height:1;color:#374151;">+</button>`;
                 const [minBtn, plusBtn] = row.querySelectorAll('button');
                 minBtn.onclick = () => {
                     acItemQtys[i] = Math.max(0, (acItemQtys[i] ?? 1) - 1);
@@ -1533,7 +1531,8 @@
                     for (const item of allForPrint) {
                         // Skip if this item has a class restriction that excludes current cls
                         if (item._classes && item._classes.length && !item._classes.includes(cls)) continue;
-                        const manualQty2 = item._qty || 1;
+                        const manualQty2 = item._qty ?? 1;
+                        if (manualQty2 <= 0) continue; // skip items user set to 0
                         const qty2 = (perLabel3 > 0 && paxCount2 > 0) ? Math.ceil(paxCount2 / perLabel3) : manualQty2;
                         if (qty2 < 1) continue;
                         const isRed2 = (item.bgColor || 'white') === 'red';
@@ -1592,6 +1591,7 @@
                 const paxCnt = paxData.find(p => p.class === cls)?.value ?? 0;
                 for (let i = 0; i < acItems.length; i++) {
                     const manualQty = (acItemQtys && acItemQtys[i] != null) ? acItemQtys[i] : 1;
+                    if (manualQty <= 0) continue; // skip items user set to 0
                     const qty = (perLabel4 > 0 && paxCnt > 0) ? Math.ceil(paxCnt / perLabel4) : manualQty;
                     const paxSplit = splitPaxAcrossLabels(paxCnt, qty, perLabel4);
                     for (let c = 0; c < qty; c++) {
@@ -1601,7 +1601,8 @@
                 for (const ci of customItems) {
                     // Respect class restriction on custom items
                     if (ci._classes && ci._classes.length && !ci._classes.includes(cls)) continue;
-                    const manualQtyCI = ci._qty || 1;
+                    const manualQtyCI = ci._qty ?? 1;
+                    if (manualQtyCI <= 0) continue; // skip items user set to 0
                     const qty = (perLabel4 > 0 && paxCnt > 0) ? Math.ceil(paxCnt / perLabel4) : manualQtyCI;
                     const paxSplitCI = splitPaxAcrossLabels(paxCnt, qty, perLabel4);
                     for (let c = 0; c < qty; c++) {
@@ -1979,6 +1980,7 @@
                             const paxCnt = pax2.find(p => p.class === cls)?.value ?? 0;
                             for (let i = 0; i < acItems2.length; i++) {
                                 const manualQtyB = acItemQtys2[i] || 1;
+                                if (manualQtyB <= 0) continue;
                                 const qty = (batchPerLabel > 0 && paxCnt > 0) ? Math.ceil(paxCnt / batchPerLabel) : manualQtyB;
                                 const bPaxSplit = splitPaxAcrossLabels(paxCnt, qty, batchPerLabel);
                                 for (let c = 0; c < qty; c++) {
