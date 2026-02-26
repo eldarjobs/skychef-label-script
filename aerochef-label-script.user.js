@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         AeroChef Paxload – Print Labels (V11.1 - Dynamic Classes)
+// @name         AeroChef Paxload – Print Labels (V12.0 - Single Route Line, Custom Class Filter)
 // @namespace    http://tampermonkey.net/
-// @version      11.1
-// @description  Dynamic Pax Classes Checkboxes, Fixed Layout, Batch Print Fix
+// @version      12.0
+// @description  Single route line on sticker, custom label class selector, batch fixes
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
@@ -417,9 +417,6 @@
     function buildItemLabelZPL(flight, item, classCode, paxCount) {
         const { LW, LH } = getLabelDims();
         const route = flight.route || '';
-        const parts = route.split('-');
-        const from = parts[0] || '';
-        const to = parts[1] || '';
         const isRed = (item.bgColor || 'white') === 'red';
         const FR = isRed ? '^FR' : '';
         const date = _dateFmt(flight.date);
@@ -439,9 +436,8 @@
 
         z += `^FO8,88${FR}^A0N,17,17^FDDate: ${date}^FS\n`;
         z += `^FO8,110${FR}^A0N,17,17^FDFlight No. : ${fno}^FS\n`;
-        z += `^FO8,132${FR}^A0N,17,17^FD${from}  ${to}^FS\n`;
-        z += `^FO8,152${FR}^A0N,17,17^FD${to} - ${from}^FS\n`;
-        z += `^FO8,174${FR}^A0N,17,17^FD${classCode} ${paxCount || ''} -^FS\n`;
+        z += `^FO8,132${FR}^A0N,17,17^FD${route}^FS\n`;
+        z += `^FO8,152${FR}^A0N,17,17^FD${classCode} ${paxCount || ''} -^FS\n`;
 
         z += `^FO4,580^GB${LW - 8},2,2^FS\n`;
 
@@ -461,9 +457,6 @@
     ============================================ */
     function renderLocalPreview(previewBox, flight, paxData, galley, _unused, acItems) {
         const route = flight.route || '';
-        const parts = route.split('-');
-        const from = parts[0] || 'GYD';
-        const to = parts[1] || '---';
         const date = _dateFmt(flight.date);
         const fno = flight.flightNo || '-';
 
@@ -511,8 +504,7 @@
               <div style="padding:3px 7px;font-size:8px;line-height:1.65;flex-shrink:0;border-bottom:1px solid ${divClr};">
                 <div><span style="opacity:.7;">Date:</span> ${date}</div>
                 <div><span style="opacity:.7;">Flt:</span>  ${fno}</div>
-                <div>${from} &#8594; ${to}</div>
-                <div>${to} &#8592; ${from}</div>
+                <div>${route}</div>
                 <div style="font-weight:700;">${cls} ${paxCount}</div>
               </div>
               <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:6px 5px;text-align:center;flex-direction:column;gap:2px;">
@@ -577,9 +569,6 @@
     ============================================ */
     function browserPrint(flight, paxData, acItemQtys, acItems) {
         const route = flight.route || '';
-        const parts = route.split('-');
-        const from = parts[0] || '';
-        const to = parts[1] || '';
         const date = _dateFmt(flight.date);
         const fno = flight.flightNo || '-';
         const classes = getPrintClasses(paxData);
@@ -618,8 +607,7 @@
               <div class="info">
                 <div><span class="lbl">Date:</span> ${date}</div>
                 <div><span class="lbl">Flt:</span>  ${fno}</div>
-                <div>${from} &#8594; ${to}</div>
-                <div>${to} &#8592; ${from}</div>
+                <div>${route}</div>
                 <div><b>${cls} ${paxCount}</b></div>
               </div>
               <div class="item-name" style="border-top:1px solid ${isRed ? 'rgba(255,255,255,.4)' : '#c7d2e6'};font-size:${nameFs}">
@@ -664,9 +652,6 @@
     function buildBatchBrowserCards(flight, paxData, acItems, acItemQtys) {
         const logoImg = `<img src="${SK.DEFAULT_LOGO}" style="width:100%;height:100%;object-fit:contain;display:block;" onerror="this.style.display='none'">`;
         const route = flight.route || '';
-        const parts = route.split('-');
-        const from = parts[0] || '';
-        const to = parts[1] || '';
         const date = _dateFmt(flight.date);
         const fno = flight.flightNo || '-';
         const classes = getPrintClasses(paxData);
@@ -690,8 +675,7 @@
               <div class="info">
                 <div><span class="lbl">Date:</span> ${date}</div>
                 <div><span class="lbl">Flt:</span>  ${fno}</div>
-                <div>${from} → ${to}</div>
-                <div>${to} ← ${from}</div>
+                <div>${route}</div>
                 <div><b>${cls} ${paxCount}</b></div>
               </div>
               <div class="item-name" style="border-top:1px solid ${isRed ? 'rgba(255,255,255,.4)' : '#c7d2e6'};font-size:${nameFs}">${item.name}</div>
@@ -1017,19 +1001,23 @@
                   ${buildSelect('acf8-sel-printtype', DEFAULT_PRINT_TYPES, gs(SK.PRINT_TYPE, ''), 'Select Print Type')}
                 </div>
                 <div class="acf8-fg">
-                  <label>Label Qty <span style="font-size:9px;color:#9ca3af;font-weight:400;">(per class)</span></label>
+                  <label>Label Qty</label>
                   <div id="acf8-item-qtys-list" style="display:flex;flex-direction:column;gap:2px;max-height:110px;overflow-y:auto;"></div>
                 </div>
                 <div class="acf8-fg" style="border-top:1px dashed #e5e7eb;padding-top:6px;">
                   <label>&#10133; Quick Custom Label</label>
-                  <div style="display:flex;gap:5px;align-items:center;">
-                    <input type="text" id="acf8-custom-name" placeholder="Item name" class="acf8-input" style="flex:1;">
+                  <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
+                    <input type="text" id="acf8-custom-name" placeholder="Item name" class="acf8-input" style="flex:1;min-width:80px;">
                     <div class="acf8-counter">
                       <button id="acf8-custom-minus">&#8722;</button>
                       <input type="number" id="acf8-custom-qty" value="1" min="1" max="20" class="acf8-input" style="width:36px;padding:3px;text-align:center;">
                       <button id="acf8-custom-plus">&#43;</button>
                     </div>
                     <button id="acf8-custom-add" style="padding:4px 9px;background:#2563eb;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">Add</button>
+                  </div>
+                  <div id="acf8-custom-class-row" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;padding:5px 6px;background:#f0f4ff;border-radius:5px;border:1px solid #dbeafe;">
+                    <span style="font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;align-self:center;">For class:</span>
+                    ${paxData.map(p => `<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer;"><input type="checkbox" class="acf8-custom-cls-cb" value="${p.class}" checked style="width:12px;height:12px;accent-color:#2563eb;margin:0;"><b style="color:${CLASS_COLORS[p.class] || '#111'};">${p.class}</b></label>`).join('')}
                   </div>
                   <div id="acf8-custom-list" style="display:flex;flex-direction:column;gap:2px;margin-top:4px;"></div>
                 </div>
@@ -1070,8 +1058,8 @@
                     <div class="acf8-fg">
                         <label>Label Size (W / H mm)</label>
                         <div style="display:flex; gap:6px;">
-                            <input type="number" id="acf8-lbl-w" value="${gs(SK.LABEL_W_MM,'57')}" class="acf8-input" style="width:50%;">
-                            <input type="number" id="acf8-lbl-h" value="${gs(SK.LABEL_H_MM,'83')}" class="acf8-input" style="width:50%;">
+                            <input type="number" id="acf8-lbl-w" value="${gs(SK.LABEL_W_MM, '57')}" class="acf8-input" style="width:50%;">
+                            <input type="number" id="acf8-lbl-h" value="${gs(SK.LABEL_H_MM, '83')}" class="acf8-input" style="width:50%;">
                         </div>
                     </div>
 
@@ -1182,7 +1170,10 @@
             customItems.forEach((ci, idx) => {
                 const row = document.createElement('div');
                 row.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:11px;background:#f0f4ff;border-radius:4px;padding:2px 6px;';
-                row.innerHTML = `<span style="flex:1;">${ci.name} <b style="color:#2563eb;">×${ci._qty}</b></span><button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;">×</button>`;
+                const clsTag = ci._classes && ci._classes.length
+                    ? ` <span style="font-size:9px;background:#dbeafe;color:#1e40af;padding:1px 5px;border-radius:8px;font-weight:700;">${ci._classes.join('+')}</span>`
+                    : '';
+                row.innerHTML = `<span style="flex:1;">${ci.name} <b style="color:#2563eb;">×${ci._qty}</b>${clsTag}</span><button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;">×</button>`;
                 row.querySelector('button').onclick = () => {
                     customItems.splice(idx, 1);
                     renderCustomList();
@@ -1329,12 +1320,15 @@
                     return;
                 }
                 const qty = Math.max(1, parseInt(qtyI.value) || 1);
-                customItems.push({ name, bgColor: 'white', _qty: qty });
+                // Collect selected classes for this custom item
+                const selCls = Array.from(overlay.querySelectorAll('.acf8-custom-cls-cb:checked')).map(c => c.value);
+                customItems.push({ name, bgColor: 'white', _qty: qty, _classes: selCls.length ? selCls : null });
                 nameI.value = '';
                 qtyI.value = 1;
                 renderCustomList();
                 schedulePreview();
-                toast(`➕ Custom: ${name} ×${qty}`, 'success', 2000);
+                const clsLabel = selCls.length ? ` [${selCls.join('+')}]` : '';
+                toast(`➕ Custom: ${name} ×${qty}${clsLabel}`, 'success', 2000);
             };
             overlay.querySelector('#acf8-custom-minus').onclick = () => {
                 const i = overlay.querySelector('#acf8-custom-qty');
@@ -1473,12 +1467,67 @@
             ss(SK.PRINT_TYPE, printType);
 
             if (method === 'browser') {
+                const printCls3 = getPrintClasses(paxData);
+                // Custom items may have class restrictions
                 const allForPrint = [
                     ...acItems.map((it, i) => ({ ...it, _qty: acItemQtys[i] ?? 1 })),
                     ...customItems,
                 ];
-                const qtysForPrint = allForPrint.map(it => it._qty || 1);
-                browserPrint(flightData, paxData, qtysForPrint, allForPrint);
+
+                // Build cards manually respecting per-item class filter
+                const logoUrl2 = SK.DEFAULT_LOGO;
+                const logoHtmlBP2 = logoUrl2
+                    ? `<img src="${logoUrl2}" style="max-height:28px;max-width:90%;object-fit:contain;display:block;margin:0 auto;" onerror="this.style.display='none'">`
+                    : `<div class="logo-name">AZERBAIJAN</div><div class="logo-sub">&#8211; AIRLINES &#8211;</div>`;
+                const route2 = flightData.route || '';
+                const date2 = _dateFmt(flightData.date);
+                const fno2 = flightData.flightNo || '-';
+                let cards2 = '';
+                for (const cls of printCls3) {
+                    const paxCount2 = paxData.find(p => p.class === cls)?.value ?? '';
+                    for (const item of allForPrint) {
+                        // Skip if this item has a class restriction that excludes current cls
+                        if (item._classes && item._classes.length && !item._classes.includes(cls)) continue;
+                        const qty2 = item._qty || 1;
+                        if (qty2 < 1) continue;
+                        const isRed2 = (item.bgColor || 'white') === 'red';
+                        const bg2 = isRed2 ? '#cc1f1f' : '#ffffff';
+                        const clr2 = isRed2 ? '#ffffff' : '#000000';
+                        const bor2 = isRed2 ? '#991b1b' : '#1e3a8a';
+                        const nlen2 = (item.name || '').length;
+                        const nameFs2 = nlen2 > 18 ? '13px' : nlen2 > 12 ? '17px' : '22px';
+                        for (let c = 0; c < qty2; c++) {
+                            cards2 += `<div class="lc" style="background:${bg2};color:${clr2};border-color:${bor2}">
+              <div class="logo-box" style="border-color:${isRed2 ? 'rgba(255,255,255,.5)' : '#1e3a8a'}">${logoHtmlBP2}</div>
+              <div class="info">
+                <div><span class="lbl">Date:</span> ${date2}</div>
+                <div><span class="lbl">Flt:</span>  ${fno2}</div>
+                <div>${route2}</div>
+                <div><b>${cls} ${paxCount2}</b></div>
+              </div>
+              <div class="item-name" style="border-top:1px solid ${isRed2 ? 'rgba(255,255,255,.4)' : '#c7d2e6'};font-size:${nameFs2}">${item.name}</div>
+            </div>`;
+                        }
+                    }
+                }
+                const pw2 = window.open('', '_blank', 'width=700,height=900');
+                pw2.document.write(`<!DOCTYPE html><html><head><title>Labels &#8211; ${flightData.flightNo}</title><style>
+                    *{margin:0;padding:0;box-sizing:border-box;}
+                    body{font-family:'Courier New',monospace;padding:10px;background:#e5e7eb;}
+                    .wrap{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-start;}
+                    .lc{width:200px;min-height:290px;border:2px solid #222;border-radius:4px;overflow:hidden;display:flex;flex-direction:column;page-break-inside:avoid;background:#fff;color:#000;}
+                    .logo-box{border:1.5px solid #222;margin:5px;padding:5px 4px;text-align:center;}
+                    .logo-name{font-size:14px;font-weight:900;letter-spacing:1px;}
+                    .logo-sub{font-size:10px;letter-spacing:2px;}
+                    .info{padding:6px 8px;font-size:11px;line-height:1.8;flex:1;}
+                    .item-name{padding:8px 6px;text-align:center;font-weight:900;font-style:italic;border-top:1px solid #ccc;font-size:22px;}
+                    .np{grid-column:1/-1;text-align:right;margin-bottom:10px;}
+                    @media print{.np{display:none;}body{background:#fff;}}
+                    .lbl{opacity:.55;font-size:9px;}
+                </style></head><body>
+                <div class="np"><button onclick="window.print()" style="padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">&#128424; Print</button></div>
+                <div class="wrap">${cards2}</div></body></html>`);
+                pw2.document.close();
                 close();
                 toast('Browser print açıldı', 'success');
                 return;
@@ -1500,6 +1549,8 @@
                     }
                 }
                 for (const ci of customItems) {
+                    // Respect class restriction on custom items
+                    if (ci._classes && ci._classes.length && !ci._classes.includes(cls)) continue;
                     const qty = ci._qty || 1;
                     for (let c = 0; c < qty; c++) {
                         zplList.push(buildItemLabelZPL(flightData, ci, cls, paxCnt));
