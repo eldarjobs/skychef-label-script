@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V12.0 - Single Route Line, Custom Class Filter)
 // @namespace    http://tampermonkey.net/
-// @version      12.0
+// @version      12.1
 // @description  Single route line on sticker, custom label class selector, batch fixes
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -35,6 +35,7 @@
         LOGO_URL: 'acf9_logo_url',
         DEFAULT_LOGO: 'https://raw.githubusercontent.com/eldarjobs/skychef-label-script/main/AZAL.logo.png',
         QR_CODE: 'acf9_qr_code',
+        PAX_PER_LABEL: 'acf9_pax_per_label',
     };
 
     const gs = (k, d = '') => {
@@ -396,6 +397,35 @@
         return { LW: mm2dots(w), LH: mm2dots(h) };
     }
 
+    /**
+     * Split totalPax across qty labels using perLabel chunk size.
+     * E.g. splitPax(120, 3, 40) → [40, 40, 40]
+     *      splitPax(125, 3, 40) → [40, 40, 45]
+     *      splitPax(50, 3, 40)  → [40, 10, 0]
+     * If perLabel is 0 or falsy, returns full count for every copy.
+     */
+    function splitPaxAcrossLabels(totalPax, qty, perLabel) {
+        if (!perLabel || perLabel <= 0 || qty <= 0 || !totalPax) {
+            return Array(qty).fill(totalPax);
+        }
+        const result = [];
+        let remaining = typeof totalPax === 'number' ? totalPax : parseInt(totalPax) || 0;
+        for (let i = 0; i < qty; i++) {
+            if (i === qty - 1) {
+                result.push(Math.max(0, remaining));
+            } else {
+                const chunk = Math.min(perLabel, remaining);
+                result.push(chunk);
+                remaining -= chunk;
+            }
+        }
+        return result;
+    }
+
+    function getPaxPerLabel() {
+        return parseInt(gs(SK.PAX_PER_LABEL, '0')) || 0;
+    }
+
     function getPrintClasses(paxData) {
         const allowed = gs(SK.PRINT_CLASSES, 'BC,EC').split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
 
@@ -464,11 +494,13 @@
         const allItems = (acItems && acItems.length) ? acItems : [{ name: '(no items)', bgColor: 'white', _qty: 1 }];
 
         const labels = [];
+        const perLabel = getPaxPerLabel();
         printCls.forEach(cls => {
-            const paxCount = paxData.find(p => p.class === cls)?.value ?? '';
+            const paxCount = paxData.find(p => p.class === cls)?.value ?? 0;
             allItems.forEach(item => {
                 const qty = item._qty || 1;
-                for (let q = 0; q < qty; q++) labels.push({ cls, paxCount, item });
+                const paxSplit = splitPaxAcrossLabels(paxCount, qty, perLabel);
+                for (let q = 0; q < qty; q++) labels.push({ cls, paxCount: paxSplit[q], item });
             });
         });
 
@@ -657,8 +689,9 @@
         const classes = getPrintClasses(paxData);
 
         let html = '';
+        const perLabel = getPaxPerLabel();
         for (const cls of classes) {
-            const paxCount = paxData.find(p => p.class === cls)?.value ?? '';
+            const paxCount = paxData.find(p => p.class === cls)?.value ?? 0;
             for (let i = 0; i < acItems.length; i++) {
                 const item = acItems[i];
                 const qty = (acItemQtys && acItemQtys[i] != null) ? acItemQtys[i] : 1;
@@ -669,6 +702,7 @@
                 const bor = isRed ? '#991b1b' : '#1e3a8a';
                 const nlen = (item.name || '').length;
                 const nameFs = nlen > 18 ? '13px' : nlen > 12 ? '17px' : '22px';
+                const paxSplit = splitPaxAcrossLabels(paxCount, qty, perLabel);
                 for (let c = 0; c < qty; c++) {
                     html += `<div class="lc" style="background:${bg};color:${clr};border-color:${bor}">
               <div class="logo-box" style="border-color:${isRed ? 'rgba(255,255,255,.5)' : '#1e3a8a'}">${logoImg}</div>
@@ -676,7 +710,7 @@
                 <div><span class="lbl">Date:</span> ${date}</div>
                 <div><span class="lbl">Flt:</span>  ${fno}</div>
                 <div>${route}</div>
-                <div><b>${cls} ${paxCount}</b></div>
+                <div><b>${cls} ${paxSplit[c]}</b></div>
               </div>
               <div class="item-name" style="border-top:1px solid ${isRed ? 'rgba(255,255,255,.4)' : '#c7d2e6'};font-size:${nameFs}">${item.name}</div>
             </div>`;
@@ -1072,6 +1106,12 @@
                         </div>
                     </div>
 
+                    <div class="acf8-fg" style="border-top:1px dashed #e5e7eb;padding-top:8px;margin-top:2px;">
+                        <label>Pax Per Label <span style="text-transform:none;font-weight:400;color:#9ca3af;">(bölmə üçün, 0 = bölmə yoxdur)</span></label>
+                        <input type="number" id="acf8-pax-per-label" value="${gs(SK.PAX_PER_LABEL, '0')}" min="0" max="500" placeholder="0" class="acf8-input" style="width:100px;">
+                        <div style="font-size:9px;color:#9ca3af;margin-top:2px;">Məs: 40 → EC 120 = 3 etiket: 40/40/40</div>
+                    </div>
+
                     <div class="acf8-fg full" style="flex-direction:row;align-items:center;justify-content:space-between;border-top:1px dashed #e5e7eb;padding-top:10px;margin-top:2px;">
                         <label style="text-transform:none;font-size:12px;color:#374151;font-weight:600;cursor:pointer;" for="acf8-qr-toggle">
                             📷 ZPL Label-də QR Kod (ramp scan)
@@ -1436,6 +1476,8 @@
                 }
                 const qrEl = overlay.querySelector('#acf8-qr-toggle');
                 if (qrEl) ss(SK.QR_CODE, qrEl.checked ? 'on' : 'off');
+                const pplEl = overlay.querySelector('#acf8-pax-per-label');
+                if (pplEl) ss(SK.PAX_PER_LABEL, pplEl.value);
                 const key = overlay.querySelector('#acf8-ac-type-sel')?.value || acCfg.key;
                 const cfgs = getAcConfigs();
                 if (cfgs[key]) {
@@ -1483,8 +1525,9 @@
                 const date2 = _dateFmt(flightData.date);
                 const fno2 = flightData.flightNo || '-';
                 let cards2 = '';
+                const perLabel3 = getPaxPerLabel();
                 for (const cls of printCls3) {
-                    const paxCount2 = paxData.find(p => p.class === cls)?.value ?? '';
+                    const paxCount2 = paxData.find(p => p.class === cls)?.value ?? 0;
                     for (const item of allForPrint) {
                         // Skip if this item has a class restriction that excludes current cls
                         if (item._classes && item._classes.length && !item._classes.includes(cls)) continue;
@@ -1496,6 +1539,7 @@
                         const bor2 = isRed2 ? '#991b1b' : '#1e3a8a';
                         const nlen2 = (item.name || '').length;
                         const nameFs2 = nlen2 > 18 ? '13px' : nlen2 > 12 ? '17px' : '22px';
+                        const paxSplit2 = splitPaxAcrossLabels(paxCount2, qty2, perLabel3);
                         for (let c = 0; c < qty2; c++) {
                             cards2 += `<div class="lc" style="background:${bg2};color:${clr2};border-color:${bor2}">
               <div class="logo-box" style="border-color:${isRed2 ? 'rgba(255,255,255,.5)' : '#1e3a8a'}">${logoHtmlBP2}</div>
@@ -1503,7 +1547,7 @@
                 <div><span class="lbl">Date:</span> ${date2}</div>
                 <div><span class="lbl">Flt:</span>  ${fno2}</div>
                 <div>${route2}</div>
-                <div><b>${cls} ${paxCount2}</b></div>
+                <div><b>${cls} ${paxSplit2[c]}</b></div>
               </div>
               <div class="item-name" style="border-top:1px solid ${isRed2 ? 'rgba(255,255,255,.4)' : '#c7d2e6'};font-size:${nameFs2}">${item.name}</div>
             </div>`;
@@ -1540,20 +1584,23 @@
 
             const printCls2 = getPrintClasses(paxData);
             const zplList = [];
+            const perLabel4 = getPaxPerLabel();
             for (const cls of printCls2) {
-                const paxCnt = paxData.find(p => p.class === cls)?.value ?? '';
+                const paxCnt = paxData.find(p => p.class === cls)?.value ?? 0;
                 for (let i = 0; i < acItems.length; i++) {
                     const qty = (acItemQtys && acItemQtys[i] != null) ? acItemQtys[i] : 1;
+                    const paxSplit = splitPaxAcrossLabels(paxCnt, qty, perLabel4);
                     for (let c = 0; c < qty; c++) {
-                        zplList.push(buildItemLabelZPL(flightData, acItems[i], cls, paxCnt));
+                        zplList.push(buildItemLabelZPL(flightData, acItems[i], cls, paxSplit[c]));
                     }
                 }
                 for (const ci of customItems) {
                     // Respect class restriction on custom items
                     if (ci._classes && ci._classes.length && !ci._classes.includes(cls)) continue;
                     const qty = ci._qty || 1;
+                    const paxSplitCI = splitPaxAcrossLabels(paxCnt, qty, perLabel4);
                     for (let c = 0; c < qty; c++) {
-                        zplList.push(buildItemLabelZPL(flightData, ci, cls, paxCnt));
+                        zplList.push(buildItemLabelZPL(flightData, ci, cls, paxSplitCI[c]));
                     }
                 }
             }
@@ -1919,15 +1966,17 @@
 
                 } else {
                     const zplList = [];
+                    const batchPerLabel = getPaxPerLabel();
                     for (const { flightData: fd2 } of selected) {
                         const pax2 = fd2.paxData || [];
                         const cls2 = getPrintClasses(pax2);
                         for (const cls of cls2) {
-                            const paxCnt = pax2.find(p => p.class === cls)?.value ?? '';
+                            const paxCnt = pax2.find(p => p.class === cls)?.value ?? 0;
                             for (let i = 0; i < acItems2.length; i++) {
                                 const qty = acItemQtys2[i] || 1;
+                                const bPaxSplit = splitPaxAcrossLabels(paxCnt, qty, batchPerLabel);
                                 for (let c = 0; c < qty; c++) {
-                                    zplList.push(buildItemLabelZPL(fd2, acItems2[i], cls, paxCnt));
+                                    zplList.push(buildItemLabelZPL(fd2, acItems2[i], cls, bPaxSplit[c]));
                                 }
                             }
                         }
