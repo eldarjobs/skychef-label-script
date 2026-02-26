@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AeroChef Paxload – Print Labels (V12.0 - Single Route Line, Custom Class Filter)
 // @namespace    http://tampermonkey.net/
-// @version      12.1
+// @version      12.2
 // @description  Single route line on sticker, custom label class selector, batch fixes
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
@@ -498,7 +498,8 @@
         printCls.forEach(cls => {
             const paxCount = paxData.find(p => p.class === cls)?.value ?? 0;
             allItems.forEach(item => {
-                const qty = item._qty || 1;
+                const manualQty = item._qty || 1;
+                const qty = (perLabel > 0 && paxCount > 0) ? Math.ceil(paxCount / perLabel) : manualQty;
                 const paxSplit = splitPaxAcrossLabels(paxCount, qty, perLabel);
                 for (let q = 0; q < qty; q++) labels.push({ cls, paxCount: paxSplit[q], item });
             });
@@ -694,7 +695,8 @@
             const paxCount = paxData.find(p => p.class === cls)?.value ?? 0;
             for (let i = 0; i < acItems.length; i++) {
                 const item = acItems[i];
-                const qty = (acItemQtys && acItemQtys[i] != null) ? acItemQtys[i] : 1;
+                const manualQty = (acItemQtys && acItemQtys[i] != null) ? acItemQtys[i] : 1;
+                const qty = (perLabel > 0 && paxCount > 0) ? Math.ceil(paxCount / perLabel) : manualQty;
                 if (qty < 1) continue;
                 const isRed = (item.bgColor || 'white') === 'red';
                 const bg = isRed ? '#cc1f1f' : '#ffffff';
@@ -1531,7 +1533,8 @@
                     for (const item of allForPrint) {
                         // Skip if this item has a class restriction that excludes current cls
                         if (item._classes && item._classes.length && !item._classes.includes(cls)) continue;
-                        const qty2 = item._qty || 1;
+                        const manualQty2 = item._qty || 1;
+                        const qty2 = (perLabel3 > 0 && paxCount2 > 0) ? Math.ceil(paxCount2 / perLabel3) : manualQty2;
                         if (qty2 < 1) continue;
                         const isRed2 = (item.bgColor || 'white') === 'red';
                         const bg2 = isRed2 ? '#cc1f1f' : '#ffffff';
@@ -1588,7 +1591,8 @@
             for (const cls of printCls2) {
                 const paxCnt = paxData.find(p => p.class === cls)?.value ?? 0;
                 for (let i = 0; i < acItems.length; i++) {
-                    const qty = (acItemQtys && acItemQtys[i] != null) ? acItemQtys[i] : 1;
+                    const manualQty = (acItemQtys && acItemQtys[i] != null) ? acItemQtys[i] : 1;
+                    const qty = (perLabel4 > 0 && paxCnt > 0) ? Math.ceil(paxCnt / perLabel4) : manualQty;
                     const paxSplit = splitPaxAcrossLabels(paxCnt, qty, perLabel4);
                     for (let c = 0; c < qty; c++) {
                         zplList.push(buildItemLabelZPL(flightData, acItems[i], cls, paxSplit[c]));
@@ -1597,7 +1601,8 @@
                 for (const ci of customItems) {
                     // Respect class restriction on custom items
                     if (ci._classes && ci._classes.length && !ci._classes.includes(cls)) continue;
-                    const qty = ci._qty || 1;
+                    const manualQtyCI = ci._qty || 1;
+                    const qty = (perLabel4 > 0 && paxCnt > 0) ? Math.ceil(paxCnt / perLabel4) : manualQtyCI;
                     const paxSplitCI = splitPaxAcrossLabels(paxCnt, qty, perLabel4);
                     for (let c = 0; c < qty; c++) {
                         zplList.push(buildItemLabelZPL(flightData, ci, cls, paxSplitCI[c]));
@@ -1973,7 +1978,8 @@
                         for (const cls of cls2) {
                             const paxCnt = pax2.find(p => p.class === cls)?.value ?? 0;
                             for (let i = 0; i < acItems2.length; i++) {
-                                const qty = acItemQtys2[i] || 1;
+                                const manualQtyB = acItemQtys2[i] || 1;
+                                const qty = (batchPerLabel > 0 && paxCnt > 0) ? Math.ceil(paxCnt / batchPerLabel) : manualQtyB;
                                 const bPaxSplit = splitPaxAcrossLabels(paxCnt, qty, batchPerLabel);
                                 for (let c = 0; c < qty; c++) {
                                     zplList.push(buildItemLabelZPL(fd2, acItems2[i], cls, bPaxSplit[c]));
