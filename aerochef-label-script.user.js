@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         AeroChef Paxload – Print Labels (V11.0)
+// @name         AeroChef Paxload – Print Labels (V10.4 - Dynamic Classes)
 // @namespace    http://tampermonkey.net/
-// @version      12.1
-// @description  V11: Custom colors, auto-update, batch ZPL, label layout editor, version check
+// @version      11.1
+// @description  Dynamic Pax Classes Checkboxes, Fixed Layout, Batch Print Fix
 // @match        https://skycatering.aerochef.online/*/FKMS_CTRL_Flight_Load_List.aspx*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
@@ -35,9 +35,6 @@
         LOGO_URL: 'acf9_logo_url',
         DEFAULT_LOGO: 'https://raw.githubusercontent.com/eldarjobs/skychef-label-script/main/AZAL.logo.png',
         QR_CODE: 'acf9_qr_code',
-        LAST_UPDATE_CHECK: 'acf9_last_update_check',
-        ZPL_BATCH_MODE: 'acf9_zpl_batch_mode',
-        LABEL_LAYOUT: 'acf9_label_layout',
     };
 
     const gs = (k, d = '') => {
@@ -249,398 +246,142 @@
     }
 
     /* ============================================
-       7. PREMIUM REDESIGNED CSS
+       7. CSS STYLES
     ============================================ */
     const style = document.createElement('style');
     style.textContent = `
-    /* === PREMIUM AEROCHEF LABEL STYLES v2 === */
+    @keyframes acf8fi  { from{opacity:0} to{opacity:1} }
+    @keyframes acf8su  { from{transform:translateY(-10px);opacity:0} to{transform:translateY(0);opacity:1} }
+    @keyframes acf8spin{ to{transform:rotate(360deg)} }
 
-    .acf8-modal *, .acf8-bm-dialog * {
-        box-sizing: border-box; margin: 0;
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }
+    .acf8-printer{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;background:none;border:none;border-radius:4px;cursor:pointer;transition:background .15s;padding:0;vertical-align:middle;}
+    .acf8-printer:hover{background:rgba(26,115,232,.1);}
+    .acf8-printer svg{width:18px;height:18px;fill:#1a73e8;}
+    .acf8-printer.loading{pointer-events:none;}
+    .acf8-printer.loading svg{fill:#f9a825;}
+    .acf8-printer.error svg{fill:#dc2626!important;}
 
-    @keyframes acf8-fade-in { from{opacity:0} to{opacity:1} }
-    @keyframes acf8-slide-up { from{transform:translateY(30px) scale(.97);opacity:0} to{transform:translateY(0) scale(1);opacity:1} }
-    @keyframes acf8-spin { to{transform:rotate(360deg)} }
-    @keyframes acf8-pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
-    @keyframes acf8-shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
-    @keyframes acf8-glow { 0%,100%{box-shadow:0 0 15px rgba(37,99,235,.15)} 50%{box-shadow:0 0 25px rgba(37,99,235,.3)} }
+    .acf8-overlay{position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:2147483647;display:flex;align-items:center;justify-content:center;animation:acf8fi .15s ease;}
 
-    .acf8-overlay {
-        position:fixed; inset:0; background:rgba(15,23,42,.6);
-        backdrop-filter:blur(12px) saturate(1.4); display:flex; align-items:center;
-        justify-content:center; z-index:2147483647; animation:acf8-fade-in .25s ease;
-    }
+    .acf8-modal{background:#fff;border-radius:10px;width:680px;max-width:96vw;max-height:88vh;box-shadow:0 16px 50px rgba(0,0,0,.28);display:flex;flex-direction:column;overflow:hidden;animation:acf8su .18s ease;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:12px;}
+    .acf8-modal *{box-sizing:border-box;margin:0;}
 
-    .acf8-modal {
-        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-        border-radius: 20px;
-        width: 960px;
-        max-width: 96vw;
-        max-height: 92vh;
-        box-shadow: 0 0 0 1px rgba(0,0,0,.05), 0 32px 64px -16px rgba(0,0,0,.2), 0 0 80px rgba(37,99,235,.06);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        animation: acf8-slide-up .35s cubic-bezier(.22,1,.36,1);
-    }
+    .acf8-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0;border-bottom:1px solid #e5e7eb;flex-shrink:0;}
+    .acf8-hdr-left{display:flex;flex-direction:column;}
+    .acf8-hdr-title{font-size:14px;font-weight:700;color:#111827;margin-bottom:8px;}
+    .acf8-close{background:none;border:none;font-size:22px;color:#9ca3af;cursor:pointer;line-height:1;padding:0 0 10px 10px;align-self:flex-start;}
+    .acf8-close:hover{color:#111827;}
 
-    /* ── Header ── */
-    .acf8-hdr {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 24px 32px;
-        background: linear-gradient(135deg, #f0f5ff 0%, #f8fafc 100%);
-        border-bottom: 1px solid #e2e8f0;
-    }
-    .acf8-hdr-left { display: flex; flex-direction: column; gap: 16px; }
-    .acf8-hdr-title {
-        font-size: 24px;
-        font-weight: 800;
-        color: #0f172a;
-        letter-spacing: -.5px;
-        background: linear-gradient(135deg, #1e3a5f, #2563eb);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
+    .acf8-tabs{display:flex;}
+    .acf8-tab{padding:6px 14px;font-size:12px;font-weight:600;color:#6b7280;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;margin-bottom:-1px;display:flex;align-items:center;gap:5px;}
+    .acf8-tab.active{color:#2563eb;border-bottom-color:#2563eb;}
+    .acf8-tab:hover:not(.active){color:#374151;}
+    .acf8-tab svg{width:15px;height:15px;fill:currentColor;}
 
-    /* ── Tabs ── */
-    .acf8-tabs { display: flex; gap: 6px; background: #e2e8f0; padding: 4px; border-radius: 14px; }
-    .acf8-tab {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 22px;
-        background: transparent;
-        border: none;
-        border-radius: 11px;
-        font-size: 14px;
-        font-weight: 600;
-        color: #64748b;
-        cursor: pointer;
-        transition: all .2s ease;
-    }
-    .acf8-tab svg { width: 18px; height: 18px; fill: currentColor; }
-    .acf8-tab:hover { color: #334155; background: rgba(255,255,255,.6); }
-    .acf8-tab.active {
-        background: #ffffff;
-        color: #1e40af;
-        box-shadow: 0 2px 8px rgba(0,0,0,.08);
-    }
+    .acf8-panel{display:none;flex:1;overflow-y:auto;padding:14px 16px;flex-direction:column;gap:12px;}
+    .acf8-panel.active{display:flex;}
 
-    .acf8-close {
-        width:36px; height:36px; background:#fff; border:1px solid #e2e8f0;
-        border-radius:12px; font-size:18px; color:#94a3b8; cursor:pointer;
-        display:flex; align-items:center; justify-content:center; transition:all .2s;
-    }
-    .acf8-close:hover { background:#fef2f2; border-color:#fecaca; color:#ef4444; transform:rotate(90deg); }
+    .acf8-flight-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;background:#eff6ff;border-radius:7px;border:1px solid #bfdbfe;}
+    .acf8-flight-bar svg{width:16px;height:16px;fill:#1d4ed8;flex-shrink:0;}
+    .acf8-fb-route{font-size:14px;font-weight:800;color:#1e3a8a;letter-spacing:.5px;}
+    .acf8-fb-flight{font-size:12px;font-weight:600;color:#1d4ed8;}
+    .acf8-fb-date{font-size:11px;color:#6b7280;}
+    .acf8-fb-order{font-size:11px;color:#9ca3af;margin-left:auto;}
 
-    /* ── Panels ── */
-    .acf8-panel { display: none; flex: 1; overflow-y: auto; padding: 28px 32px; }
-    .acf8-panel.active { display: block; animation: acf8-fade-in .2s ease; }
+    .acf8-print-body{display:flex;gap:16px;flex:1;min-height:0;}
+    .acf8-print-form{flex:0 0 228px;display:flex;flex-direction:column;gap:9px;overflow-y:auto;}
+    .acf8-preview-col{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0;}
 
-    /* ── Flight Bar ── */
-    .acf8-flight-bar {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        padding: 20px 24px;
-        background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%);
-        border-radius: 16px;
-        margin-bottom: 24px;
-        color: #fff;
-        box-shadow: 0 8px 24px rgba(15,23,42,.25);
-    }
-    .acf8-flight-bar svg { width: 28px; height: 28px; fill: rgba(255,255,255,.85); }
-    .acf8-fb-route { font-size: 20px; font-weight: 800; letter-spacing: .5px; }
-    .acf8-fb-flight { font-size: 15px; font-weight: 500; opacity: .85; }
-    .acf8-fb-date { font-size: 13px; opacity: .55; background: rgba(255,255,255,.1); padding: 4px 12px; border-radius: 20px; }
-    .acf8-fb-order { margin-left: auto; font-size: 13px; opacity: .4; }
+    .acf8-fg{display:flex;flex-direction:column;gap:3px;}
+    .acf8-fg label{font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;}
+    .acf8-fg label .req{color:#ef4444;}
 
-    /* ── Print Body ── */
-    .acf8-print-body { display: flex; gap: 32px; }
-    .acf8-print-form { flex: 0 0 300px; }
-    .acf8-preview-col { flex: 1; }
+    .acf8-input{padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:12px;color:#374151;background:#fff;outline:none;transition:border-color .15s;width:100%;}
+    .acf8-input:focus{border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,.12);}
+    .acf8-fg select, .acf8-fg input[type=text], .acf8-fg input[type=number] { padding:5px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:12px;color:#374151;background:#fff;outline:none;transition:border-color .15s;width:100%; }
+    .acf8-fg select:focus, .acf8-fg input:focus { border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,.12); }
 
-    /* ── Form Groups ── */
-    .acf8-fg { margin-bottom: 20px; }
-    .acf8-fg label {
-        display: block;
+    .acf8-chips{display:flex;flex-wrap:wrap;gap:5px;}
+    .acf8-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;color:#fff;letter-spacing:.2px;}
+    .acf8-chip-v{opacity:.88;font-weight:400;font-size:11px;}
+
+    .acf8-counter{display:flex;align-items:center;gap:5px;}
+    .acf8-counter button{width:24px;height:24px;border:1px solid #d1d5db;border-radius:5px;background:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#374151;line-height:1;}
+    .acf8-counter button:hover{background:#f3f4f6;}
+    .acf8-counter input{width:40px;text-align:center;font-size:12px;}
+
+    .acf8-preview-box{flex:1;border:1px solid #e5e7eb;border-radius:7px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;min-height:140px;overflow:hidden;position:relative;}
+    .acf8-preview-box img{max-width:100%;max-height:100%;object-fit:contain;}
+    .acf8-prev-ph{display:flex;flex-direction:column;align-items:center;gap:8px;color:#9ca3af;font-size:12px;}
+    .acf8-prev-ph svg{width:30px;height:30px;fill:#d1d5db;}
+    .acf8-spinner{width:24px;height:24px;border:3px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;animation:acf8spin .7s linear infinite;}
+
+    /* =======================================================
+       COMPACT SETTINGS STYLES (FIXED CLIPPING & ALIGNMENT)
+    ======================================================= */
+    .acf8-set-section {
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
         margin-bottom: 8px;
-        font-size: 12px;
-        font-weight: 700;
-        color: #475569;
-        text-transform: uppercase;
-        letter-spacing: .6px;
-    }
-    .acf8-fg .req { color: #ef4444; }
-
-    .acf8-fg select, .acf8-fg input[type="text"], .acf8-fg input[type="number"] {
-        width: 100%;
-        padding: 11px 14px;
-        background: #f8fafc;
-        border: 1.5px solid #e2e8f0;
-        border-radius: 10px;
-        font-size: 14px;
-        color: #0f172a;
-        transition: all .2s;
-    }
-    .acf8-fg select:hover, .acf8-fg input:hover { border-color: #94a3b8; background: #fff; }
-    .acf8-fg select:focus, .acf8-fg input:focus {
-        outline: none;
-        border-color: #2563eb;
+        overflow: hidden;
         background: #fff;
-        box-shadow: 0 0 0 4px rgba(37,99,235,.08);
+        flex-shrink: 0;
     }
+    .acf8-set-header { background: #f9fafb; padding: 6px 12px; font-size: 11px; font-weight: 700; color: #4b5563; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; user-select: none; }
+    .acf8-set-content { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .acf8-set-content.full { display: block; }
 
-    /* ── Item Qty List ── */
-    #acf8-item-qtys-list {
-        background:#f8fafc; border-radius:12px; padding:6px;
-        max-height:150px; overflow-y:auto; border:1px solid #f1f5f9;
-    }
-    #acf8-item-qtys-list > div { padding:7px 10px; border-radius:8px; transition:all .15s; }
-    #acf8-item-qtys-list > div:hover { background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.04); }
-    #acf8-item-qtys-list button {
-        width:28px; height:28px; border:1.5px solid #e2e8f0; border-radius:8px;
-        background:#fff; color:#475569; font-size:15px; cursor:pointer;
-        display:inline-flex; align-items:center; justify-content:center; transition:all .15s;
-    }
-    #acf8-item-qtys-list button:hover { background:#2563eb; border-color:#2563eb; color:#fff; }
+    .acf8-method-row{display:flex;gap:6px;}
+    .acf8-method-btn{flex:1;padding:6px 8px;border-radius:5px;font-size:11px;font-weight:600;border:1.5px solid #e5e7eb;background:#fff;cursor:pointer;color:#6b7280;transition:all .15s;}
+    .acf8-method-btn.active{border-color:#2563eb;color:#2563eb;background:#eff6ff;}
+    .acf8-ip-row{display:flex;gap:6px;}
+    .acf8-ip-status{font-size:10px;margin-top:2px;}
+    .acf8-ip-status.ok{color:#16a34a;}
+    .acf8-ip-status.err{color:#dc2626;}
 
-    /* ── Chips ── */
-    .acf8-chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
-    .acf8-chip {
-        display:inline-flex; align-items:center; gap:6px; padding:6px 14px;
-        border-radius:30px; font-size:12px; font-weight:700; color:#fff;
-        box-shadow:0 2px 6px rgba(0,0,0,.12); letter-spacing:.3px;
-    }
-    .acf8-chip-v { background:rgba(255,255,255,.22); padding:2px 7px; border-radius:20px; font-size:10px; }
+    /* Beautiful Toggle Switch */
+    .acf8-toggle { position: relative; display: inline-block; width: 34px; height: 20px; flex-shrink: 0; margin-left: 10px; }
+    .acf8-toggle input { opacity: 0; width: 0; height: 0; }
+    .acf8-toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 20px; }
+    .acf8-toggle-slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+    .acf8-toggle input:checked + .acf8-toggle-slider { background-color: #2563eb; }
+    .acf8-toggle input:checked + .acf8-toggle-slider:before { transform: translateX(14px); }
 
-    /* ── Preview Box ── */
-    .acf8-preview-box {
-        background:linear-gradient(180deg,#f8fafc,#f1f5f9);
-        border:2px solid #e2e8f0; border-radius:16px; padding:20px;
-        min-height:320px; display:flex; flex-direction:column;
-        align-items:center; justify-content:center; gap:16px;
-        box-shadow:inset 0 2px 8px rgba(0,0,0,.03);
+    /* COMPACT GRID FOR AIRCRAFT ITEMS */
+    #acf8-ac-items-list, #acf8-galley-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
+        max-height: 120px;
+        overflow-y: auto;
+        gap: 5px !important;
+        padding: 4px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        margin: 6px 0;
     }
-
-    /* ── Settings Grid ── */
-    .acf8-settings-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:22px; }
-    .acf8-settings-grid .full { grid-column:span 2; }
-
-    /* ── Method Buttons ── */
-    .acf8-method-row { display:flex; gap:10px; }
-    .acf8-method-btn {
-        flex:1; padding:12px; border:1.5px solid #e2e8f0; border-radius:12px;
-        background:#f8fafc; font-size:13px; font-weight:600; color:#475569;
-        cursor:pointer; transition:all .2s;
-    }
-    .acf8-method-btn:hover { background:#fff; border-color:#94a3b8; }
-    .acf8-method-btn.active {
-        background:linear-gradient(135deg,#2563eb,#1d4ed8);
-        border-color:#2563eb; color:#fff;
-        box-shadow:0 4px 12px rgba(37,99,235,.25);
-    }
-
-    /* ── IP Row ── */
-    .acf8-ip-row { display:flex; gap:8px; }
-    .acf8-ip-row input { flex:1; }
-    .acf8-ip-btn {
-        padding:10px 18px; background:linear-gradient(135deg,#10b981,#059669);
-        border:none; border-radius:12px; color:#fff; font-weight:700;
-        font-size:13px; cursor:pointer; transition:all .2s;
-        box-shadow:0 3px 10px rgba(16,185,129,.2);
-    }
-    .acf8-ip-btn:hover { transform:translateY(-1px); box-shadow:0 5px 14px rgba(16,185,129,.3); }
-    .acf8-ip-status { font-size:12px; margin-top:5px; }
-    .acf8-ip-status.ok { color:#10b981; }
-    .acf8-ip-status.err { color:#ef4444; }
-
-    /* ── Galley List ── */
-    .acf8-galley-list { max-height:120px; overflow-y:auto; background:#f8fafc; border-radius:12px; padding:6px; }
-    .acf8-galley-item {
-        display:flex; align-items:center; justify-content:space-between;
-        padding:7px 12px; border-radius:8px; font-size:13px; transition:all .15s;
-    }
-    .acf8-galley-item:hover { background:#fff; }
-    .acf8-galley-item button { background:none; border:none; color:#94a3b8; font-size:16px; cursor:pointer; }
-    .acf8-galley-item button:hover { color:#ef4444; }
-    .acf8-galley-add { display:flex; gap:8px; margin-top:8px; }
-    .acf8-galley-add button {
-        padding:9px 18px; background:#2563eb; border:none; border-radius:10px;
-        color:#fff; font-weight:700; font-size:12px; cursor:pointer;
-    }
-
-    /* ── Aircraft Items ── */
-    #acf8-ac-items-list { max-height:150px; overflow-y:auto; background:#f8fafc; border-radius:12px; padding:6px; margin:8px 0; }
-    #acf8-ac-items-list > div { padding:7px 10px; border-radius:8px; font-size:13px; transition:all .15s; }
-    #acf8-ac-items-list > div:hover { background:#fff; }
-    #acf8-ac-items-list button { background:none; border:none; color:#94a3b8; font-size:16px; cursor:pointer; }
-    #acf8-ac-items-list button:hover { color:#ef4444; }
-
-    /* ── Layout Editor ── */
-    .acf8-layout-section { grid-column:span 2; border-top:1.5px solid #e2e8f0; padding-top:22px; margin-top:12px; }
-    .acf8-layout-editor { max-height:250px; overflow-y:auto; background:#f8fafc; border-radius:12px; padding:8px; }
-    .acf8-layout-row { display:flex; align-items:center; gap:8px; padding:8px; border-bottom:1px solid #f1f5f9; }
-    .acf8-layout-row:last-child { border-bottom:none; }
-    .acf8-layout-row b { min-width:80px; font-size:12px; color:#1e40af; }
-    .acf8-layout-lbl { font-size:10px; color:#64748b; font-weight:700; text-transform:uppercase; }
-    .acf8-layout-inp {
-        width:55px; padding:5px; border:1.5px solid #e2e8f0; border-radius:8px;
-        font-size:12px; text-align:center; transition:border .15s;
-    }
-    .acf8-layout-inp:focus { outline:none; border-color:#2563eb; }
-    .acf8-layout-reset-btn {
-        padding:7px 14px; background:linear-gradient(135deg,#ef4444,#dc2626);
-        border:none; border-radius:8px; color:#fff; font-size:11px;
-        font-weight:700; cursor:pointer; transition:all .2s;
-    }
-    .acf8-layout-reset-btn:hover { transform:translateY(-1px); box-shadow:0 3px 10px rgba(239,68,68,.3); }
-
-    /* ── Toggle ── */
-    .acf8-toggle { position:relative; display:inline-block; width:46px; height:26px; }
-    .acf8-toggle input { opacity:0; width:0; height:0; }
-    .acf8-toggle-knob { position:absolute; cursor:pointer; inset:0; border-radius:26px; transition:.25s; }
-    .acf8-toggle-knob.off { background:#cbd5e1; }
-    .acf8-toggle-knob.on { background:linear-gradient(135deg,#2563eb,#1d4ed8); box-shadow:0 2px 8px rgba(37,99,235,.3); }
-    .acf8-toggle-knob:before {
-        content:""; position:absolute; height:22px; width:22px; left:2px; bottom:2px;
-        background:#fff; border-radius:50%; transition:.25s; box-shadow:0 1px 3px rgba(0,0,0,.15);
-    }
-    .acf8-toggle input:checked + .acf8-toggle-knob:before { transform:translateX(20px); }
-
-    /* ── Footer ── */
-    .acf8-ftr {
+    .acf8-item-compact {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 20px 32px;
-        background: linear-gradient(135deg, #f0f5ff, #f8fafc);
-        border-top: 1px solid #e2e8f0;
-    }
-    .acf8-ftr-status { font-size: 14px; color: #64748b; }
-    .acf8-ftr-right { display: flex; gap: 14px; }
-
-    .acf8-btn {
-        padding: 12px 28px;
-        border-radius: 12px;
-        font-size: 15px;
-        font-weight: 700;
-        cursor: pointer;
-        transition: all .2s;
-        border: none;
-        letter-spacing: .2px;
-    }
-    .acf8-btn-cancel { background: #fff; border: 1.5px solid #e2e8f0; color: #475569; }
-    .acf8-btn-cancel:hover { background: #f1f5f9; border-color: #cbd5e1; }
-    .acf8-btn-print {
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        color: #fff;
-        box-shadow: 0 4px 14px rgba(37,99,235,.3);
-    }
-    .acf8-btn-print:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(37,99,235,.35); }
-    .acf8-btn-save {
-        background: linear-gradient(135deg, #10b981, #059669);
-        color: #fff;
-        box-shadow: 0 4px 14px rgba(16,185,129,.25);
-    }
-    .acf8-btn-save:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(16,185,129,.3); }
-    .acf8-btn:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
-
-    /* ── Batch Modal ── */
-    .acf8-bm-overlay {
-        position:fixed; inset:0; background:rgba(15,23,42,.6);
-        backdrop-filter:blur(12px) saturate(1.4); display:flex;
-        align-items:center; justify-content:center; z-index:2147483647;
-    }
-    .acf8-bm-dialog {
-        background:linear-gradient(180deg,#fff,#f8fafc); border-radius:24px;
-        width:520px; max-width:96vw;
-        box-shadow:0 0 0 1px rgba(0,0,0,.05), 0 32px 64px -16px rgba(0,0,0,.2);
-        animation:acf8-slide-up .35s cubic-bezier(.22,1,.36,1); overflow:hidden;
-    }
-    .acf8-bm-header {
-        padding:22px 24px; background:linear-gradient(135deg,#f0f5ff,#f8fafc);
-        border-bottom:1px solid #e2e8f0; display:flex; align-items:center;
-        justify-content:space-between;
-    }
-    .acf8-bm-title { font-size:18px; font-weight:800; color:#0f172a; }
-    .acf8-bm-subtitle { font-size:13px; color:#64748b; margin-top:4px; }
-    .acf8-bm-body { padding:22px 24px; }
-    .acf8-bm-footer { padding:18px 24px; border-top:1px solid #e2e8f0; display:flex; gap:12px; justify-content:flex-end; }
-    .acf8-bm-chip {
-        display:inline-flex; align-items:center; gap:6px; padding:6px 14px;
-        background:#eef2ff; border-radius:20px; font-size:12px; color:#1e40af; font-weight:600;
-    }
-    .acf8-bm-method-btn {
-        flex:1; padding:12px; border-radius:12px; font-size:13px;
-        font-weight:600; cursor:pointer; transition:all .2s;
-    }
-    .acf8-bm-method-btn.off { background:#f8fafc; border:1.5px solid #e2e8f0; color:#475569; }
-    .acf8-bm-method-btn.on {
-        background:linear-gradient(135deg,#2563eb,#1d4ed8);
-        border:1.5px solid #2563eb; color:#fff; box-shadow:0 4px 12px rgba(37,99,235,.25);
-    }
-    .acf8-bm-cancel, .acf8-bm-start {
-        padding:11px 22px; border-radius:14px; font-size:13px;
-        font-weight:700; cursor:pointer; border:none;
-    }
-    .acf8-bm-cancel { background:#f1f5f9; color:#475569; }
-    .acf8-bm-start {
-        background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff;
-        box-shadow:0 4px 14px rgba(37,99,235,.3);
-    }
-    .acf8-bm-start:disabled { opacity:.5; cursor:not-allowed; }
-
-    /* ── Printer Button ── */
-    .acf8-printer {
-        display:inline-flex; align-items:center; justify-content:center;
-        width:34px; height:34px; background:transparent; border:none;
-        border-radius:10px; cursor:pointer; transition:all .2s;
-    }
-    .acf8-printer:hover { background:#eef2ff; }
-    .acf8-printer svg { width:18px; height:18px; fill:#2563eb; transition:all .2s; }
-    .acf8-printer:hover svg { fill:#1d4ed8; }
-    .acf8-printer.loading svg { fill:#f59e0b; animation:acf8-spin 1s linear infinite; }
-    .acf8-printer.error svg { fill:#ef4444; }
-
-    /* ── Batch Button ── */
-    #acf8-batch-btn {
-        position:fixed; bottom:28px; right:28px; z-index:2147483646;
-        padding:14px 28px; background:linear-gradient(135deg,#2563eb,#1d4ed8);
-        color:#fff; border:none; border-radius:16px; font-size:14px;
-        font-weight:700; cursor:pointer; letter-spacing:.3px;
-        box-shadow:0 8px 24px rgba(37,99,235,.35); transition:all .25s; display:none;
-    }
-    #acf8-batch-btn:hover {
-        transform:translateY(-3px); box-shadow:0 14px 32px rgba(37,99,235,.4);
+        padding: 3px 6px !important;
+        background: #fff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 4px;
+        font-size: 10px !important;
     }
 
-    /* ── Checkbox ── */
-    .acf8-cb { width:17px; height:17px; cursor:pointer; border-radius:5px; accent-color:#2563eb; }
-
-    /* ── Scrollbar ── */
-    .acf8-modal ::-webkit-scrollbar, .acf8-bm-dialog ::-webkit-scrollbar { width:5px; }
-    .acf8-modal ::-webkit-scrollbar-track, .acf8-bm-dialog ::-webkit-scrollbar-track { background:transparent; }
-    .acf8-modal ::-webkit-scrollbar-thumb, .acf8-bm-dialog ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:10px; }
-    .acf8-modal ::-webkit-scrollbar-thumb:hover, .acf8-bm-dialog ::-webkit-scrollbar-thumb:hover { background:#94a3b8; }
-
-    /* ── Quick Custom ── */
-    #acf8-custom-list { display:flex; flex-direction:column; gap:4px; margin-top:8px; }
-    #acf8-custom-list > div { padding:6px 10px; border-radius:8px; font-size:12px; }
-    #acf8-custom-list button { background:none; border:none; color:#94a3b8; font-size:14px; cursor:pointer; }
-    #acf8-custom-list button:hover { color:#ef4444; }
-
-    .acf8-counter { display:flex; align-items:center; gap:2px; }
-    .acf8-counter button {
-        width:26px; height:26px; border:1.5px solid #e2e8f0; border-radius:6px;
-        background:#fff; cursor:pointer; font-size:14px; transition:all .15s;
-    }
-    .acf8-counter button:hover { border-color:#2563eb; color:#2563eb; }
-    .acf8-counter input { width:40px; text-align:center; }
+    .acf8-ftr{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid #e5e7eb;background:#fafafa;flex-shrink:0;}
+    .acf8-ftr-status{font-size:11px;color:#6b7280;}
+    .acf8-ftr-right{display:flex;gap:7px;}
+    .acf8-btn{padding:7px 18px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid transparent;transition:all .15s;}
+    .acf8-btn-cancel{background:#fff;border-color:#d1d5db;color:#374151;}
+    .acf8-btn-cancel:hover{background:#f3f4f6;}
+    .acf8-btn-print{background:#2563eb;color:#fff;}
+    .acf8-btn-print:hover{background:#1d4ed8;}
+    .acf8-btn-print:disabled{background:#93c5fd;cursor:not-allowed;}
+    .acf8-btn-save{background:#10b981;color:#fff;}
+    .acf8-btn-save:hover{background:#059669;}
     `;
     document.head.appendChild(style);
 
@@ -675,7 +416,6 @@
 
     function buildItemLabelZPL(flight, item, classCode, paxCount) {
         const { LW, LH } = getLabelDims();
-        const L = getLabelLayout();
         const route = flight.route || '';
         const parts = route.split('-');
         const from = parts[0] || '';
@@ -686,60 +426,40 @@
         const fno = flight.flightNo || '-';
 
         const nameLen = (item.name || '').length;
-        const autoFz = nameLen > 18 ? 34 : nameLen > 12 ? 42 : 50;
-        const nameFz = (L.itemName && L.itemName.fz != null) ? L.itemName.fz : autoFz;
+        const nameFz = nameLen > 18 ? 34 : nameLen > 12 ? 42 : 50;
 
-        let z = `^XA
-^CI28
-^PW${LW}
-^LL${LH}
-^LH0,0
-`;
-        if (isRed) z += `^FO0,0^GB${LW},${LH},${LH}^FS
-`;
+        let z = `^XA\n^CI28\n^PW${LW}\n^LL${LH}\n^LH0,0\n`;
+        if (isRed) z += `^FO0,0^GB${LW},${LH},${LH}^FS\n`;
 
-        z += `^FO${L.logo.x},${L.logo.y}^GB${L.logo.w || LW - 8},${L.logo.h || 72},2^FS
-`;
-        z += `^FO${L.header1.x},${L.header1.y}^A0N,${L.header1.fz},${L.header1.fz}${FR}^FDAZERBAIJAN^FS
-`;
-        z += `^FO${L.header2.x},${L.header2.y}${FR}^A0N,${L.header2.fz},${L.header2.fz}^FD- AIRLINES -^FS
-`;
+        z += `^FO4,4^GB${LW - 8},72,2^FS\n`;
+        z += `^FO50,9^A0N,24,24${FR}^FDAZERBAIJAN^FS\n`;
+        z += `^FO110,36${FR}^A0N,18,18^FD- AIRLINES -^FS\n`;
 
-        z += `^FO${L.divider1.x},${L.divider1.y}^GB${LW - 8},2,2^FS
-`;
+        z += `^FO4,79^GB${LW - 8},2,2^FS\n`;
 
-        z += `^FO${L.date.x},${L.date.y}${FR}^A0N,${L.date.fz},${L.date.fz}^FDDate: ${date}^FS
-`;
-        z += `^FO${L.flight.x},${L.flight.y}${FR}^A0N,${L.flight.fz},${L.flight.fz}^FDFlight No. : ${fno}^FS
-`;
-        z += `^FO${L.routeFrom.x},${L.routeFrom.y}${FR}^A0N,${L.routeFrom.fz},${L.routeFrom.fz}^FD${from}  ${to}^FS
-`;
-        z += `^FO${L.routeTo.x},${L.routeTo.y}${FR}^A0N,${L.routeTo.fz},${L.routeTo.fz}^FD${to} - ${from}^FS
-`;
-        z += `^FO${L.classPax.x},${L.classPax.y}${FR}^A0N,${L.classPax.fz},${L.classPax.fz}^FD${classCode} ${paxCount || ''} -^FS
-`;
+        z += `^FO8,88${FR}^A0N,17,17^FDDate: ${date}^FS\n`;
+        z += `^FO8,110${FR}^A0N,17,17^FDFlight No. : ${fno}^FS\n`;
+        z += `^FO8,132${FR}^A0N,17,17^FD${from}  ${to}^FS\n`;
+        z += `^FO8,152${FR}^A0N,17,17^FD${to} - ${from}^FS\n`;
+        z += `^FO8,174${FR}^A0N,17,17^FD${classCode} ${paxCount || ''} -^FS\n`;
 
-        z += `^FO${L.divider2.x},${L.divider2.y}^GB${LW - 8},2,2^FS
-`;
+        z += `^FO4,580^GB${LW - 8},2,2^FS\n`;
 
-        z += `^FO${L.itemName.x},${L.itemName.y}${FR}^FB${LW - 16},2,0,C,0^A0N,${nameFz},${nameFz}^FD${item.name}^FS
-`;
+        z += `^FO8,595^FI${FR}^A0N,${nameFz},${nameFz}^FD${item.name}^FS\n`;
 
         if (gs(SK.QR_CODE, 'off') === 'on') {
             const qrData = `${fno}|${date}|${classCode}|${item.name}`;
-            z += `^FO${LW - 110},${LH - 110}^BQN,2,3^FDMM,${qrData}^FS
-`;
+            z += `^FO${LW - 110},${LH - 110}^BQN,2,3^FDMM,${qrData}^FS\n`;
         }
 
-        z += `^XZ
-`;
+        z += `^XZ\n`;
         return z;
     }
 
     /* ============================================
-       9. HTML CARD BUILDER (SHARED)
+       9. PREVIEW RENDERER
     ============================================ */
-    function buildHtmlCard(flight, item, cls, paxCount) {
+    function renderLocalPreview(previewBox, flight, paxData, galley, _unused, acItems) {
         const route = flight.route || '';
         const parts = route.split('-');
         const from = parts[0] || 'GYD';
@@ -747,50 +467,6 @@
         const date = _dateFmt(flight.date);
         const fno = flight.flightNo || '-';
 
-        const isRed = (item.bgColor || 'white') === 'red';
-        const bg = isRed ? '#dc2626' : '#ffffff';
-        const txtClr = isRed ? '#ffffff' : '#0f172a';
-        const borClr = isRed ? '#991b1b' : '#2563eb';
-        const divClr = isRed ? 'rgba(255,255,255,0.2)' : '#e2e8f0';
-
-        const logoUrl = SK.DEFAULT_LOGO;
-        const nlen = (item.name || '').length;
-        const nameFz = nlen > 18 ? '10px' : nlen > 12 ? '12px' : '15px';
-
-        const logoHtml = logoUrl
-            ? `<img src="${logoUrl}" style="width:100%;height:100%;object-fit:contain;display:block;" onerror="this.style.display='none'">`
-            : `<div style="font-size:10px;font-weight:900;letter-spacing:.5px;line-height:1.2;color:${txtClr}">AZERBAIJAN<br><span style="font-size:8px;letter-spacing:2px;">&#8210; AIRLINES &#8210;</span></div>`;
-
-        return `
-        <div style="width:168px;height:246px;border:2px solid ${borClr};border-radius:8px;
-             overflow:hidden;font-family:'Courier New',monospace;background:${bg};color:${txtClr};
-             display:flex;flex-direction:column;box-shadow:0 4px 12px rgba(0,0,0,0.1);flex-shrink:0;page-break-inside:avoid;margin:0;">
-          <div style="border-bottom:1px solid ${divClr};margin:4px 4px 2px;flex-shrink:0;overflow:hidden;height:50px;display:flex;align-items:center;justify-content:center;">
-            ${logoHtml}
-          </div>
-          <div style="padding:6px 8px;font-size:9px;line-height:1.6;flex-shrink:0;border-bottom:1px solid ${divClr};">
-            <div style="display:flex;justify-content:space-between;"><span style="opacity:0.7;">Date:</span> ${date}</div>
-            <div style="display:flex;justify-content:space-between;"><span style="opacity:0.7;">Flight:</span> ${fno}</div>
-            <div style="display:flex;justify-content:space-between;margin-top:2px;">
-              <span>${from}</span> <span>→</span> <span>${to}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;">
-              <span>${to}</span> <span>←</span> <span>${from}</span>
-            </div>
-            <div style="margin-top:4px;font-weight:700;text-align:center;background:${isRed ? 'rgba(255,255,255,0.1)' : 'rgba(37,99,235,0.1)'};padding:2px 0;border-radius:4px;">
-              ${cls} ${paxCount}
-            </div>
-          </div>
-          <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:8px;text-align:center;">
-            <span style="font-size:${nameFz};font-weight:900;font-style:italic;line-height:1.2;">${item.name}</span>
-          </div>
-        </div>`;
-    }
-
-    /* ============================================
-       9b. PREVIEW RENDERER
-    ============================================ */
-    function renderLocalPreview(previewBox, flight, paxData, galley, _unused, acItems) {
         const printCls = getPrintClasses(paxData);
         const allItems = (acItems && acItems.length) ? acItems : [{ name: '(no items)', bgColor: 'white', _qty: 1 }];
 
@@ -804,32 +480,67 @@
         });
 
         if (!labels.length) {
-            previewBox.innerHTML = '<span style="color:#9ca3af;font-size:11px;">No labels</span>';
+            previewBox.innerHTML = '<span style="color:#9ca3af;font-size:11px;">Seçilmiş siniflər üçün label yoxdur</span>';
             return;
         }
 
         let cur = 0;
 
+        function buildCard(lbl) {
+            const { cls, paxCount, item } = lbl;
+            const isRed = (item.bgColor || 'white') === 'red';
+            const bg = isRed ? '#cc1f1f' : '#ffffff';
+            const txtClr = isRed ? '#fff' : '#111';
+            const borClr = isRed ? '#991b1b' : '#1e3a8a';
+            const divClr = isRed ? 'rgba(255,255,255,.35)' : '#c7d2e6';
+            const logoUrl = SK.DEFAULT_LOGO;
+            const nlen = (item.name || '').length;
+            const nameFz = nlen > 18 ? '9px' : nlen > 12 ? '11px' : '14px';
+
+            const logoHtml = logoUrl
+                ? `<img src="${logoUrl}" style="width:100%;height:100%;object-fit:contain;display:block;" onerror="this.style.display='none'">`
+                : `<div style="font-size:10px;font-weight:900;letter-spacing:.5px;line-height:1.2;">AZERBAIJAN<br><span style="font-size:8px;letter-spacing:2px;">&#8210; AIRLINES &#8210;</span></div>`;
+
+            return `
+            <div style="width:168px;height:246px;border:2px solid ${borClr};border-radius:5px;
+                 overflow:hidden;font-family:'Courier New',monospace;background:${bg};color:${txtClr};
+                 display:flex;flex-direction:column;box-shadow:0 3px 10px rgba(0,0,0,.18);flex-shrink:0;">
+              <div style="border:1.5px solid ${borClr};margin:4px 4px 2px;flex-shrink:0;overflow:hidden;height:50px;">
+                ${logoHtml}
+              </div>
+              <div style="padding:3px 7px;font-size:8px;line-height:1.65;flex-shrink:0;border-bottom:1px solid ${divClr};">
+                <div><span style="opacity:.7;">Date:</span> ${date}</div>
+                <div><span style="opacity:.7;">Flt:</span>  ${fno}</div>
+                <div>${from} &#8594; ${to}</div>
+                <div>${to} &#8592; ${from}</div>
+                <div style="font-weight:700;">${cls} ${paxCount}</div>
+              </div>
+              <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:6px 5px;text-align:center;flex-direction:column;gap:2px;">
+                <span style="font-size:${nameFz};font-weight:900;font-style:italic;line-height:1.2;">${item.name}</span>
+              </div>
+            </div>`;
+        }
+
         function render() {
             previewBox.innerHTML = '';
-            previewBox.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:12px;background:#f1f5f9;border-radius:12px;';
+            previewBox.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;gap:8px;background:#f1f5f9;border-radius:6px;';
 
             const cardWrap = document.createElement('div');
-            const currentLbl = labels[cur];
-            cardWrap.innerHTML = buildHtmlCard(flight, currentLbl.item, currentLbl.cls, currentLbl.paxCount);
+            cardWrap.innerHTML = buildCard(labels[cur]);
             previewBox.appendChild(cardWrap);
 
             const nav = document.createElement('div');
-            nav.style.cssText = 'display:flex;align-items:center;gap:12px;font-size:13px;font-weight:600;color:#2563eb;';
+            nav.style.cssText = 'display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;color:#1e3a8a;';
             nav.innerHTML = `
-                <button id="acf8-prev-lbl" style="width:32px;height:32px;border:2px solid #2563eb;border-radius:8px;background:#fff;cursor:pointer;font-size:16px;color:#2563eb;line-height:1;">&#8249;</button>
-                <span style="min-width:80px;text-align:center;">${cur + 1} / ${labels.length}</span>
-                <button id="acf8-next-lbl" style="width:32px;height:32px;border:2px solid #2563eb;border-radius:8px;background:#fff;cursor:pointer;font-size:16px;color:#2563eb;line-height:1;">&#8250;</button>`;
+                <button id="acf8-prev-lbl" style="width:28px;height:28px;border:1.5px solid #1e3a8a;border-radius:6px;background:#fff;cursor:pointer;font-size:16px;color:#1e3a8a;line-height:1;">&#8249;</button>
+                <span style="min-width:68px;text-align:center;">${cur + 1} &nbsp;/&nbsp; ${labels.length}</span>
+                <button id="acf8-next-lbl" style="width:28px;height:28px;border:1.5px solid #1e3a8a;border-radius:6px;background:#fff;cursor:pointer;font-size:16px;color:#1e3a8a;line-height:1;">&#8250;</button>`;
             previewBox.appendChild(nav);
 
             const info = document.createElement('div');
-            info.style.cssText = 'font-size:10px;color:#64748b;text-align:center;';
-            info.textContent = `${currentLbl.cls} • ${currentLbl.item.name} • ${currentLbl.item.bgColor === 'red' ? '🔴' : '⚪'}`;
+            info.style.cssText = 'font-size:9px;color:#64748b;text-align:center;letter-spacing:.3px;';
+            const lbl = labels[cur];
+            info.textContent = `${lbl.cls} • ${lbl.item.name}`;
             previewBox.appendChild(info);
 
             previewBox.querySelector('#acf8-prev-lbl').onclick = () => {
@@ -861,83 +572,16 @@
         });
     }
 
-    /* === 10b. BATCH ZPL SENDER === */
-    function sendZplBatch(ip, zplArray, onOk, onErr) {
-        const allZpl = zplArray.join('\n');
-        GM_xmlhttpRequest({
-            method: 'POST',
-            url: `http://${ip}:9100`,
-            data: allZpl,
-            headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-            timeout: 30000,
-            onload: r => r.status < 400 ? onOk(zplArray.length) : onErr(`HTTP ${r.status}`),
-            onerror: () => onErr('Network error – printer offline?'),
-            ontimeout: () => onErr('Timeout – batch too large?'),
-        });
-    }
-
-    /* === 10c. VERSION CHECK === */
-    function checkForUpdates(force) {
-        const lastCheck = parseInt(gs(SK.LAST_UPDATE_CHECK, '0'));
-        const now = Date.now();
-        if (!force && now - lastCheck < 86400000) return;
-        ss(SK.LAST_UPDATE_CHECK, String(now));
-        GM_xmlhttpRequest({
-            method: 'GET',
-            url: 'https://raw.githubusercontent.com/eldarjobs/skychef-label-script/master/version.txt',
-            timeout: 5000,
-            onload: (r) => {
-                if (r.status !== 200) return;
-                const latestVer = r.responseText.trim();
-                if (!/^\d+(\.\d+)+$/.test(latestVer)) return;
-                const currentVer = (typeof GM_info !== 'undefined' && GM_info.script) ? GM_info.script.version : '11.0';
-                if (latestVer !== currentVer && latestVer > currentVer) {
-                    toast(`🆕 Yeni versiya mövcuddur: v${latestVer} (hazırki: v${currentVer})`, 'info', 10000);
-                }
-            },
-            onerror: () => { /* silent fail */ }
-        });
-    }
-
-    /* === 10d. LABEL LAYOUT === */
-    const DEFAULT_LABEL_LAYOUT = {
-        logo: { x: 4, y: 4, w: 200, h: 72 },
-        header1: { x: 50, y: 9, fz: 24 },
-        header2: { x: 110, y: 36, fz: 18 },
-        divider1: { x: 4, y: 79 },
-        date: { x: 8, y: 88, fz: 17 },
-        flight: { x: 8, y: 110, fz: 17 },
-        routeFrom: { x: 8, y: 132, fz: 17 },
-        routeTo: { x: 8, y: 152, fz: 17 },
-        classPax: { x: 8, y: 174, fz: 17 },
-        divider2: { x: 4, y: 580 },
-        itemName: { x: 8, y: 595, fz: 50 },
-    };
-
-    function getLabelLayout() {
-        try {
-            const s = gs(SK.LABEL_LAYOUT, '');
-            if (!s) return JSON.parse(JSON.stringify(DEFAULT_LABEL_LAYOUT));
-            const parsed = JSON.parse(s);
-            const merged = {};
-            for (const key in DEFAULT_LABEL_LAYOUT) {
-                merged[key] = { ...DEFAULT_LABEL_LAYOUT[key], ...(parsed[key] || {}) };
-            }
-            return merged;
-        } catch (e) {
-            console.warn('Error parsing label layout:', e);
-            return JSON.parse(JSON.stringify(DEFAULT_LABEL_LAYOUT));
-        }
-    }
-
-    function saveLabelLayout(layout) {
-        ss(SK.LABEL_LAYOUT, JSON.stringify(layout));
-    }
-
     /* ============================================
-       11. BROWSER PRINT
+       11. BROWSER PRINT (FALLBACK)
     ============================================ */
     function browserPrint(flight, paxData, acItemQtys, acItems) {
+        const route = flight.route || '';
+        const parts = route.split('-');
+        const from = parts[0] || '';
+        const to = parts[1] || '';
+        const date = _dateFmt(flight.date);
+        const fno = flight.flightNo || '-';
         const classes = getPrintClasses(paxData);
         const items = (acItems && acItems.length) ? acItems : [];
 
@@ -948,6 +592,11 @@
             return;
         }
 
+        const logoUrl = SK.DEFAULT_LOGO;
+        const logoHtmlBP = logoUrl
+            ? `<img src="${logoUrl}" style="max-height:28px;max-width:90%;object-fit:contain;display:block;margin:0 auto;" onerror="this.style.display='none'">`
+            : `<div class="logo-name">AZERBAIJAN</div><div class="logo-sub">&#8211; AIRLINES &#8211;</div>`;
+
         let cards = '';
         for (const cls of classes) {
             const paxCount = paxData.find(p => p.class === cls)?.value ?? '';
@@ -955,34 +604,55 @@
                 const item = items[i];
                 const qty = (acItemQtys && acItemQtys[i] != null) ? acItemQtys[i] : 1;
                 if (qty < 1) continue;
+                const isRed = (item.bgColor || 'white') === 'red';
+                const bg = isRed ? '#cc1f1f' : '#ffffff';
+                const clr = isRed ? '#ffffff' : '#000000';
+                const borClr = isRed ? '#991b1b' : '#1e3a8a';
+                const nlen = (item.name || '').length;
+                const nameFs = nlen > 18 ? '13px' : nlen > 12 ? '17px' : '22px';
                 for (let c = 0; c < qty; c++) {
-                    cards += buildHtmlCard(flight, item, cls, paxCount);
+                    cards += `<div class="lc" style="background:${bg};color:${clr};border-color:${borClr}">
+              <div class="logo-box" style="border-color:${isRed ? 'rgba(255,255,255,.5)' : '#1e3a8a'}">
+                ${logoHtmlBP}
+              </div>
+              <div class="info">
+                <div><span class="lbl">Date:</span> ${date}</div>
+                <div><span class="lbl">Flt:</span>  ${fno}</div>
+                <div>${from} &#8594; ${to}</div>
+                <div>${to} &#8592; ${from}</div>
+                <div><b>${cls} ${paxCount}</b></div>
+              </div>
+              <div class="item-name" style="border-top:1px solid ${isRed ? 'rgba(255,255,255,.4)' : '#c7d2e6'};font-size:${nameFs}">
+                ${item.name}
+              </div>
+            </div>`;
                 }
             }
         }
 
         const totalLabels = classes.reduce((s, _) => s + (acItemQtys ? acItemQtys.reduce((a, q) => a + (q || 0), 0) : items.length), 0);
-        const pw = window.open('', '_blank', 'width=800,height=900');
-        pw.document.write(`<!DOCTYPE html><html><head><title>Labels - ${flight.flightNo}</title><style>
+        const qtyList = items.map((it, i) => `${it.name}×${acItemQtys?.[i] ?? 1}`).join(', ');
+        const pw = window.open('', '_blank', 'width=700,height=900');
+        pw.document.write(`<!DOCTYPE html><html><head><title>Labels &#8211; ${flight.flightNo}</title><style>
             *{margin:0;padding:0;box-sizing:border-box;}
-            body{
-                font-family:'Courier New',monospace;padding:20px;background:#e5e7eb;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                color-adjust: exact !important;
-            }
-            .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-start;}
-            .np{text-align:right;margin-bottom:15px;width:100%;}
-            @media print{
-                .np{display:none;}
-                body{background:#fff;padding:0;}
-                .wrap{gap:8px;justify-content:flex-start;flex-direction:row;}
-                @page { margin: 10mm; }
-            }
+            body{font-family:'Courier New',monospace;padding:10px;background:#e5e7eb;}
+            .wrap{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-start;}
+            .lc{width:200px;min-height:290px;border:2px solid #222;border-radius:4px;
+                overflow:hidden;display:flex;flex-direction:column;page-break-inside:avoid;
+                background:#fff;color:#000;}
+            .logo-box{border:1.5px solid #222;margin:5px;padding:5px 4px;text-align:center;}
+            .logo-name{font-size:14px;font-weight:900;letter-spacing:1px;}
+            .logo-sub{font-size:10px;letter-spacing:2px;}
+            .info{padding:6px 8px;font-size:11px;line-height:1.8;flex:1;}
+            .item-name{padding:8px 6px;text-align:center;font-weight:900;font-style:italic;
+                        border-top:1px solid #ccc;font-size:22px;}
+            .np{grid-column:1/-1;text-align:right;margin-bottom:10px;}
+            @media print{.np{display:none;}body{background:#fff;}}
+            .lbl{opacity:.55;font-size:9px;}
         </style></head><body>
         <div class="np">
-          <b>${totalLabels} labels</b>&nbsp;&nbsp;
-          <button onclick="window.print()" style="padding:10px 24px;background:#2563eb;color:#fff;border:none;border-radius:30px;cursor:pointer;font-size:14px;font-weight:600;">🖨 Print All</button>
+          <b>${totalLabels} label</b> (${classes.join('+')} × ${qtyList})&nbsp;&nbsp;
+          <button onclick="window.print()" style="padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">&#128424; Print</button>
         </div>
         <div class="wrap">${cards}</div></body></html>`);
         pw.document.close();
@@ -992,7 +662,15 @@
        12. BATCH BROWSER CARDS BUILDER
     ============================================ */
     function buildBatchBrowserCards(flight, paxData, acItems, acItemQtys) {
+        const logoImg = `<img src="${SK.DEFAULT_LOGO}" style="width:100%;height:100%;object-fit:contain;display:block;" onerror="this.style.display='none'">`;
+        const route = flight.route || '';
+        const parts = route.split('-');
+        const from = parts[0] || '';
+        const to = parts[1] || '';
+        const date = _dateFmt(flight.date);
+        const fno = flight.flightNo || '-';
         const classes = getPrintClasses(paxData);
+
         let html = '';
         for (const cls of classes) {
             const paxCount = paxData.find(p => p.class === cls)?.value ?? '';
@@ -1000,8 +678,24 @@
                 const item = acItems[i];
                 const qty = (acItemQtys && acItemQtys[i] != null) ? acItemQtys[i] : 1;
                 if (qty < 1) continue;
+                const isRed = (item.bgColor || 'white') === 'red';
+                const bg = isRed ? '#cc1f1f' : '#ffffff';
+                const clr = isRed ? '#ffffff' : '#000000';
+                const bor = isRed ? '#991b1b' : '#1e3a8a';
+                const nlen = (item.name || '').length;
+                const nameFs = nlen > 18 ? '13px' : nlen > 12 ? '17px' : '22px';
                 for (let c = 0; c < qty; c++) {
-                    html += buildHtmlCard(flight, item, cls, paxCount);
+                    html += `<div class="lc" style="background:${bg};color:${clr};border-color:${bor}">
+              <div class="logo-box" style="border-color:${isRed ? 'rgba(255,255,255,.5)' : '#1e3a8a'}">${logoImg}</div>
+              <div class="info">
+                <div><span class="lbl">Date:</span> ${date}</div>
+                <div><span class="lbl">Flt:</span>  ${fno}</div>
+                <div>${from} → ${to}</div>
+                <div>${to} ← ${from}</div>
+                <div><b>${cls} ${paxCount}</b></div>
+              </div>
+              <div class="item-name" style="border-top:1px solid ${isRed ? 'rgba(255,255,255,.4)' : '#c7d2e6'};font-size:${nameFs}">${item.name}</div>
+            </div>`;
                 }
             }
         }
@@ -1025,7 +719,7 @@
             const tmr = setTimeout(() => {
                 iframe.remove();
                 if (formEl) formEl.remove();
-                resolve([]);
+                resolve([]); // TIMEOUT RESOLVE
             }, 20000);
 
             iframe.onload = () => {
@@ -1236,7 +930,7 @@
        14. PRINT MODAL
     ============================================ */
     function buildSelect(id, options, savedVal, placeholder) {
-        let h = `<select id="${id}"><option value="">${placeholder}</option>`;
+        let h = `<select id="${id}" class="acf8-input"><option value="">${placeholder}</option>`;
         options.forEach(o => h += `<option value="${o}"${o === savedVal ? ' selected' : ''}>${o}</option>`);
         return h + '</select>';
     }
@@ -1260,7 +954,19 @@
         const chipsHtml = paxData.map(p => {
             const bg = CLASS_COLORS[p.class] || DEFAULT_COLOR;
             return `<span class="acf8-chip" style="background:${bg}">${p.class} <span class="acf8-chip-v">${p.value}</span></span>`;
-        }).join('') + (total ? `<span class="acf8-chip" style="background:#475569">Total <span class="acf8-chip-v">${total}</span></span>` : '');
+        }).join('') + (total ? `<span class="acf8-chip" style="background:#374151">Total <span class="acf8-chip-v">${total}</span></span>` : '');
+
+        // --- DYNAMIC CLASSES HTML (SINGLE PRINT MODAL) ---
+        const savedClasses = gs(SK.PRINT_CLASSES, 'BC,EC').split(',').map(s => s.trim().toUpperCase());
+        const classCbsHTML = paxData.map(p => {
+            const isChecked = savedClasses.includes(p.class.toUpperCase()) ? 'checked' : '';
+            return `
+            <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:#fff;padding:4px 8px;border:1px solid #e2e8f0;border-radius:4px;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                <input type="checkbox" class="acf8-class-cb" value="${p.class}" ${isChecked} style="width:14px;height:14px;accent-color:#2563eb;cursor:pointer;margin:0;">
+                <b style="color:${CLASS_COLORS[p.class] || '#111'};">${p.class}</b>
+                <span style="color:#64748b;font-weight:600;">(${p.value})</span>
+            </label>`;
+        }).join('');
 
         const overlay = document.createElement('div');
         overlay.className = 'acf8-overlay';
@@ -1278,7 +984,6 @@
             <button class="acf8-close">&times;</button>
           </div>
 
-          <!-- PRINT PANEL -->
           <div class="acf8-panel active" id="acf8-panel-print">
             <div class="acf8-flight-bar">
               ${ICO.plane}
@@ -1287,11 +992,11 @@
               <span class="acf8-fb-date">${flightData.date}</span>
               <span class="acf8-fb-order">${flightData.orderNo}</span>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;padding:4px 0 12px;">
-              <span style="font-size:11px;font-weight:600;color:#64748b;">Aircraft:</span>
-              <span id="acf8-ac-badge" style="background:#1e293b;color:#fff;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;">${flightData.aircraftSeries || '—'}</span>
-              <span style="font-size:12px;color:#64748b;">${flightData.aircraftType || ''}</span>
-              <span style="font-size:11px;color:#94a3b8;margin-left:auto;">config: <b>${acCfg.label}</b></span>
+            <div style="display:flex;align-items:center;gap:6px;padding:4px 0;">
+              <span style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Aircraft:</span>
+              <span id="acf8-ac-badge" style="background:#1e3a8a;color:#fff;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;">${flightData.aircraftSeries || '—'}</span>
+              <span style="font-size:10px;color:#6b7280;">${flightData.aircraftType || ''}</span>
+              <span style="font-size:10px;color:#9ca3af;margin-left:4px;">→ config: <b>${acCfg.label}</b></span>
             </div>
             <div class="acf8-print-body">
               <div class="acf8-print-form">
@@ -1312,125 +1017,125 @@
                   ${buildSelect('acf8-sel-printtype', DEFAULT_PRINT_TYPES, gs(SK.PRINT_TYPE, ''), 'Select Print Type')}
                 </div>
                 <div class="acf8-fg">
-                  <label>Label Qty <span style="font-size:10px;color:#94a3b8;">(per class)</span></label>
-                  <div id="acf8-item-qtys-list" style="display:flex;flex-direction:column;gap:4px;max-height:120px;overflow-y:auto;"></div>
+                  <label>Label Qty <span style="font-size:9px;color:#9ca3af;font-weight:400;">(per class)</span></label>
+                  <div id="acf8-item-qtys-list" style="display:flex;flex-direction:column;gap:2px;max-height:110px;overflow-y:auto;"></div>
                 </div>
-                <div class="acf8-fg" style="border-top:1px dashed #e2e8f0;padding-top:12px;">
-                  <label>➕ Quick Custom Label</label>
-                  <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-                    <input type="text" id="acf8-custom-name" placeholder="Item name" style="flex:1;min-width:100px;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;">
-                    <select id="acf8-custom-color" style="padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;">
-                      <option value="white">⬜ White</option>
-                      <option value="red">🔴 Red</option>
-                    </select>
+                <div class="acf8-fg" style="border-top:1px dashed #e5e7eb;padding-top:6px;">
+                  <label>&#10133; Quick Custom Label</label>
+                  <div style="display:flex;gap:5px;align-items:center;">
+                    <input type="text" id="acf8-custom-name" placeholder="Item name" class="acf8-input" style="flex:1;">
                     <div class="acf8-counter">
-                      <button id="acf8-custom-minus">−</button>
-                      <input type="number" id="acf8-custom-qty" value="1" min="1" max="20" style="width:40px;text-align:center;padding:6px;border:1px solid #e2e8f0;border-radius:6px;">
-                      <button id="acf8-custom-plus">+</button>
+                      <button id="acf8-custom-minus">&#8722;</button>
+                      <input type="number" id="acf8-custom-qty" value="1" min="1" max="20" class="acf8-input" style="width:36px;padding:3px;text-align:center;">
+                      <button id="acf8-custom-plus">&#43;</button>
                     </div>
-                    <button id="acf8-custom-add" style="padding:8px 16px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">Add</button>
+                    <button id="acf8-custom-add" style="padding:4px 9px;background:#2563eb;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">Add</button>
                   </div>
-                  <div id="acf8-custom-list" style="margin-top:8px;"></div>
+                  <div id="acf8-custom-list" style="display:flex;flex-direction:column;gap:2px;margin-top:4px;"></div>
                 </div>
                 <div class="acf8-fg">
                   <label>Pax by Class</label>
-                  <div class="acf8-chips">${chipsHtml || '<span style="color:#94a3b8;font-size:12px;">No pax data</span>'}</div>
+                  <div class="acf8-chips">${chipsHtml || '<span style="color:#9ca3af;font-size:12px;">No pax data</span>'}</div>
                 </div>
               </div>
               <div class="acf8-preview-col">
-                <span style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block;">Label Preview</span>
-                <div class="acf8-preview-box" id="acf8-prev-box"></div>
-                <span style="font-size:10px;color:#94a3b8;text-align:center;margin-top:6px;">Zebra ZT411 · 57×83mm</span>
+                <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Label Preview</span>
+                <div class="acf8-preview-box" id="acf8-prev-box" style="align-items:flex-start;justify-content:center;overflow-y:auto;padding:8px;"></div>
+                <span style="font-size:11px;color:#9ca3af;text-align:center;">Local render · Zebra ZT411</span>
               </div>
             </div>
           </div>
 
-          <!-- SETTINGS PANEL -->
-          <div class="acf8-panel" id="acf8-panel-settings">
-            <div class="acf8-settings-grid">
-              <div class="acf8-fg full">
-                <label>Print Method</label>
-                <div class="acf8-method-row">
-                  <button class="acf8-method-btn${curMethod === 'network' ? ' active' : ''}" data-method="network">🌐 Network (ZT411 TCP)</button>
-                  <button class="acf8-method-btn${curMethod === 'browser' ? ' active' : ''}" data-method="browser">🖨 Browser Print</button>
-                </div>
-              </div>
-              <div class="acf8-fg full">
-                <label>Label Size (mm)</label>
-                <div style="display:flex;gap:12px;align-items:center;">
-                  <span style="font-size:12px;color:#64748b;">Width:</span>
-                  <input type="number" id="acf8-lbl-w" min="30" max="150" value="${gs(SK.LABEL_W_MM, '57')}" style="width:70px;padding:6px;border:1px solid #e2e8f0;border-radius:6px;">
-                  <span style="font-size:12px;color:#64748b;">Height:</span>
-                  <input type="number" id="acf8-lbl-h" min="30" max="200" value="${gs(SK.LABEL_H_MM, '83')}" style="width:70px;padding:6px;border:1px solid #e2e8f0;border-radius:6px;">
-                </div>
-              </div>
-              <div class="acf8-fg full">
-                <label>Print Classes <span style="font-size:10px;color:#94a3b8;">(comma-separated, e.g. BC,EC)</span></label>
-                <input type="text" id="acf8-print-classes" value="${gs(SK.PRINT_CLASSES, 'BC,EC')}" placeholder="BC,EC" style="padding:8px;border:1px solid #e2e8f0;border-radius:8px;width:100%;">
-              </div>
-              <div class="acf8-fg full" style="display:flex;flex-direction:row;align-items:center;justify-content:space-between;">
-                <label style="font-size:13px;font-weight:600;color:#0f172a;">📷 QR Code on ZPL</label>
-                <label class="acf8-toggle">
-                  <input type="checkbox" id="acf8-qr-toggle" ${gs(SK.QR_CODE, 'off') === 'on' ? 'checked' : ''}>
-                  <span class="acf8-toggle-knob ${gs(SK.QR_CODE, 'off') === 'on' ? 'on' : 'off'}" onclick="const c=this.previousElementSibling;c.checked=!c.checked;this.className='acf8-toggle-knob '+(c.checked?'on':'off')"></span>
-                </label>
-              </div>
+          <div class="acf8-panel" id="acf8-panel-settings" style="padding:10px 16px;">
+            <div class="acf8-set-section">
+                <div class="acf8-set-header">BAZİ AYARLAR & PRİNTER <span>▼</span></div>
+                <div class="acf8-set-content" style="display:grid; grid-template-columns: 1fr 1fr;">
+                    <div class="acf8-fg">
+                        <label>Print Method</label>
+                        <div class="acf8-method-row">
+                            <button class="acf8-method-btn${curMethod === 'network' ? ' active' : ''}" data-method="network">🌐 Network</button>
+                            <button class="acf8-method-btn${curMethod === 'browser' ? ' active' : ''}" data-method="browser">🖨 Browser</button>
+                        </div>
+                    </div>
 
-              <div class="acf8-fg full" id="acf8-ip-group" style="${curMethod !== 'network' ? 'opacity:0.5;pointer-events:none' : ''}">
-                <label>Zebra Printer IP</label>
-                <div class="acf8-ip-row">
-                  <input type="text" id="acf8-ip" placeholder="192.168.1.100" value="${gs(SK.PRINTER_IP, '')}">
-                  <button class="acf8-ip-btn" id="acf8-ip-save">Save</button>
+                    <div class="acf8-fg" id="acf8-ip-group" style="${curMethod !== 'network' ? 'opacity:.4;pointer-events:none' : ''}">
+                        <label>Zebra Printer IP</label>
+                        <div class="acf8-ip-row">
+                            <input type="text" id="acf8-ip" placeholder="192.168.1.100" value="${gs(SK.PRINTER_IP, '')}" class="acf8-input" style="flex:1;">
+                            <button class="acf8-ip-btn" id="acf8-ip-save" style="background:#10b981;color:#fff;border:none;border-radius:5px;padding:0 12px;font-weight:bold;cursor:pointer;">Save</button>
+                        </div>
+                        <div class="acf8-ip-status" id="acf8-ip-status" style="display:none;"></div>
+                    </div>
+
+                    <div class="acf8-fg">
+                        <label>Label Size (W / H mm)</label>
+                        <div style="display:flex; gap:6px;">
+                            <input type="number" id="acf8-lbl-w" value="${gs(SK.LABEL_W_MM,'57')}" class="acf8-input" style="width:50%;">
+                            <input type="number" id="acf8-lbl-h" value="${gs(SK.LABEL_H_MM,'83')}" class="acf8-input" style="width:50%;">
+                        </div>
+                    </div>
+
+                    <div class="acf8-fg full" style="margin-top:4px;">
+                        <label style="display:flex;align-items:center;justify-content:space-between;">
+                            <span>Print Classes <span style="text-transform:none;font-weight:400;color:#9ca3af;">(Çap olunacaq siniflər)</span></span>
+                        </label>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;padding:8px;border:1px solid #e2e8f0;border-radius:6px;background:#f8fafc;">
+                            ${classCbsHTML || '<span style="font-size:11px;color:#9ca3af;">Data yoxdur</span>'}
+                        </div>
+                    </div>
+
+                    <div class="acf8-fg full" style="flex-direction:row;align-items:center;justify-content:space-between;border-top:1px dashed #e5e7eb;padding-top:10px;margin-top:2px;">
+                        <label style="text-transform:none;font-size:12px;color:#374151;font-weight:600;cursor:pointer;" for="acf8-qr-toggle">
+                            📷 ZPL Label-də QR Kod (ramp scan)
+                        </label>
+                        <label class="acf8-toggle">
+                            <input type="checkbox" id="acf8-qr-toggle" ${gs(SK.QR_CODE, 'off') === 'on' ? 'checked' : ''}>
+                            <span class="acf8-toggle-slider"></span>
+                        </label>
+                    </div>
                 </div>
-                <div class="acf8-ip-status" id="acf8-ip-status"></div>
-              </div>
-              <div class="acf8-fg full">
-                <label>Galley List</label>
-                <div class="acf8-galley-list" id="acf8-galley-list"></div>
-                <div class="acf8-galley-add">
-                  <input type="text" id="acf8-galley-new" placeholder="New galley name">
-                  <button id="acf8-galley-add">Add</button>
+            </div>
+
+            <div class="acf8-set-section">
+                <div class="acf8-set-header">GALLEY SİYAHISI <span>▼</span></div>
+                <div class="acf8-set-content full" style="display:block;">
+                    <div id="acf8-galley-list" class="acf8-galley-list"></div>
+                    <div class="acf8-galley-add" style="display:flex;gap:5px;">
+                        <input type="text" id="acf8-galley-new" placeholder="New galley name" class="acf8-input" style="flex:1;">
+                        <button id="acf8-galley-add" style="padding:5px 12px;background:#2563eb;color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer;">+ Add</button>
+                    </div>
                 </div>
-              </div>
-              <div class="acf8-fg full">
-                <label style="display:flex;align-items:center;justify-content:space-between;">
-                  <span>Aircraft Items</span>
-                  <select id="acf8-ac-type-sel" style="padding:6px;border-radius:8px;border:1px solid #e2e8f0;">${Object.entries(getAcConfigs()).map(([k, c]) => `<option value="${k}"${k === acCfg.key ? ' selected' : ''}>${k} – ${c.label}</option>`).join('')}</select>
-                </label>
-                <div id="acf8-ac-items-list" style="margin:8px 0;"></div>
-                <div style="display:flex;gap:8px;">
-                  <input type="text" id="acf8-ac-item-name" placeholder="Item name" style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:8px;">
-                  <input type="text" id="acf8-ac-item-unit" placeholder="Unit" style="width:80px;padding:8px;border:1px solid #e2e8f0;border-radius:8px;">
-                  <button id="acf8-ac-item-add" style="padding:8px 16px;background:#2563eb;color:#fff;border:none;border-radius:8px;cursor:pointer;">Add</button>
+            </div>
+
+            <div class="acf8-set-section">
+                <div class="acf8-set-header">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        AIRCRAFT ITEMS CONFIG
+                        <span id="acf8-ac-cfg-key" style="background:#1e3a8a;color:#fff;padding:2px 8px;border-radius:6px;font-size:10px;">${acCfg.key || '—'}</span>
+                    </div>
+                    <span>▼</span>
                 </div>
-              </div>
-              <div class="acf8-fg full" style="display:flex;flex-direction:row;align-items:center;justify-content:space-between;">
-                <label style="font-size:13px;font-weight:600;color:#0f172a;">⚡ ZPL Batch Mode</label>
-                <label class="acf8-toggle">
-                  <input type="checkbox" id="acf8-batch-toggle" ${gs(SK.ZPL_BATCH_MODE, 'sequential') === 'batch' ? 'checked' : ''}>
-                  <span class="acf8-toggle-knob ${gs(SK.ZPL_BATCH_MODE, 'sequential') === 'batch' ? 'on' : 'off'}" onclick="const c=this.previousElementSibling;c.checked=!c.checked;this.className='acf8-toggle-knob '+(c.checked?'on':'off')"></span>
-                </label>
-              </div>
-              <div class="acf8-layout-section">
-                <div class="acf8-ls-title" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-                  <span style="font-size:13px;font-weight:600;color:#0f172a;">📐 Label Layout Editor</span>
-                  <button id="acf8-layout-reset" class="acf8-layout-reset-btn">Reset</button>
+                <div class="acf8-set-content full" style="display:block;">
+                    <select id="acf8-ac-type-sel" class="acf8-input" style="width:100%; margin-bottom:8px;">
+                        ${Object.entries(getAcConfigs()).map(([k, c]) => `<option value="${k}"${k === acCfg.key ? ' selected' : ''}>${k} – ${c.label}</option>`).join('')}
+                    </select>
+                    <div id="acf8-ac-items-list"></div>
+                    <div style="display:flex; gap:4px; margin-top:6px;">
+                        <input type="text" id="acf8-ac-item-name" placeholder="Item name" class="acf8-input" style="flex:2;">
+                        <input type="text" id="acf8-ac-item-unit" placeholder="Unit" class="acf8-input" style="flex:1;">
+                        <button id="acf8-ac-item-add" style="padding:5px 12px;background:#2563eb;color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:bold;white-space:nowrap;cursor:pointer;">+ Add</button>
+                    </div>
                 </div>
-                <div id="acf8-layout-editor" class="acf8-layout-editor"></div>
-              </div>
-              <div class="acf8-fg full" style="border-top:1px solid #e2e8f0;padding-top:16px;">
-                <label>🔄 Version Check</label>
-                <button id="acf8-check-update" style="width:100%;padding:10px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Check for Updates</button>
-              </div>
-              <div class="acf8-fg full" style="border-top:1px solid #e2e8f0;padding-top:16px;">
-                <label>Config Export / Import</label>
-                <div style="display:flex;gap:8px;">
-                  <button id="acf8-export-btn" style="flex:1;padding:10px;background:#0f766e;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;">Export JSON</button>
-                  <label for="acf8-import-file" style="flex:1;padding:10px;background:#4f46e5;color:#fff;border-radius:8px;font-size:13px;cursor:pointer;text-align:center;">Import JSON
-                    <input type="file" id="acf8-import-file" accept=".json" style="display:none;">
-                  </label>
+            </div>
+
+            <div class="acf8-set-section">
+                <div class="acf8-set-header">DATA MANAGEMENT <span>▼</span></div>
+                <div class="acf8-set-content">
+                     <button id="acf8-export-btn" style="padding:7px;background:#0f766e;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer;font-weight:bold;width:100%;">⬇ Export JSON</button>
+                     <label for="acf8-import-file" style="padding:7px;background:#4f46e5;color:#fff;border-radius:4px;font-size:11px;cursor:pointer;text-align:center;display:block;font-weight:bold;width:100%;">⬆ Import JSON
+                         <input type="file" id="acf8-import-file" accept=".json" style="display:none;">
+                     </label>
                 </div>
-              </div>
             </div>
           </div>
 
@@ -1445,6 +1150,25 @@
 
         document.body.appendChild(overlay);
 
+        // --- DYNAMIC CHECKBOX LISTENER (Saves instantly and triggers preview) ---
+        overlay.querySelectorAll('.acf8-class-cb').forEach(cb => {
+            cb.addEventListener('change', () => {
+                const selectedCls = Array.from(overlay.querySelectorAll('.acf8-class-cb:checked')).map(c => c.value).join(',');
+                ss(SK.PRINT_CLASSES, selectedCls);
+                schedulePreview(); // Updates UI immediately
+            });
+        });
+
+        // Setup Accordion for Settings Tab
+        overlay.querySelectorAll('.acf8-set-header').forEach(header => {
+            header.onclick = () => {
+                const content = header.nextElementSibling;
+                const isHidden = content.style.display === 'none';
+                content.style.display = isHidden ? (content.classList.contains('full') ? 'block' : 'grid') : 'none';
+                header.querySelector('span:last-child').textContent = isHidden ? '▼' : '▲';
+            };
+        });
+
         const prevBox = overlay.querySelector('#acf8-prev-box');
         const ftrStatus = overlay.querySelector('#acf8-ftr-status');
         const actionBtn = overlay.querySelector('#acf8-btn-action');
@@ -1456,11 +1180,9 @@
             if (!el) return;
             el.innerHTML = '';
             customItems.forEach((ci, idx) => {
-                const isRed = (ci.bgColor || 'white') === 'red';
-                const bgRow = isRed ? '#fef2f2' : '#f8fafc';
                 const row = document.createElement('div');
-                row.style.cssText = `display:flex;align-items:center;gap:8px;padding:6px 10px;background:${bgRow};border-radius:6px;font-size:12px;`;
-                row.innerHTML = `<span style="width:10px;height:10px;border-radius:50%;background:${isRed ? '#dc2626' : '#94a3b8'};"></span><span style="flex:1;">${ci.name} <b style="color:#2563eb;">×${ci._qty}</b></span><button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:14px;">×</button>`;
+                row.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:11px;background:#f0f4ff;border-radius:4px;padding:2px 6px;';
+                row.innerHTML = `<span style="flex:1;">${ci.name} <b style="color:#2563eb;">×${ci._qty}</b></span><button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;">×</button>`;
                 row.querySelector('button').onclick = () => {
                     customItems.splice(idx, 1);
                     renderCustomList();
@@ -1488,15 +1210,13 @@
             el.innerHTML = '';
             list.forEach(g => {
                 const item = document.createElement('div');
-                item.className = 'acf8-galley-item';
-                item.innerHTML = `<span>${g}</span><button>&times;</button>`;
+                item.className = 'acf8-item-compact';
+                item.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${g}">${g}</span><button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;padding:0;">&times;</button>`;
                 item.querySelector('button').onclick = () => {
                     const upd = getGalleys().filter(x => x !== g);
                     ss(SK.GALLEY_LIST, JSON.stringify(upd));
                     const sel = overlay.querySelector('#acf8-sel-galley');
-                    if (sel) {
-                        sel.innerHTML = '<option value="">Select Galley</option>' + upd.map(x => `<option value="${x}"${x === selGalley ? ' selected' : ''}>${x}</option>`).join('');
-                    }
+                    if (sel) sel.innerHTML = upd.map(x => `<option value="${x}">${x}</option>`).join('');
                     renderGalleyList();
                 };
                 el.appendChild(item);
@@ -1509,10 +1229,9 @@
             if (!el) return;
             el.innerHTML = '';
             acItems.forEach((item, idx) => {
-                const isRed = (item.bgColor || 'white') === 'red';
                 const row = document.createElement('div');
-                row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;background:#f8fafc;border-radius:6px;';
-                row.innerHTML = `<span style="width:10px;height:10px;border-radius:50%;background:${isRed ? '#dc2626' : '#94a3b8'};"></span><span style="flex:1;">${item.name}</span><span style="color:#64748b;font-size:11px;">${item.unit || ''}</span><button style="background:none;border:none;color:#ef4444;cursor:pointer;">×</button>`;
+                row.className = 'acf8-item-compact';
+                row.innerHTML = `<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${item.name}">${item.name}</span><span style="color:#6b7280;margin:0 4px;font-size:9px;">${item.unit || ''}</span><button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;">&times;</button>`;
                 row.querySelector('button').onclick = () => {
                     acItems.splice(idx, 1);
                     acItemQtys.splice(idx, 1);
@@ -1572,15 +1291,15 @@
             el.innerHTML = '';
             acItems.forEach((item, i) => {
                 const isRed = (item.bgColor || 'white') === 'red';
-                const dot = isRed ? '#dc2626' : '#94a3b8';
+                const dot = isRed ? '#dc2626' : '#9ca3af';
                 const row = document.createElement('div');
-                row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:4px;';
+                row.style.cssText = 'display:flex;align-items:center;gap:5px;padding:2px 3px;';
                 row.innerHTML = `
-                    <span style="width:8px;height:8px;border-radius:50%;background:${dot};"></span>
-                    <span style="flex:1;font-size:12px;">${item.name}</span>
-                    <button style="width:26px;height:26px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;cursor:pointer;">−</button>
-                    <span id="acf8-iq-v-${i}" style="min-width:24px;text-align:center;font-size:13px;font-weight:600;">${acItemQtys[i] ?? 1}</span>
-                    <button style="width:26px;height:26px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;cursor:pointer;">+</button>`;
+                    <span style="width:8px;height:8px;border-radius:50%;background:${dot};flex-shrink:0;"></span>
+                    <span style="flex:1;font-size:11px;">${item.name}</span>
+                    <button style="width:22px;height:22px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:15px;line-height:1;color:#374151;">&#8722;</button>
+                    <span id="acf8-iq-v-${i}" style="min-width:24px;text-align:center;font-size:12px;font-weight:700;">${acItemQtys[i] ?? 1}</span>
+                    <button style="width:22px;height:22px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:15px;line-height:1;color:#374151;">+</button>`;
                 const [minBtn, plusBtn] = row.querySelectorAll('button');
                 minBtn.onclick = () => {
                     acItemQtys[i] = Math.max(0, (acItemQtys[i] ?? 1) - 1);
@@ -1610,8 +1329,7 @@
                     return;
                 }
                 const qty = Math.max(1, parseInt(qtyI.value) || 1);
-                const bgColor = overlay.querySelector('#acf8-custom-color')?.value || 'white';
-                customItems.push({ name, bgColor, _qty: qty });
+                customItems.push({ name, bgColor: 'white', _qty: qty });
                 nameI.value = '';
                 qtyI.value = 1;
                 renderCustomList();
@@ -1654,9 +1372,14 @@
         overlay.querySelectorAll('.acf8-tab').forEach(tab => {
             tab.onclick = () => {
                 overlay.querySelectorAll('.acf8-tab').forEach(t => t.classList.remove('active'));
-                overlay.querySelectorAll('.acf8-panel').forEach(p => p.classList.remove('active'));
+                overlay.querySelectorAll('.acf8-panel').forEach(p => {
+                    p.classList.remove('active');
+                    p.style.display = 'none';
+                });
                 tab.classList.add('active');
-                overlay.querySelector(`#acf8-panel-${tab.dataset.tab}`).classList.add('active');
+                const panel = overlay.querySelector(`#acf8-panel-${tab.dataset.tab}`);
+                panel.classList.add('active');
+                panel.style.display = 'flex';
                 curTab = tab.dataset.tab;
                 actionBtn.textContent = curTab === 'settings' ? 'Save Settings' : 'Print';
                 actionBtn.className = 'acf8-btn ' + (curTab === 'settings' ? 'acf8-btn-save' : 'acf8-btn-print');
@@ -1669,7 +1392,7 @@
                 btn.classList.add('active');
                 curMethod = btn.dataset.method;
                 const ipG = overlay.querySelector('#acf8-ip-group');
-                ipG.style.opacity = curMethod === 'network' ? '1' : '0.5';
+                ipG.style.opacity = curMethod === 'network' ? '1' : '.4';
                 ipG.style.pointerEvents = curMethod === 'network' ? 'auto' : 'none';
             };
         });
@@ -1678,13 +1401,10 @@
             const ip = overlay.querySelector('#acf8-ip').value.trim();
             const st = overlay.querySelector('#acf8-ip-status');
             if (!IP_REGEX.test(ip)) {
-                st.textContent = '✗ Invalid IP';
-                st.className = 'acf8-ip-status err';
+                toast('✗ Invalid IP', 'error');
                 return;
             }
             ss(SK.PRINTER_IP, ip);
-            st.textContent = '✓ Saved';
-            st.className = 'acf8-ip-status ok';
             toast('Printer IP saved: ' + ip, 'success');
         };
 
@@ -1700,9 +1420,7 @@
             list.push(name);
             ss(SK.GALLEY_LIST, JSON.stringify(list));
             const sel = overlay.querySelector('#acf8-sel-galley');
-            if (sel) {
-                sel.innerHTML = '<option value="">Select Galley</option>' + list.map(g => `<option value="${g}"${g === selGalley ? ' selected' : ''}>${g}</option>`).join('');
-            }
+            if (sel) sel.innerHTML = list.map(g => `<option value="${g}">${g}</option>`).join('');
             inp.value = '';
             renderGalleyList();
             toast('Galley added: ' + name, 'success');
@@ -1713,45 +1431,6 @@
             schedulePreview();
         };
 
-        function renderLayoutEditor() {
-            const el = overlay.querySelector('#acf8-layout-editor');
-            if (!el) return;
-            el.innerHTML = '';
-            const layout = getLabelLayout();
-            const fieldLabels = {
-                logo: 'Logo', header1: 'AZERBAIJAN', header2: 'AIRLINES',
-                divider1: 'Line 1', date: 'Date', flight: 'Flight',
-                routeFrom: 'From→To', routeTo: 'To←From', classPax: 'Class',
-                divider2: 'Line 2', itemName: 'Item'
-            };
-            Object.keys(DEFAULT_LABEL_LAYOUT).forEach(key => {
-                const item = layout[key] || DEFAULT_LABEL_LAYOUT[key];
-                const def = DEFAULT_LABEL_LAYOUT[key];
-                const row = document.createElement('div');
-                row.className = 'acf8-layout-row';
-                let html = `<b>${fieldLabels[key] || key}</b>`;
-                html += `<span class="acf8-layout-lbl">X</span><input class="acf8-layout-inp" type="number" data-lk="${key}" data-lp="x" value="${item.x ?? 0}">`;
-                html += `<span class="acf8-layout-lbl">Y</span><input class="acf8-layout-inp" type="number" data-lk="${key}" data-lp="y" value="${item.y ?? 0}">`;
-                if (def.fz != null) html += `<span class="acf8-layout-lbl">Fz</span><input class="acf8-layout-inp" type="number" data-lk="${key}" data-lp="fz" value="${item.fz ?? def.fz}">`;
-                if (def.w != null) html += `<span class="acf8-layout-lbl">W</span><input class="acf8-layout-inp" type="number" data-lk="${key}" data-lp="w" value="${item.w ?? def.w}">`;
-                if (def.h != null) html += `<span class="acf8-layout-lbl">H</span><input class="acf8-layout-inp" type="number" data-lk="${key}" data-lp="h" value="${item.h ?? def.h}">`;
-                row.innerHTML = html;
-                el.appendChild(row);
-            });
-        }
-        renderLayoutEditor();
-
-        overlay.querySelector('#acf8-layout-reset')?.addEventListener('click', () => {
-            saveLabelLayout(DEFAULT_LABEL_LAYOUT);
-            renderLayoutEditor();
-            toast('Layout reset to default', 'success');
-        });
-
-        overlay.querySelector('#acf8-check-update')?.addEventListener('click', () => {
-            checkForUpdates(true);
-            toast('Versiya yoxlanır...', 'info', 2000);
-        });
-
         actionBtn.onclick = () => {
             if (curTab === 'settings') {
                 ss(SK.PRINT_METHOD, curMethod);
@@ -1761,33 +1440,15 @@
                     ss(SK.LABEL_W_MM, wEl.value);
                     ss(SK.LABEL_H_MM, hEl.value);
                 }
-                const pcEl = overlay.querySelector('#acf8-print-classes');
-                if (pcEl) ss(SK.PRINT_CLASSES, pcEl.value.trim());
                 const qrEl = overlay.querySelector('#acf8-qr-toggle');
                 if (qrEl) ss(SK.QR_CODE, qrEl.checked ? 'on' : 'off');
-                const batchEl = overlay.querySelector('#acf8-batch-toggle');
-                if (batchEl) ss(SK.ZPL_BATCH_MODE, batchEl.checked ? 'batch' : 'sequential');
-
-                const layoutEd = overlay.querySelector('#acf8-layout-editor');
-                if (layoutEd) {
-                    const layout = getLabelLayout();
-                    layoutEd.querySelectorAll('.acf8-layout-inp[data-lk]').forEach(inp => {
-                        const k = inp.dataset.lk;
-                        const p = inp.dataset.lp;
-                        if (!layout[k]) layout[k] = {};
-                        const val = parseInt(inp.value);
-                        if (!isNaN(val)) layout[k][p] = val;
-                    });
-                    saveLabelLayout(layout);
-                    toast('📐 Layout saved', 'success', 2500);
-                }
                 const key = overlay.querySelector('#acf8-ac-type-sel')?.value || acCfg.key;
                 const cfgs = getAcConfigs();
                 if (cfgs[key]) {
                     cfgs[key].items = [...acItems];
                     saveAcConfigs(cfgs);
                 }
-                toast('Settings saved', 'success');
+                toast('Settings saved ✔', 'success');
                 schedulePreview();
                 return;
             }
@@ -1855,54 +1516,35 @@
             let sent = 0;
             let failed = 0;
 
-            const useBatch = gs(SK.ZPL_BATCH_MODE, 'sequential') === 'batch';
-
-            if (useBatch) {
-                ftrStatus.textContent = `Batch göndərilir: ${zplList.length} label…`;
-                sendZplBatch(ip, zplList,
-                    (count) => {
-                        actionBtn.disabled = false;
-                        toast(`✓ ${count} label batch ZT411-ə göndərildi (${ip})`, 'success');
+            function sendNext() {
+                if (sent + failed >= zplList.length) {
+                    actionBtn.disabled = false;
+                    if (failed === 0) {
+                        toast(`✓ ${sent}/${zplList.length} label ZT411-ə göndərildi (${ip})`, 'success');
                         close();
-                    },
-                    (err) => {
-                        actionBtn.disabled = false;
-                        ftrStatus.textContent = `Batch xəta: ${err}`;
-                        toast(`Batch göndərmə uğursuz: ${err}`, 'error');
+                    } else {
+                        ftrStatus.textContent = `${sent} ok, ${failed} xəta`;
+                        toast(`${failed} label göndərilmədi`, 'error');
                     }
-                );
-            } else {
-                function sendNext() {
-                    if (sent + failed >= zplList.length) {
-                        actionBtn.disabled = false;
-                        if (failed === 0) {
-                            toast(`✓ ${sent}/${zplList.length} label ZT411-ə göndərildi (${ip})`, 'success');
-                            close();
-                        } else {
-                            ftrStatus.textContent = `${sent} ok, ${failed} xəta`;
-                            toast(`${failed} label göndərilmədi`, 'error');
-                        }
-                        return;
-                    }
-                    const idx = sent + failed;
-                    ftrStatus.textContent = `Göndərilir: ${idx + 1} / ${zplList.length}…`;
-                    sendZplToZebra(ip, zplList[idx],
-                        () => { sent++; sendNext(); },
-                        (err) => { failed++; console.warn('ZPL err:', err); sendNext(); }
-                    );
+                    return;
                 }
-                sendNext();
+                const idx = sent + failed;
+                ftrStatus.textContent = `Göndərilir: ${idx + 1} / ${zplList.length}…`;
+                sendZplToZebra(ip, zplList[idx],
+                    () => { sent++; sendNext(); },
+                    (err) => { failed++; console.warn('ZPL err:', err); sendNext(); }
+                );
             }
+            sendNext();
         };
 
         schedulePreview();
     }
 
     /* ============================================
-       15. MAIN - BATCH PRINT
+       15. MAIN - BATCH PRINT FIXED
     ============================================ */
     setTimeout(() => {
-        checkForUpdates(false);
         const table = document.querySelector('table.acf-grid-common') || document.getElementById('ctl00_CphMaster_gdvList');
         if (!table) return;
 
@@ -1910,9 +1552,9 @@
         batchBtn.id = 'acf8-batch-btn';
         batchBtn.style.cssText = [
             'position:fixed;bottom:24px;right:24px;z-index:2147483646;',
-            'display:none;padding:12px 24px;background:#2563eb;color:#fff;',
-            'border:none;border-radius:40px;font-size:14px;font-weight:600;cursor:pointer;',
-            'box-shadow:0 10px 15px -3px rgba(37,99,235,0.3);transition:all 0.2s;',
+            'display:none;padding:10px 20px;background:#1a73e8;color:#fff;',
+            'border:none;border-radius:24px;font-size:13px;font-weight:700;cursor:pointer;',
+            'box-shadow:0 4px 16px rgba(26,115,232,.45);transition:opacity .2s;',
         ].join('');
         batchBtn.textContent = '🖨 Print Selected (0)';
         document.body.appendChild(batchBtn);
@@ -1933,15 +1575,17 @@
             const thPrint = document.createElement('th');
             thPrint.scope = 'col';
             thPrint.style.cssText = 'width:1%;text-align:center;padding:4px;';
-            thPrint.innerHTML = '<span style="color:#2563eb;font-size:16px;">🏷</span>';
+            thPrint.innerHTML = '<span style="color:#1a73e8;font-size:15px;" title="Print Labels">🏷</span>';
             headerRow.insertBefore(thPrint, last);
 
             const thCb = document.createElement('th');
             thCb.scope = 'col';
             thCb.style.cssText = 'width:1%;text-align:center;padding:4px;';
+            thCb.title = 'Select all for batch print';
             const allCb = document.createElement('input');
             allCb.type = 'checkbox';
-            allCb.className = 'acf8-cb';
+            allCb.style.cssText = 'width:14px;height:14px;cursor:pointer;accent-color:#1a73e8;';
+            allCb.title = 'Select/Deselect All';
             allCb.onchange = () => {
                 table.querySelectorAll('.acf8-row-cb').forEach(cb => {
                     cb.checked = allCb.checked;
@@ -1961,7 +1605,7 @@
             printTd.style.cssText = 'text-align:center;vertical-align:middle;padding:2px 4px;width:1%;';
 
             if (!editBtn) {
-                printTd.innerHTML = '<span style="color:#cbd5e1;">—</span>';
+                printTd.innerHTML = '<span style="color:#d1d5db;">—</span>';
                 row.insertBefore(printTd, lastTd);
                 const cbTdBlank = document.createElement('td');
                 cbTdBlank.style.cssText = 'text-align:center;vertical-align:middle;padding:2px 4px;width:1%;';
@@ -2003,7 +1647,8 @@
             cbTd.style.cssText = 'text-align:center;vertical-align:middle;padding:2px 4px;width:1%;';
             const cb = document.createElement('input');
             cb.type = 'checkbox';
-            cb.className = 'acf8-row-cb acf8-cb';
+            cb.className = 'acf8-row-cb';
+            cb.style.cssText = 'width:14px;height:14px;cursor:pointer;accent-color:#1a73e8;';
             cb.onchange = () => {
                 if (cb.checked) selectedRows.set(row, { editBtn, printBtn, flightData: { ...flightData } });
                 else selectedRows.delete(row);
@@ -2022,68 +1667,100 @@
             const galleys = getGalleys();
 
             const flightChips = selected.map(({ flightData: fd2 }) =>
-                `<span class="acf8-bm-chip">${fd2.flightNo || '?'} <span>${fd2.route || ''}</span></span>`
+                `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;font-size:11px;font-weight:600;color:#1e3a8a;">${fd2.flightNo || '?'} <span style="color:#6b7280;font-weight:400;">${fd2.route || ''} ${fd2.date || ''}</span></span>`
             ).join('');
 
+            // --- DYNAMIC CLASSES HTML (BATCH PRINT MODAL) ---
+            const savedClasses = gs(SK.PRINT_CLASSES, 'BC,EC').split(',').map(s => s.trim().toUpperCase());
+            const stdClasses = ['BC', 'PE', 'EC', 'CT', 'CP', 'CC', 'VP'];
+            const batchClassHTML = stdClasses.map(cls => {
+                const isChecked = savedClasses.includes(cls) ? 'checked' : '';
+                return `
+                <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:#fff;padding:4px 8px;border:1px solid #e2e8f0;border-radius:4px;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                    <input type="checkbox" class="acf8-bm-class-cb" value="${cls}" ${isChecked} style="width:14px;height:14px;accent-color:#2563eb;cursor:pointer;margin:0;">
+                    <b style="color:${CLASS_COLORS[cls] || '#111'};">${cls}</b>
+                </label>`;
+            }).join('');
+
             const bModal = document.createElement('div');
-            bModal.className = 'acf8-bm-overlay';
+            bModal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2147483647;display:flex;align-items:center;justify-content:center;animation:acf8fi .15s ease;';
             bModal.innerHTML = `
-            <div class="acf8-bm-dialog">
-              <div class="acf8-bm-header">
+            <div style="background:#fff;border-radius:12px;width:480px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #e5e7eb;">
                 <div>
-                  <div class="acf8-bm-title">🖨 Batch Print</div>
-                  <div class="acf8-bm-subtitle">${selected.length} flights selected</div>
+                  <div style="font-size:15px;font-weight:700;color:#111;">🖨 Batch Print</div>
+                  <div style="font-size:11px;color:#6b7280;margin-top:2px;">${selected.length} uçuş seçilib</div>
                 </div>
-                <button id="acf8-bm-close" class="acf8-bm-close">&times;</button>
+                <button id="acf8-bm-close" style="background:none;border:none;font-size:22px;cursor:pointer;color:#9ca3af;line-height:1;">&times;</button>
               </div>
-              <div class="acf8-bm-body">
-                <div style="margin-bottom:16px;">
-                  <div style="font-size:12px;font-weight:600;color:#475569;margin-bottom:8px;">Selected Flights</div>
-                  <div style="display:flex;flex-wrap:wrap;gap:6px;">${flightChips}</div>
-                </div>
-                <div style="margin-bottom:16px;">
-                  <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:6px;">Aircraft Config</label>
-                  <select id="acf8-bm-ac" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;">
+              <div style="padding:12px 18px;border-bottom:1px solid #e5e7eb;">
+                <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Seçilmiş uçuşlar</div>
+                <div style="display:flex;flex-wrap:wrap;gap:5px;">${flightChips}</div>
+              </div>
+              <div style="padding:14px 18px;display:flex;flex-direction:column;gap:12px;">
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Aircraft Config</label>
+                  <select id="acf8-bm-ac" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;color:#374151;">
                     ${Object.entries(acCfgs).map(([k, c]) => `<option value="${k}"${k === curAcKey ? ' selected' : ''}>${k} – ${c.label}</option>`).join('')}
                   </select>
                 </div>
-                <div style="margin-bottom:16px;">
-                  <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:6px;">Galley</label>
-                  <select id="acf8-bm-galley" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;">
-                    ${galleys.map(g => `<option value="${g}"${g === gs(SK.GALLEY, galleys[0]) ? ' selected' : ''}>${g}</option>`).join('')}
-                  </select>
+
+                <div style="display:flex;gap:10px;">
+                    <div style="display:flex;flex-direction:column;gap:4px;flex:1;">
+                      <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Galley</label>
+                      <select id="acf8-bm-galley" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;color:#374151;">
+                        ${galleys.map(g => `<option value="${g}"${g === gs(SK.GALLEY, galleys[0]) ? ' selected' : ''}>${g}</option>`).join('')}
+                      </select>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:4px;flex:1;">
+                      <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Print Method</label>
+                      <div style="display:flex;gap:6px;">
+                        <button class="acf8-bm-meth${curMethod === 'network' ? ' acf8-bm-active' : ''}" data-m="network" style="flex:1;padding:5px;border-radius:6px;font-size:11px;font-weight:600;border:1.5px solid ${curMethod === 'network' ? '#2563eb' : '#e5e7eb'};background:${curMethod === 'network' ? '#eff6ff' : '#fff'};color:${curMethod === 'network' ? '#2563eb' : '#6b7280'};cursor:pointer;">🌐 Network</button>
+                        <button class="acf8-bm-meth${curMethod === 'browser' ? ' acf8-bm-active' : ''}" data-m="browser" style="flex:1;padding:5px;border-radius:6px;font-size:11px;font-weight:600;border:1.5px solid ${curMethod === 'browser' ? '#2563eb' : '#e5e7eb'};background:${curMethod === 'browser' ? '#eff6ff' : '#fff'};color:${curMethod === 'browser' ? '#2563eb' : '#6b7280'};cursor:pointer;">🖨 Browser</button>
+                      </div>
+                    </div>
                 </div>
-                <div style="margin-bottom:16px;">
-                  <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:6px;">Print Method</label>
-                  <div style="display:flex;gap:8px;">
-                    <button class="acf8-bm-method-btn ${curMethod === 'network' ? 'on' : 'off'}" data-m="network">🌐 Network</button>
-                    <button class="acf8-bm-method-btn ${curMethod === 'browser' ? 'on' : 'off'}" data-m="browser">🖨 Browser</button>
+
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Print Classes (Toplu Çap)</label>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;padding:8px;border:1px solid #e2e8f0;border-radius:6px;background:#f8fafc;">
+                    ${batchClassHTML}
                   </div>
                 </div>
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-                  <label style="font-size:13px;font-weight:600;color:#0f172a;">📷 QR Code</label>
+
+                <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px dashed #e5e7eb;padding-top:10px;">
+                  <label style="font-size:11px;font-weight:600;color:#374151;cursor:pointer;" for="acf8-bm-qr">📷 ZPL Label-də QR Kod</label>
                   <label class="acf8-toggle">
                     <input type="checkbox" id="acf8-bm-qr" ${gs(SK.QR_CODE, 'off') === 'on' ? 'checked' : ''}>
-                    <span class="acf8-toggle-knob ${gs(SK.QR_CODE, 'off') === 'on' ? 'on' : 'off'}" onclick="const c=this.previousElementSibling;c.checked=!c.checked;this.className='acf8-toggle-knob '+(c.checked?'on':'off')"></span>
+                    <span class="acf8-toggle-slider"></span>
                   </label>
                 </div>
-                <div id="acf8-bm-status" style="font-size:12px;color:#64748b;min-height:16px;"></div>
+                <div id="acf8-bm-status" style="font-size:11px;color:#6b7280;min-height:16px;"></div>
               </div>
-              <div class="acf8-bm-footer">
-                <button id="acf8-bm-cancel" class="acf8-bm-cancel">Cancel</button>
-                <button id="acf8-bm-start" class="acf8-bm-start">Start Print (${selected.length})</button>
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid #e5e7eb;">
+                <button id="acf8-bm-cancel" style="padding:7px 16px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;font-size:12px;cursor:pointer;color:#6b7280;font-weight:600;">İptal</button>
+                <button id="acf8-bm-start" style="padding:7px 18px;border:none;border-radius:6px;background:#1a73e8;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Çap başlat (${selected.length} uçuş)</button>
               </div>
             </div>`;
             document.body.appendChild(bModal);
 
+            // BATCH PRINT CHECKBOX LISTENER
+            bModal.querySelectorAll('.acf8-bm-class-cb').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    const bSelected = Array.from(bModal.querySelectorAll('.acf8-bm-class-cb:checked')).map(c => c.value).join(',');
+                    ss(SK.PRINT_CLASSES, bSelected);
+                });
+            });
+
             let bmMethod = curMethod;
-            bModal.querySelectorAll('.acf8-bm-method-btn').forEach(b => {
+            bModal.querySelectorAll('.acf8-bm-meth').forEach(b => {
                 b.onclick = () => {
                     bmMethod = b.dataset.m;
-                    bModal.querySelectorAll('.acf8-bm-method-btn').forEach(x => {
+                    bModal.querySelectorAll('.acf8-bm-meth').forEach(x => {
                         const on = x.dataset.m === bmMethod;
-                        x.classList.toggle('on', on);
-                        x.classList.toggle('off', !on);
+                        x.style.borderColor = on ? '#2563eb' : '#e5e7eb';
+                        x.style.background = on ? '#eff6ff' : '#fff';
+                        x.style.color = on ? '#2563eb' : '#6b7280';
                     });
                 };
             });
@@ -2104,7 +1781,7 @@
                 const bmQR = bModal.querySelector('#acf8-bm-qr').checked ? 'on' : 'off';
                 ss(SK.QR_CODE, bmQR);
 
-                const acCfg2 = (getAcConfigs())[acKey2] || matchAcConfig('', '');
+                const acCfg2 = (getAcConfigs())[acKey2] || getSelectedAcConfig();
                 const acItems2 = [...(acCfg2.items || [])];
                 const acItemQtys2 = acItems2.map(() => 1);
 
@@ -2115,7 +1792,7 @@
 
                 let fetched = 0;
                 for (const { editBtn, printBtn, flightData } of selected) {
-                    statusEl.textContent = `⏳ Loading PAX: ${fetched + 1} / ${selected.length}`;
+                    statusEl.textContent = `⏳ PAX yüklənir: ${fetched + 1} / ${selected.length}`;
                     try {
                         const origClass = printBtn.className;
                         printBtn.classList.add('loading');
@@ -2129,7 +1806,7 @@
                     fetched++;
                 }
 
-                statusEl.textContent = '🖨 Sending...';
+                statusEl.textContent = '🖨 Göndərilir…';
 
                 if (bmMethod === 'browser') {
                     const pw = window.open('', '_blank', 'width=800,height=900');
@@ -2145,7 +1822,7 @@
                     }
 
                     if (!hasCards) {
-                        toast('No labels generated! Check PAX data.', 'error');
+                        toast('Heç bir label yaradılmadı! Pax məlumatlarını yoxlayın.', 'error');
                         startBtn.disabled = false;
                         batchBtn.disabled = false;
                         updateBatchBtn();
@@ -2153,37 +1830,37 @@
                     }
 
                     pw.document.write(`<!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>Batch Labels</title>
-                        <style>
-                            *{margin:0;padding:0;box-sizing:border-box;}
-                            body{
-                                font-family:'Courier New',monospace;padding:20px;background:#e5e7eb;
-                                -webkit-print-color-adjust: exact !important;
-                                print-color-adjust: exact !important;
-                                color-adjust: exact !important;
-                            }
-                            .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-start;}
-                            .np{text-align:right;margin-bottom:15px;width:100%;}
-                            @media print{
-                                .np{display:none;}
-                                body{background:#fff;padding:0;}
-                                .wrap{gap:8px;justify-content:flex-start;flex-direction:row;}
-                                @page { margin: 10mm; }
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="np">
-                            <button onclick="window.print()" style="padding:10px 24px;background:#2563eb;color:#fff;border:none;border-radius:30px;cursor:pointer;font-size:14px;">🖨 Print All</button>
-                        </div>
-                        <div class="wrap">${allCards}</div>
-                    </body>
-                    </html>`);
+            <html>
+            <head>
+                <title>Batch Labels</title>
+                <style>
+                    *{margin:0;padding:0;box-sizing:border-box;}
+                    body{font-family:'Courier New',monospace;padding:10px;background:#e0e7ef;}
+                    .wrap{display:flex;flex-wrap:wrap;gap:10px;}
+                    .lc{width:200px;height:292px;border:2px solid #1e3a8a;border-radius:5px;
+                        overflow:hidden;display:flex;flex-direction:column;page-break-inside:avoid;
+                        background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15);}
+                    .logo-box{border:1.5px solid #1e3a8a;margin:5px 5px 3px;height:62px;
+                        overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+                    .logo-box img{max-width:100%;max-height:100%;object-fit:contain;}
+                    .info{padding:4px 8px;font-size:11px;line-height:1.75;flex-shrink:0;border-bottom:1px solid #c7d2e6;}
+                    .info .lbl{font-size:9px;color:#64748b;}
+                    .item-name{flex:1;display:flex;align-items:center;justify-content:center;
+                        padding:6px;text-align:center;font-weight:900;font-style:italic;font-size:22px;}
+                    .np{text-align:right;margin-bottom:10px;}
+                    @media print{.np{display:none;}body{background:#fff;}}
+                </style>
+            </head>
+            <body>
+                <div class="np">
+                    <button onclick="window.print()" style="padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🖨 Print All</button>
+                </div>
+                <div class="wrap">${allCards}</div>
+            </body>
+            </html>`);
 
                     pw.document.close();
-                    toast(`✓ ${selected.length} flights browser print opened`, 'success');
+                    toast(`✓ ${selected.length} uçuş üçün browser print açıldı`, 'success');
                     closeModal();
                     selectedRows.clear();
                     batchBtn.disabled = false;
@@ -2206,42 +1883,29 @@
                     }
 
                     if (!zplList.length) {
-                        toast('No labels to send', 'error');
+                        toast('Göndəriləcək label yoxdur', 'error');
                         startBtn.disabled = false;
                         batchBtn.disabled = false;
                         updateBatchBtn();
                         return;
                     }
 
-                    const useBatch2 = gs(SK.ZPL_BATCH_MODE, 'sequential') === 'batch';
-                    if (useBatch2) {
-                        statusEl.textContent = `Batch sending: ${zplList.length} labels...`;
-                        sendZplBatch(ip, zplList,
-                            (count) => {
-                                batchBtn.disabled = false; updateBatchBtn();
-                                toast(`✓ ${count} labels batch sent to ZT411`, 'success');
-                                selectedRows.clear(); closeModal();
-                            },
-                            (err) => {
-                                batchBtn.disabled = false; updateBatchBtn();
-                                toast(`Batch error: ${err}`, 'error');
-                            }
-                        );
-                    } else {
-                        let sent2 = 0, fail2 = 0;
-                        function batchSendNext() {
-                            if (sent2 + fail2 >= zplList.length) {
-                                batchBtn.disabled = false; updateBatchBtn();
-                                toast(`✓ ${sent2}/${zplList.length} labels sent to ZT411`, 'success');
-                                selectedRows.clear(); closeModal(); return;
-                            }
-                            statusEl.textContent = `🖨 ${sent2 + fail2 + 1} / ${zplList.length} sending...`;
-                            sendZplToZebra(ip, zplList[sent2 + fail2],
-                                () => { sent2++; batchSendNext(); },
-                                () => { fail2++; batchSendNext(); });
+                    let sent2 = 0, fail2 = 0;
+                    function batchSendNext() {
+                        if (sent2 + fail2 >= zplList.length) {
+                            batchBtn.disabled = false;
+                            updateBatchBtn();
+                            toast(`✓ ${sent2}/${zplList.length} label ZT411-ə göndərildi`, 'success');
+                            selectedRows.clear();
+                            closeModal();
+                            return;
                         }
-                        batchSendNext();
+                        statusEl.textContent = `🖨 ${sent2 + fail2 + 1} / ${zplList.length} göndərilir…`;
+                        sendZplToZebra(ip, zplList[sent2 + fail2],
+                            () => { sent2++; batchSendNext(); },
+                            () => { fail2++; batchSendNext(); });
                     }
+                    batchSendNext();
                 }
             };
         };
