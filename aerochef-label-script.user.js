@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         AeroChef Paxload – Print Labels (V10.4 - Dynamic Classes)
+// @name         AeroChef Paxload – Print Labels (V11.1 - Dynamic Classes)
 // @namespace    http://tampermonkey.net/
 // @version      11.1
 // @description  Dynamic Pax Classes Checkboxes, Fixed Layout, Batch Print Fix
