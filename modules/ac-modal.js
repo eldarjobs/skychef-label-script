@@ -710,9 +710,24 @@
             { id: 'info', label: 'Info (Date/Flt)', key: SK.EL_INFO, color: '#2563eb', defaults: { x: 8, y: 80, w: 210, h: 80, fs: 16, visible: true } },
             { id: 'sep2', label: 'Bottom Separator', key: SK.EL_SEP2, color: '#f59e0b', defaults: { x: 4, y: 165, w: 220, h: 3, fs: 0, visible: true } },
             { id: 'item', label: 'Item Name', key: SK.EL_ITEM, color: '#dc2626', defaults: { x: 8, y: 170, w: 210, h: 60, fs: 28, visible: true } },
+
+            // Core Frames
             { id: 'frame1', label: 'Box / Line 1', key: SK.EL_FRAME1, color: '#10b981', defaults: { x: 2, y: 70, w: 224, h: 90, bw: 2, fs: 0, visible: false } },
             { id: 'frame2', label: 'Box / Line 2', key: SK.EL_FRAME2, color: '#10b981', defaults: { x: 2, y: 165, w: 224, h: 65, bw: 2, fs: 0, visible: false } },
             { id: 'frame3', label: 'Box / Line 3', key: SK.EL_FRAME3, color: '#10b981', defaults: { x: 2, y: 4, w: 224, h: 226, bw: 2, fs: 0, visible: false } },
+
+            // Custom Text Blocks
+            { id: 'cust1', label: 'Custom Text 1', key: 'acf9_el_cust1', color: '#ec4899', defaults: { x: 20, y: 20, w: 100, h: 30, fs: 16, visible: false } },
+            { id: 'cust2', label: 'Custom Text 2', key: 'acf9_el_cust2', color: '#ec4899', defaults: { x: 20, y: 60, w: 100, h: 30, fs: 16, visible: false } },
+            { id: 'cust3', label: 'Custom Text 3', key: 'acf9_el_cust3', color: '#ec4899', defaults: { x: 20, y: 100, w: 100, h: 30, fs: 16, visible: false } },
+
+            // Custom Frames
+            { id: 'frame4', label: 'Custom Box 4', key: 'acf9_el_frame4', color: '#14b8a6', defaults: { x: 10, y: 10, w: 50, h: 50, bw: 2, fs: 0, visible: false } },
+            { id: 'frame5', label: 'Custom Box 5', key: 'acf9_el_frame5', color: '#14b8a6', defaults: { x: 60, y: 10, w: 50, h: 50, bw: 2, fs: 0, visible: false } },
+            { id: 'frame6', label: 'Custom Box 6', key: 'acf9_el_frame6', color: '#14b8a6', defaults: { x: 110, y: 10, w: 50, h: 50, bw: 2, fs: 0, visible: false } },
+
+            // Barcode
+            { id: 'barcode', label: '1D Barcode', key: 'acf9_el_bc', color: '#6366f1', defaults: { x: 10, y: 120, w: 180, h: 40, fs: 0, visible: false } },
         ];
 
         function getEl(key, defaults) {
@@ -765,34 +780,29 @@
                     `border-radius:2px;cursor:move;display:flex;align-items:center;justify-content:center;` +
                     `font-size:${Math.max(7, Math.round(10 * scale))}px;font-weight:700;color:${elDef.color};` +
                     `overflow:hidden;user-select:none;opacity:${props.visible ? '1' : '0.25'};` +
-                    `z-index:${isSelected ? 10 : 1};` +
-                    `${isSelected && !elDef.id.startsWith('frame') ? 'box-shadow:0 0 0 3px ' + elDef.color + '40;' : ''}`;
-                el.textContent = elDef.label;
+                    `z-index:${isSelected ? 10 : 1};`;
+                el.classList.add('acf8-ed-el');
 
                 el.addEventListener('mousedown', ev => {
                     ev.preventDefault(); ev.stopPropagation();
                     edSelectedId = elDef.id;
-                    renderEditorCanvas();
                     renderEditorProps();
 
-                    const sx2 = ev.clientX, sy2 = ev.clientY;
-                    const ox = props.x, oy = props.y;
-                    const { scale: sc } = getEdScale();
-
-                    const onMove = e2 => {
-                        props.x = Math.max(0, Math.round(ox + (e2.clientX - sx2) / sc));
-                        props.y = Math.max(0, Math.round(oy + (e2.clientY - sy2) / sc));
-                        setEl(elDef.key, props);
-                        renderEditorCanvas();
-                        renderEditorProps();
-                        schedulePreview();
-                    };
-                    const onUp = () => {
-                        document.removeEventListener('mousemove', onMove);
-                        document.removeEventListener('mouseup', onUp);
-                    };
-                    document.addEventListener('mousemove', onMove);
-                    document.addEventListener('mouseup', onUp);
+                    // Re-render outlines
+                    edCanvas.querySelectorAll('.acf8-ed-el').forEach(div => {
+                        const dId = div.dataset.elId;
+                        const isS = edSelectedId === dId;
+                        const c = EDITOR_ELEMENTS.find(x => x.id === dId).color;
+                        if (dId.startsWith('frame')) {
+                            const fDef = EDITOR_ELEMENTS.find(x => x.id === dId);
+                            const elP = getEl(fDef.key, { bw: 2 });
+                            div.style.border = `${Math.max(1, Math.round(elP.bw * scale))}px solid ${c}${isS ? '' : '80'}`;
+                        } else {
+                            div.style.border = isS ? `2px solid ${c}` : `1.5px dashed ${c}aa`;
+                            div.style.boxShadow = isS ? `0 0 0 3px ${c}40` : 'none';
+                        }
+                        div.style.zIndex = isS ? '10' : '1';
+                    });
                 });
 
                 labelDiv.appendChild(el);
@@ -835,14 +845,15 @@
                 `<input type="number" data-prop="${prop}" value="${props[prop] ?? 0}" min="${min}" max="${max}" step="${step}" ` +
                 `style="width:58px;padding:2px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px;text-align:right;"></div>`;
 
-            const hasFontSize = elDef.id !== 'sep1' && elDef.id !== 'sep2' && !elDef.id.startsWith('frame');
-            const isShape = elDef.id.startsWith('frame');
+            const isLogo = elDef.id === 'logo';
+            const hasFontSize = elDef.id !== 'sep1' && elDef.id !== 'sep2' && !elDef.id.startsWith('frame') && !isLogo;
+            const isShape = elDef.id.startsWith('frame') || isLogo;
             edProps.innerHTML =
                 `<div style="font-weight:700;font-size:12px;color:${elDef.color};padding-bottom:5px;margin-bottom:7px;border-bottom:2px solid ${elDef.color};">${elDef.label}</div>` +
-                mkRow('X', 'x', 0, 2000) + mkRow('Y', 'y', 0, 2000) +
+                mkRow('X', 'x', -500, 2000) + mkRow('Y', 'y', -500, 2000) +
                 mkRow('W', 'w', 5, 2000) + mkRow('H', 'h', 2, 2000) +
                 (hasFontSize ? mkRow('Font', 'fs', 4, 80) : '') +
-                (isShape ? mkRow('Border W.', 'bw', 1, 40) : '') +
+                (isShape ? mkRow('Border W.', 'bw', 0, 40) : '') +
                 `<div style="display:flex;align-items:center;gap:6px;padding-top:6px;border-top:1px dashed #e5e7eb;margin-top:6px;">` +
                 `<input type="checkbox" id="acf8-ep-vis" ${props.visible ? 'checked' : ''} style="width:14px;height:14px;accent-color:${elDef.color};cursor:pointer;">` +
                 `<label for="acf8-ep-vis" style="font-size:11px;cursor:pointer;color:#374151;">Visible</label></div>`;
@@ -852,7 +863,18 @@
                     const p = inp.dataset.prop;
                     props[p] = parseFloat(inp.value) || 0;
                     setEl(elDef.key, props);
-                    renderEditorCanvas();
+
+                    // Instantly update the HTML element visually without a hard re-render
+                    const div = edCanvas.querySelector(`[data-el-id="${elDef.id}"]`);
+                    if (div) {
+                        const { scale } = getEdScale();
+                        if (p === 'x') div.style.left = Math.round(props.x * scale) + 'px';
+                        if (p === 'y') div.style.top = Math.round(props.y * scale) + 'px';
+                        if (p === 'w') div.style.width = Math.round(props.w * scale) + 'px';
+                        if (p === 'h') div.style.height = Math.round(props.h * scale) + 'px';
+                        if (p === 'bw' && isShape) div.style.borderWidth = Math.max(1, Math.round(props.bw * scale)) + 'px';
+                    }
+
                     schedulePreview();
                 });
             });
@@ -901,6 +923,72 @@
             reader.readAsText(file);
             e.target.value = '';
         });
+
+        // Initialize Interact.js
+        if (typeof interact !== 'undefined') {
+            interact('.acf8-ed-el').draggable({
+                modifiers: [
+                    interact.modifiers.restrictRect({ restriction: 'parent', endOnly: false })
+                ],
+                listeners: {
+                    move(event) {
+                        const target = event.target;
+                        const elId = target.dataset.elId;
+                        const elDef = EDITOR_ELEMENTS.find(e => e.id === elId);
+                        if (!elDef) return;
+
+                        const props = getEl(elDef.key, elDef.defaults);
+                        const { scale } = getEdScale();
+
+                        props.x += (event.dx / scale);
+                        props.y += (event.dy / scale);
+                        setEl(elDef.key, props);
+
+                        target.style.left = Math.round(props.x * scale) + 'px';
+                        target.style.top = Math.round(props.y * scale) + 'px';
+
+                        if (edSelectedId === elId) renderEditorProps();
+                        schedulePreview();
+                    }
+                }
+            });
+
+            // Allow resizing on logo and frames
+            interact('.acf8-ed-el[data-el-id="logo"], .acf8-ed-el[data-el-id^="frame"]').resizable({
+                edges: { left: true, right: true, bottom: true, top: true },
+                listeners: {
+                    move(event) {
+                        const target = event.target;
+                        const elId = target.dataset.elId;
+                        const elDef = EDITOR_ELEMENTS.find(e => e.id === elId);
+                        if (!elDef) return;
+
+                        const props = getEl(elDef.key, elDef.defaults);
+                        const { scale } = getEdScale();
+
+                        props.w += (event.rect.width - event.edges.width) / scale;
+                        props.h += (event.rect.height - event.edges.height) / scale;
+
+                        // translate when resizing from top or left edges
+                        props.x += (event.deltaRect.left / scale);
+                        props.y += (event.deltaRect.top / scale);
+
+                        setEl(elDef.key, props);
+
+                        Object.assign(target.style, {
+                            width: Math.round(props.w * scale) + 'px',
+                            height: Math.round(props.h * scale) + 'px',
+                            left: Math.round(props.x * scale) + 'px',
+                            top: Math.round(props.y * scale) + 'px'
+                        });
+
+                        if (edSelectedId === elId) renderEditorProps();
+                        schedulePreview();
+                    }
+                }
+            });
+        }
+
         // â”€â”€ END VISUAL LABEL EDITOR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         overlay.querySelector('#acf8-ip-save').onclick = () => {

@@ -138,9 +138,28 @@
                 return `<div style="position:absolute;left:${pct(conf.x, LW)};top:${pct(conf.y, LH)};width:${pct(conf.w, LW)};height:${pct(conf.h, LH)};border:${bwPx} solid ${bor};box-sizing:border-box;"></div>`;
             }
 
+            const cust1Conf = getEl('acf9_el_cust1', { x: 20, y: 20, w: 100, h: 30, fs: 16, visible: false });
+            const cust2Conf = getEl('acf9_el_cust2', { x: 20, y: 60, w: 100, h: 30, fs: 16, visible: false });
+            const cust3Conf = getEl('acf9_el_cust3', { x: 20, y: 100, w: 100, h: 30, fs: 16, visible: false });
+            const frame4Conf = getEl('acf9_el_frame4', { x: 10, y: 10, w: 50, h: 50, bw: 2, visible: false });
+            const frame5Conf = getEl('acf9_el_frame5', { x: 60, y: 10, w: 50, h: 50, bw: 2, visible: false });
+            const frame6Conf = getEl('acf9_el_frame6', { x: 110, y: 10, w: 50, h: 50, bw: 2, visible: false });
+
+            function drawCustomTxt(conf, defaultTxt) {
+                if (!conf.visible) return '';
+                return `<div style="position:absolute;left:${pct(conf.x, LW)};top:${pct(conf.y, LH)};width:${pct(conf.w, LW)};height:${pct(conf.h, LH)};display:flex;align-items:center;justify-content:center;text-align:center;font-size:${fs2val(conf.fs)};font-weight:700;line-height:1.1;overflow:hidden;">${defaultTxt}</div>`;
+            }
+
             html += drawFrame(frame1Conf);
             html += drawFrame(frame2Conf);
             html += drawFrame(frame3Conf);
+            html += drawFrame(frame4Conf);
+            html += drawFrame(frame5Conf);
+            html += drawFrame(frame6Conf);
+
+            html += drawCustomTxt(cust1Conf, 'Custom 1');
+            html += drawCustomTxt(cust2Conf, 'Custom 2');
+            html += drawCustomTxt(cust3Conf, 'Custom 3');
 
             html += `</div>`;
             return html;
@@ -229,41 +248,45 @@
         const frame2Props = getEl(SK.EL_FRAME2, { x: 2, y: 165, w: 224, h: 65, bw: 2, fs: 0, visible: false });
         const frame3Props = getEl(SK.EL_FRAME3, { x: 2, y: 4, w: 224, h: 226, bw: 2, fs: 0, visible: false });
 
-        let z = `^XA\n^CI28\n^PW${LW}\n^LL${LH}\n^LH0,0\n`;
-        if (isRed) z += `^FO0,0^GB${LW},${LH},${LH}^FS\n`;
+        const cust1Props = getEl('acf9_el_cust1', { x: 20, y: 20, w: 100, h: 30, fs: 16, visible: false });
+        const cust2Props = getEl('acf9_el_cust2', { x: 20, y: 60, w: 100, h: 30, fs: 16, visible: false });
+        const cust3Props = getEl('acf9_el_cust3', { x: 20, y: 100, w: 100, h: 30, fs: 16, visible: false });
+        const frame4Props = getEl('acf9_el_frame4', { x: 10, y: 10, w: 50, h: 50, bw: 2, visible: false });
+        const frame5Props = getEl('acf9_el_frame5', { x: 60, y: 10, w: 50, h: 50, bw: 2, visible: false });
+        const frame6Props = getEl('acf9_el_frame6', { x: 110, y: 10, w: 50, h: 50, bw: 2, visible: false });
+
+        let z = `^XA\n^MMT\n^PW${LW}\n^LL${LH}\n^LS0\n`;
+        if (gs(SK.PRINT_METHOD, 'network') === 'network') {
+            z += `^PON\n^PMN\n`;
+        }
 
         if (logoProps.visible) {
+            if (logoProps.bw && logoProps.bw > 0) {
+                z += `^FO${logoProps.x},${logoProps.y}^GB${logoProps.w},${logoProps.h},${logoProps.bw}^FS\n`;
+            }
             if (_logoGRF) {
-                z += `^FO${logoProps.x},${logoProps.y}^GB${logoProps.w},${logoProps.h},2^FS\n`;
                 const imgX = logoProps.x + Math.round((logoProps.w - _logoGRF.width) / 2);
                 const imgY = logoProps.y + Math.round((logoProps.h - _logoGRF.height) / 2);
                 z += `^FO${imgX},${imgY}${FR}^GFA,${_logoGRF.length},${_logoGRF.length},${_logoGRF.rowlen},${_logoGRF.z64}^FS\n`;
             } else {
-                z += `^FO${logoProps.x},${logoProps.y}^GB${logoProps.w},${logoProps.h},2^FS\n`;
                 const tX = logoProps.x + Math.round(logoProps.w * 0.1);
                 const tY = logoProps.y + Math.round(logoProps.h * 0.2);
-                z += `^FO${Math.max(0, tX)},${tY}^A0N,24,24${FR}^FDAZERBAIJAN^FS\n`;
-                z += `^FO${Math.max(0, tX + 10)},${tY + 26}${FR}^A0N,18,18^FD- AIRLINES -^FS\n`;
+                z += `^FO${tX},${tY}^A0N,28,28^FD AZERBAIJAN^FS\n`;
+                z += `^FO${tX},${tY + 36}^A0N,18,18^FD- AIRLINES -^FS\n`;
             }
         }
 
-        if (sep1Props.visible) {
-            z += `^FO${sep1Props.x},${sep1Props.y}^GB${sep1Props.w},${sep1Props.h},${sep1Props.h}^FS\n`;
-        }
+        if (sep1Props.visible) z += `^FO${sep1Props.x},${sep1Props.y}^GB${sep1Props.w},${sep1Props.h},${sep1Props.h}^FS\n`;
 
         if (infoProps.visible) {
-            const fs = infoProps.fs;
-            const lh = fs + 4;
-            let curY = infoProps.y;
-            z += `^FO${infoProps.x},${curY}${FR}^A0N,${fs},${fs}^FDDate: ${date}^FS\n`; curY += lh;
-            z += `^FO${infoProps.x},${curY}${FR}^A0N,${fs},${fs}^FDFlight No. : ${fno}^FS\n`; curY += lh;
-            z += `^FO${infoProps.x},${curY}${FR}^A0N,${fs},${fs}^FD${route}^FS\n`; curY += lh;
-            z += `^FO${infoProps.x},${curY}${FR}^A0N,${fs + 2},${fs + 2}^FD${classCode} ${paxDisplay} -^FS\n`;
+            z += `^FO${infoProps.x},${infoProps.y}^A0N,${infoProps.fs},${infoProps.fs}^FDDate: ${date}^FS\n`;
+            z += `^FO${infoProps.x},${infoProps.y + infoProps.fs + 4}^A0N,${infoProps.fs},${infoProps.fs}^FDFlt:  ${fno}^FS\n`;
+            z += `^FO${infoProps.x},${infoProps.y + (infoProps.fs + 4) * 2}^A0N,${infoProps.fs},${infoProps.fs}^FD${route}^FS\n`;
+            const bFs = Math.round(infoProps.fs * 1.25);
+            z += `^FO${infoProps.x},${infoProps.y + (infoProps.fs + 4) * 3}^A0N,${bFs},${bFs}^FD${classCode} ${paxDisplay}  -^FS\n`;
         }
 
-        if (sep2Props.visible) {
-            z += `^FO${sep2Props.x},${sep2Props.y}^GB${sep2Props.w},${sep2Props.h},${sep2Props.h}^FS\n`;
-        }
+        if (sep2Props.visible) z += `^FO${sep2Props.x},${sep2Props.y}^GB${sep2Props.w},${sep2Props.h},${sep2Props.h}^FS\n`;
 
         if (itemProps.visible) {
             let fs = itemProps.fs;
@@ -273,9 +296,17 @@
             z += `^FO${itemProps.x},${itemProps.y}^FI${FR}^A0N,${Math.round(fs)},${Math.round(fs)}^FD${item.name}^FS\n`;
         }
 
+        if (cust1Props.visible) z += `^FO${cust1Props.x},${cust1Props.y}^FI${FR}^A0N,${Math.round(cust1Props.fs)},${Math.round(cust1Props.fs)}^FDCustom 1^FS\n`;
+        if (cust2Props.visible) z += `^FO${cust2Props.x},${cust2Props.y}^FI${FR}^A0N,${Math.round(cust2Props.fs)},${Math.round(cust2Props.fs)}^FDCustom 2^FS\n`;
+        if (cust3Props.visible) z += `^FO${cust3Props.x},${cust3Props.y}^FI${FR}^A0N,${Math.round(cust3Props.fs)},${Math.round(cust3Props.fs)}^FDCustom 3^FS\n`;
+
         if (frame1Props.visible) z += `^FO${frame1Props.x},${frame1Props.y}^GB${frame1Props.w},${frame1Props.h},${frame1Props.bw}^FS\n`;
         if (frame2Props.visible) z += `^FO${frame2Props.x},${frame2Props.y}^GB${frame2Props.w},${frame2Props.h},${frame2Props.bw}^FS\n`;
         if (frame3Props.visible) z += `^FO${frame3Props.x},${frame3Props.y}^GB${frame3Props.w},${frame3Props.h},${frame3Props.bw}^FS\n`;
+        if (frame4Props.visible) z += `^FO${frame4Props.x},${frame4Props.y}^GB${frame4Props.w},${frame4Props.h},${frame4Props.bw}^FS\n`;
+        if (frame5Props.visible) z += `^FO${frame5Props.x},${frame5Props.y}^GB${frame5Props.w},${frame5Props.h},${frame5Props.bw}^FS\n`;
+        if (frame6Props.visible) z += `^FO${frame6Props.x},${frame6Props.y}^GB${frame6Props.w},${frame6Props.h},${frame6Props.bw}^FS\n`;
+
         if (gs(SK.QR_CODE, 'off') === 'on') {
             const qrData = `${fno}|${date}|${classCode}|${item.name}`;
             z += `^FO${LW - 110},${LH - 110}^BQN,2,3^FDMM,${qrData}^FS\n`;
