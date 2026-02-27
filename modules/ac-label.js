@@ -284,8 +284,7 @@
         return z;
     };
 
-    /* ── PREVIEW RENDERER ── */
-    AC.renderLocalPreview = function (previewBox, flight, paxData, galley, _unused, acItems) {
+    AC.renderLocalPreview = function (previewBoxes, flight, paxData, galley, _unused, acItems) {
         const { _dateFmt, getPrintClasses, getPaxPerLabel, splitPaxAcrossLabels, fmtPax, buildCardHTML } = AC;
         const route = flight.route || '';
         const date = _dateFmt(flight.date);
@@ -304,8 +303,13 @@
                 for (let q = 0; q < qty; q++) labels.push({ cls, paxCount: paxSplit[q], totalPax: paxCount, item });
             });
         });
+
+        const boxes = Array.isArray(previewBoxes) ? previewBoxes : [previewBoxes];
+
         if (!labels.length) {
-            previewBox.innerHTML = '<span style="color:#9ca3af;font-size:11px;">No labels for the selected classes</span>';
+            boxes.forEach(box => {
+                if (box) box.innerHTML = '<span style="color:#9ca3af;font-size:11px;">No labels for the selected classes</span>';
+            });
             return;
         }
         let cur = 0;
@@ -313,21 +317,31 @@
             return buildCardHTML({ date, fno, route, cls: lbl.cls, paxDisplay: fmtPax(lbl.paxCount, lbl.totalPax, perLabel), itemName: lbl.item.name, isRed: (lbl.item.bgColor || 'white') === 'red', size: 'preview' });
         }
         function render() {
-            previewBox.innerHTML = '';
-            previewBox.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;gap:8px;background:#f1f5f9;border-radius:6px;';
-            const cardWrap = document.createElement('div');
-            cardWrap.innerHTML = buildCard(labels[cur]);
-            previewBox.appendChild(cardWrap);
-            const nav = document.createElement('div');
-            nav.style.cssText = 'display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;color:#1e3a8a;';
-            nav.innerHTML = `<button id="acf8-prev-lbl" style="width:28px;height:28px;border:1.5px solid #1e3a8a;border-radius:6px;background:#fff;cursor:pointer;font-size:16px;color:#1e3a8a;line-height:1;">&#8249;</button><span style="min-width:68px;text-align:center;">${cur + 1} &nbsp;/&nbsp; ${labels.length}</span><button id="acf8-next-lbl" style="width:28px;height:28px;border:1.5px solid #1e3a8a;border-radius:6px;background:#fff;cursor:pointer;font-size:16px;color:#1e3a8a;line-height:1;">&#8250;</button>`;
-            previewBox.appendChild(nav);
-            const info = document.createElement('div');
-            info.style.cssText = 'font-size:9px;color:#64748b;text-align:center;letter-spacing:.3px;';
-            info.textContent = `${labels[cur].cls} • ${labels[cur].item.name}`;
-            previewBox.appendChild(info);
-            previewBox.querySelector('#acf8-prev-lbl').onclick = () => { cur = (cur - 1 + labels.length) % labels.length; render(); };
-            previewBox.querySelector('#acf8-next-lbl').onclick = () => { cur = (cur + 1) % labels.length; render(); };
+            const cardHTML = buildCard(labels[cur]);
+            const navHTML = `<div style="display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;color:#1e3a8a;"><button class="acf8-prev-btn" style="width:28px;height:28px;border:1.5px solid #1e3a8a;border-radius:6px;background:#fff;cursor:pointer;font-size:16px;color:#1e3a8a;line-height:1;">&#8249;</button><span style="min-width:68px;text-align:center;">${cur + 1} &nbsp;/&nbsp; ${labels.length}</span><button class="acf8-next-btn" style="width:28px;height:28px;border:1.5px solid #1e3a8a;border-radius:6px;background:#fff;cursor:pointer;font-size:16px;color:#1e3a8a;line-height:1;">&#8250;</button></div>`;
+            const infoTxt = `${labels[cur].cls} • ${labels[cur].item.name}`;
+
+            boxes.forEach(box => {
+                if (!box) return;
+                box.innerHTML = '';
+                box.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;gap:8px;background:#f1f5f9;border-radius:6px;';
+
+                const cardWrap = document.createElement('div');
+                cardWrap.innerHTML = cardHTML;
+                box.appendChild(cardWrap);
+
+                const nav = document.createElement('div');
+                nav.innerHTML = navHTML;
+                box.appendChild(nav);
+
+                const info = document.createElement('div');
+                info.style.cssText = 'font-size:9px;color:#64748b;text-align:center;letter-spacing:.3px;';
+                info.textContent = infoTxt;
+                box.appendChild(info);
+
+                box.querySelector('.acf8-prev-btn').onclick = () => { cur = (cur - 1 + labels.length) % labels.length; render(); };
+                box.querySelector('.acf8-next-btn').onclick = () => { cur = (cur + 1) % labels.length; render(); };
+            });
         }
         render();
     };

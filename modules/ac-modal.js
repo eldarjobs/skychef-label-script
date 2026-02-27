@@ -291,20 +291,29 @@
             <div style="display:flex;gap:12px;flex:1;min-height:0;">
               <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
                 <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Label Canvas <span style="font-weight:400;color:#9ca3af;">(click to select, drag to move)</span></div>
-                <div id="acf8-ed-canvas" style="position:relative;border:2px solid #1e3a8a;border-radius:6px;background:#fff;overflow:hidden;cursor:crosshair;flex:1;min-height:280px;"></div>
+                <div id="acf8-ed-canvas" style="position:relative;border:2px solid #1e3a8a;border-radius:6px;background:#fff;overflow:hidden;cursor:crosshair;flex:1;min-height:480px;"></div>
               </div>
-              <div style="flex:0 0 180px;display:flex;flex-direction:column;gap:6px;">
+              <div style="flex:0 0 200px;display:flex;flex-direction:column;gap:6px;">
                 <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Element Properties</div>
-                <div id="acf8-ed-props" style="flex:1;border:1px solid #e5e7eb;border-radius:6px;background:#f8fafc;padding:8px;font-size:11px;overflow-y:auto;">
+                <div id="acf8-ed-props" style="flex:1;border:1px solid #e5e7eb;border-radius:6px;background:#f8fafc;padding:8px;font-size:11px;overflow-y:auto;max-height:300px;">
                   <div style="color:#9ca3af;text-align:center;padding:20px 0;">Select an element</div>
                 </div>
-                <div style="display:flex;flex-direction:column;gap:4px;">
+                <div style="display:flex;flex-direction:column;gap:4px;margin-top:auto;">
                   <button id="acf8-ed-reset" style="padding:5px;background:#ef4444;color:#fff;border:none;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;">↺ Reset All Positions</button>
                   <button id="acf8-ed-export" style="padding:5px;background:#0f766e;color:#fff;border:none;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;">Save Template</button>
                   <label style="padding:5px;background:#4f46e5;color:#fff;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;text-align:center;">Load Template
                     <input type="file" id="acf8-ed-import" accept=".json" style="display:none;">
                   </label>
+                  <button id="acf8-btn-action-ed" style="padding:8px;background:#2563eb;color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;margin-top:8px;">🖨 Print Current</button>
                 </div>
+              </div>
+              <div style="flex:0 0 450px;display:flex;flex-direction:column;gap:6px;border-left:1px solid #e5e7eb;padding-left:12px;">
+                 <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Label Preview (Live)</span>
+                 <div class="acf8-preview-box" id="acf8-ed-prev-box" style="align-items:flex-start;justify-content:center;overflow-y:auto;padding:8px;background:#f1f5f9;border-radius:6px;"></div>
+                 <div style="display:flex;justify-content:space-between;align-items:center;">
+                     <span style="font-size:11px;color:#9ca3af;">Browser Print Emulation</span>
+                     <button id="acf8-btn-zpl-ed" style="padding:4px 8px;background:#7c3aed;color:#fff;border:none;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;">📋 ZPL Layout</button>
+                 </div>
               </div>
             </div>
           </div>
@@ -341,8 +350,10 @@
         });
 
         const prevBox = overlay.querySelector('#acf8-prev-box');
+        const edPrevBox = overlay.querySelector('#acf8-ed-prev-box');
         const ftrStatus = overlay.querySelector('#acf8-ftr-status');
         const actionBtn = overlay.querySelector('#acf8-btn-action');
+        const actionBtnEd = overlay.querySelector('#acf8-btn-action-ed');
 
         const customItems = [];
 
@@ -369,12 +380,12 @@
         function schedulePreview() {
             clearTimeout(prevTimer);
             prevTimer = setTimeout(() => {
-                const galley = overlay.querySelector('#acf8-sel-galley').value || 'Galley 1';
-                const tagged = [
+                const galley = overlay.querySelector('#acf8-sel-galley').value;
+                const itemsToPreview = [
                     ...acItems.map((it, i) => ({ ...it, _qty: acItemQtys[i] ?? 1 })),
-                    ...customItems,
+                    ...customItems
                 ];
-                renderLocalPreview(prevBox, flightData, paxData, galley, 1, tagged);
+                renderLocalPreview([prevBox, edPrevBox], flightData, paxData, galley, null, itemsToPreview);
             }, 300);
         }
 
@@ -560,7 +571,7 @@
         });
 
         // â”€â”€ ZPL Preview Console â”€â”€
-        overlay.querySelector('#acf8-btn-zpl')?.addEventListener('click', () => {
+        const generateZplPreview = () => {
             const printType = overlay.querySelector('#acf8-sel-printtype').value;
             if (!printType) { toast('Please select Print Type!', 'error'); return; }
             if (!paxData.length) { toast('No pax data available', 'error'); return; }
@@ -628,6 +639,12 @@
                     toast('ZPL copied âœ”', 'success');
                 });
             };
+        };
+
+        overlay.querySelector('#acf8-btn-zpl')?.addEventListener('click', generateZplPreview);
+        overlay.querySelector('#acf8-btn-zpl-ed')?.addEventListener('click', generateZplPreview);
+        overlay.querySelector('#acf8-btn-action-ed')?.addEventListener('click', () => {
+            actionBtn.click();
         });
 
         const close = () => {
@@ -768,6 +785,7 @@
                         setEl(elDef.key, props);
                         renderEditorCanvas();
                         renderEditorProps();
+                        schedulePreview();
                     };
                     const onUp = () => {
                         document.removeEventListener('mousemove', onMove);
@@ -831,16 +849,18 @@
 
             edProps.querySelectorAll('input[data-prop]').forEach(inp => {
                 inp.addEventListener('input', () => {
-                    props[inp.dataset.prop] = parseFloat(inp.value) || 0;
+                    const p = inp.dataset.prop;
+                    props[p] = parseFloat(inp.value) || 0;
                     setEl(elDef.key, props);
                     renderEditorCanvas();
+                    schedulePreview();
                 });
             });
-            const visEl = edProps.querySelector('#acf8-ep-vis');
-            if (visEl) visEl.addEventListener('change', () => {
-                props.visible = visEl.checked;
+            edProps.querySelector('#acf8-ep-vis').addEventListener('change', e => {
+                props.visible = e.target.checked;
                 setEl(elDef.key, props);
                 renderEditorCanvas();
+                schedulePreview();
             });
         }
 
@@ -918,27 +938,31 @@
             schedulePreview();
         };
 
+        function saveSettingsOnly() {
+            ss(SK.PRINT_METHOD, curMethod);
+            const wEl = overlay.querySelector('#acf8-lbl-w');
+            const hEl = overlay.querySelector('#acf8-lbl-h');
+            if (wEl && hEl) {
+                ss(SK.LABEL_W_MM, wEl.value);
+                ss(SK.LABEL_H_MM, hEl.value);
+            }
+            const qrEl = overlay.querySelector('#acf8-qr-toggle');
+            if (qrEl) ss(SK.QR_CODE, qrEl.checked ? 'on' : 'off');
+            const pplEl = overlay.querySelector('#acf8-pax-per-label');
+            if (pplEl) ss(SK.PAX_PER_LABEL, pplEl.value);
+            const key = overlay.querySelector('#acf8-ac-type-sel')?.value || acCfg.key;
+            const cfgs = getAcConfigs();
+            if (cfgs[key]) {
+                cfgs[key].items = [...acItems];
+                saveAcConfigs(cfgs);
+            }
+            toast('Settings saved âœ”', 'success');
+            schedulePreview();
+        }
+
         actionBtn.onclick = () => {
             if (curTab === 'settings') {
-                ss(SK.PRINT_METHOD, curMethod);
-                const wEl = overlay.querySelector('#acf8-lbl-w');
-                const hEl = overlay.querySelector('#acf8-lbl-h');
-                if (wEl && hEl) {
-                    ss(SK.LABEL_W_MM, wEl.value);
-                    ss(SK.LABEL_H_MM, hEl.value);
-                }
-                const qrEl = overlay.querySelector('#acf8-qr-toggle');
-                if (qrEl) ss(SK.QR_CODE, qrEl.checked ? 'on' : 'off');
-                const pplEl = overlay.querySelector('#acf8-pax-per-label');
-                if (pplEl) ss(SK.PAX_PER_LABEL, pplEl.value);
-                const key = overlay.querySelector('#acf8-ac-type-sel')?.value || acCfg.key;
-                const cfgs = getAcConfigs();
-                if (cfgs[key]) {
-                    cfgs[key].items = [...acItems];
-                    saveAcConfigs(cfgs);
-                }
-                toast('Settings saved âœ”', 'success');
-                schedulePreview();
+                saveSettingsOnly();
                 return;
             }
 
