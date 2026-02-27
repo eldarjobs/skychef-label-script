@@ -68,9 +68,74 @@
         const { gs, SK } = AC;
         const userW = parseFloat(gs(SK.LABEL_W_MM, '57')) || 57;
         const userH = parseFloat(gs(SK.LABEL_H_MM, '83')) || 83;
+
+        // Is it an absolute layout (Visual Editor based)?
+        if (o.size === 'preview' || o.size === 'sticker') {
+            const { LW, LH } = AC.getLabelDims();
+            const isPreview = o.size === 'preview';
+
+            function getEl(key, def) {
+                try { const v = gs(key, ''); return v ? { ...def, ...JSON.parse(v) } : { ...def }; }
+                catch (_) { return { ...def }; }
+            }
+
+            const logoConf = getEl(SK.EL_LOGO, { x: 4, y: 4, w: 200, h: 64, fs: 0, visible: true });
+            const sep1Conf = getEl(SK.EL_SEP1, { x: 4, y: 76, w: 220, h: 3, fs: 0, visible: true });
+            const infoConf = getEl(SK.EL_INFO, { x: 8, y: 80, w: 210, h: 80, fs: 16, visible: true });
+            const sep2Conf = getEl(SK.EL_SEP2, { x: 4, y: 165, w: 220, h: 3, fs: 0, visible: true });
+            const itemConf = getEl(SK.EL_ITEM, { x: 8, y: 170, w: 210, h: 60, fs: 28, visible: true });
+
+            const pct = (val, max) => ((val / max) * 100).toFixed(2) + '%';
+            const wVal = isPreview ? '168px' : `${userW}mm`;
+            const hVal = isPreview ? '246px' : `${userH}mm`;
+            const mm2val = (mm) => isPreview ? `${mm * (168 / (parseFloat(userW) || 57))}px` : `${mm}mm`;
+            const fs2val = (dots) => mm2val(dots / 8);
+
+            const bg = o.isRed ? '#cc1f1f' : '#fff';
+            const clr = o.isRed ? '#fff' : '#000';
+            const bor = o.isRed ? '#991b1b' : '#000';
+
+            let html = `<div style="position:relative;width:${wVal};height:${hVal};background:${bg};color:${clr};border:1.5px solid ${bor};border-radius:4px;overflow:hidden;font-family:'Courier New',monospace;box-shadow:0 2px 6px rgba(0,0,0,.12);flex-shrink:0;page-break-inside:avoid;box-sizing:border-box;">`;
+
+            if (logoConf.visible) {
+                const logoUrl = SK.DEFAULT_LOGO;
+                const logoHtml = logoUrl
+                    ? `<img src="${logoUrl}" style="width:100%;height:100%;object-fit:contain;display:block;" onerror="this.style.display='none'">`
+                    : `<div style="font-size:${fs2val(24)};line-height:1;font-weight:900;text-align:center;">AZERBAIJAN<br><span style="font-size:${fs2val(14)};letter-spacing:1px;">&#8210; AIRLINES &#8210;</span></div>`;
+                html += `<div style="position:absolute;left:${pct(logoConf.x, LW)};top:${pct(logoConf.y, LH)};width:${pct(logoConf.w, LW)};height:${pct(logoConf.h, LH)};border:1.5px solid ${bor};display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:2px;overflow:hidden">${logoHtml}</div>`;
+            }
+
+            if (sep1Conf.visible) {
+                html += `<div style="position:absolute;left:${pct(sep1Conf.x, LW)};top:${pct(sep1Conf.y, LH)};width:${pct(sep1Conf.w, LW)};height:${pct(sep1Conf.h, LH)};background:${bor};"></div>`;
+            }
+
+            if (infoConf.visible) {
+                html += `<div style="position:absolute;left:${pct(infoConf.x, LW)};top:${pct(infoConf.y, LH)};width:${pct(infoConf.w, LW)};height:${pct(infoConf.h, LH)};font-size:${fs2val(infoConf.fs)};font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;box-sizing:border-box;">
+                    <div>Date: ${o.date}</div>
+                    <div>Flt:  ${o.fno}</div>
+                    <div style="margin-top:2px;">${o.route}</div>
+                    <div style="font-weight:900;margin-top:2px;font-size:${fs2val(infoConf.fs + 2)};">${o.cls} ${o.paxDisplay} -</div>
+                </div>`;
+            }
+
+            if (sep2Conf.visible) {
+                html += `<div style="position:absolute;left:${pct(sep2Conf.x, LW)};top:${pct(sep2Conf.y, LH)};width:${pct(sep2Conf.w, LW)};height:${pct(sep2Conf.h, LH)};background:${bor};"></div>`;
+            }
+
+            if (itemConf.visible) {
+                const nl = (o.itemName || '').length;
+                let fsDots = itemConf.fs;
+                if (nl > 24) fsDots *= 0.7; else if (nl > 15) fsDots *= 0.85;
+                html += `<div style="position:absolute;left:${pct(itemConf.x, LW)};top:${pct(itemConf.y, LH)};width:${pct(itemConf.w, LW)};height:${pct(itemConf.h, LH)};display:flex;align-items:center;justify-content:center;text-align:center;font-size:${fs2val(fsDots)};font-weight:900;font-style:italic;line-height:1.1;overflow:hidden;">${o.itemName}</div>`;
+            }
+
+            html += `</div>`;
+            return html;
+        }
+
+        // Fallback for Thermal and A4 lists where we still want flow layouts
         const scale = Math.min(userW / 57, userH / 83);
         const s = base => Math.round(base * scale * 10) / 10;
-
         const dLogoH = parseFloat(gs(SK.DESIGN_LOGO_H, '0')) || s(60);
         const dInfoFs = parseFloat(gs(SK.DESIGN_INFO_FS, '0')) || s(16);
         const dInfoPad = parseFloat(gs(SK.DESIGN_INFO_PAD, '0')) || s(10);
@@ -79,12 +144,10 @@
         const dBorder = parseFloat(gs(SK.DESIGN_BORDER, '0')) || Math.max(1, s(2.5));
 
         const sizes = {
-            preview: { w: '168px', h: '246px', bor: '1.5px', logoH: '36px', logoM: '3px 3px 1px', infoPad: '3px 6px', infoFs: '9px', infoLh: '1.6', lblFs: '8px', itemPad: '4px 3px', itemFs: [9, 11, 14], divBor: '1px' },
-            sticker: { w: `${userW}mm`, h: `${userH}mm`, bor: `${dBorder}px`, logoH: `${dLogoH}px`, logoM: `${s(6)}px`, infoPad: `${dInfoPad}px ${Math.round(dInfoPad * 1.2)}px`, infoFs: `${dInfoFs}px`, infoLh: '2', lblFs: `${dLblFs}px`, itemPad: `${s(12)}px ${s(8)}px`, itemFs: [Math.round(dItemFs * 0.46), Math.round(dItemFs * 0.61), Math.round(dItemFs)], divBor: `${dBorder}px` },
             thermal: { w: '80mm', h: 'auto', minH: '60mm', bor: '1.5px', logoH: '40px', logoM: '4px', infoPad: '6px 8px', infoFs: '13px', infoLh: '1.7', lblFs: '10px', itemPad: '8px 5px', itemFs: [11, 14, 20], divBor: '2px' },
             a4: { w: '100%', h: '100%', bor: '1.5px', logoH: '18%', logoM: '0', infoPad: '5px 8px', infoFs: '12px', infoLh: '1.65', lblFs: '10px', itemPad: '5px 4px', itemFs: [11, 14, 17], divBor: '1.5px' },
         };
-        const sz = sizes[o.size] || sizes.sticker;
+        const sz = sizes[o.size] || sizes.thermal;
         const bg = o.isRed ? '#cc1f1f' : '#fff';
         const clr = o.isRed ? '#fff' : '#000';
         const bor = o.isRed ? '#991b1b' : '#000';
@@ -129,7 +192,7 @@
 
     /* ── BUILD ZPL ── */
     AC.buildItemLabelZPL = function (flight, item, classCode, paxCount, totalPax) {
-        const { getPaxPerLabel, fmtPax, getLabelDims, gs, SK, _dateFmt } = AC;
+        const { getPaxPerLabel, fmtPax, getLabelDims, gs, SK, _dateFmt, _logoGRF } = AC;
         const perLabel = getPaxPerLabel();
         const paxDisplay = fmtPax(paxCount, totalPax || paxCount, perLabel);
         const { LW, LH } = getLabelDims();
@@ -138,32 +201,61 @@
         const FR = isRed ? '^FR' : '';
         const date = _dateFmt(flight.date);
         const fno = flight.flightNo || '-';
-        const nameLen = (item.name || '').length;
-        const nameFz = nameLen > 18 ? 34 : nameLen > 12 ? 42 : 50;
+
+        function getEl(key, def) {
+            try { const v = gs(key, ''); return v ? { ...def, ...JSON.parse(v) } : { ...def }; }
+            catch (_) { return { ...def }; }
+        }
+
+        const logoProps = getEl(SK.EL_LOGO, { x: 4, y: 4, w: 200, h: 64, fs: 0, visible: true });
+        const sep1Props = getEl(SK.EL_SEP1, { x: 4, y: 76, w: 220, h: 3, fs: 0, visible: true });
+        const infoProps = getEl(SK.EL_INFO, { x: 8, y: 80, w: 210, h: 80, fs: 16, visible: true });
+        const sep2Props = getEl(SK.EL_SEP2, { x: 4, y: 165, w: 220, h: 3, fs: 0, visible: true });
+        const itemProps = getEl(SK.EL_ITEM, { x: 8, y: 170, w: 210, h: 60, fs: 28, visible: true });
 
         let z = `^XA\n^CI28\n^PW${LW}\n^LL${LH}\n^LH0,0\n`;
         if (isRed) z += `^FO0,0^GB${LW},${LH},${LH}^FS\n`;
 
-        if (_logoGRF) {
-            const logoX = Math.round((LW - _logoGRF.width) / 2);
-            const logoY = Math.round((72 - _logoGRF.height) / 2) + 4;
-            z += `^FO4,4^GB${LW - 8},72,2^FS\n`;
-            z += `^FO${logoX},${logoY}${FR}^GFA,${_logoGRF.length},${_logoGRF.length},${_logoGRF.rowlen},${_logoGRF.z64}^FS\n`;
-        } else {
-            z += `^FO4,4^GB${LW - 8},72,2^FS\n`;
-            z += `^FO50,9^A0N,24,24${FR}^FDAZERBAIJAN^FS\n`;
-            z += `^FO110,36${FR}^A0N,18,18^FD- AIRLINES -^FS\n`;
+        if (logoProps.visible) {
+            if (_logoGRF) {
+                z += `^FO${logoProps.x},${logoProps.y}^GB${logoProps.w},${logoProps.h},2^FS\n`;
+                const imgX = logoProps.x + Math.round((logoProps.w - _logoGRF.width) / 2);
+                const imgY = logoProps.y + Math.round((logoProps.h - _logoGRF.height) / 2);
+                z += `^FO${imgX},${imgY}${FR}^GFA,${_logoGRF.length},${_logoGRF.length},${_logoGRF.rowlen},${_logoGRF.z64}^FS\n`;
+            } else {
+                z += `^FO${logoProps.x},${logoProps.y}^GB${logoProps.w},${logoProps.h},2^FS\n`;
+                const tX = logoProps.x + Math.round(logoProps.w * 0.1);
+                const tY = logoProps.y + Math.round(logoProps.h * 0.2);
+                z += `^FO${Math.max(0, tX)},${tY}^A0N,24,24${FR}^FDAZERBAIJAN^FS\n`;
+                z += `^FO${Math.max(0, tX + 10)},${tY + 26}${FR}^A0N,18,18^FD- AIRLINES -^FS\n`;
+            }
         }
 
-        z += `^FO4,79^GB${LW - 8},2,2^FS\n`;
-        z += `^FO8,88${FR}^A0N,17,17^FDDate: ${date}^FS\n`;
-        z += `^FO8,110${FR}^A0N,17,17^FDFlight No. : ${fno}^FS\n`;
-        z += `^FO8,132${FR}^A0N,17,17^FD${route}^FS\n`;
-        z += `^FO8,152${FR}^A0N,17,17^FD${classCode} ${paxDisplay} -^FS\n`;
+        if (sep1Props.visible) {
+            z += `^FO${sep1Props.x},${sep1Props.y}^GB${sep1Props.w},${sep1Props.h},${sep1Props.h}^FS\n`;
+        }
 
-        const sepY = LH - 83, nameY = LH - 68;
-        z += `^FO4,${sepY}^GB${LW - 8},2,2^FS\n`;
-        z += `^FO8,${nameY}^FI${FR}^A0N,${nameFz},${nameFz}^FD${item.name}^FS\n`;
+        if (infoProps.visible) {
+            const fs = infoProps.fs;
+            const lh = fs + 4;
+            let curY = infoProps.y;
+            z += `^FO${infoProps.x},${curY}${FR}^A0N,${fs},${fs}^FDDate: ${date}^FS\n`; curY += lh;
+            z += `^FO${infoProps.x},${curY}${FR}^A0N,${fs},${fs}^FDFlight No. : ${fno}^FS\n`; curY += lh;
+            z += `^FO${infoProps.x},${curY}${FR}^A0N,${fs},${fs}^FD${route}^FS\n`; curY += lh;
+            z += `^FO${infoProps.x},${curY}${FR}^A0N,${fs + 2},${fs + 2}^FD${classCode} ${paxDisplay} -^FS\n`;
+        }
+
+        if (sep2Props.visible) {
+            z += `^FO${sep2Props.x},${sep2Props.y}^GB${sep2Props.w},${sep2Props.h},${sep2Props.h}^FS\n`;
+        }
+
+        if (itemProps.visible) {
+            let fs = itemProps.fs;
+            const nl = (item.name || '').length;
+            if (nl > 24) fs = Math.max(10, fs * 0.7);
+            else if (nl > 15) fs = Math.max(12, fs * 0.85);
+            z += `^FO${itemProps.x},${itemProps.y}^FI${FR}^A0N,${Math.round(fs)},${Math.round(fs)}^FD${item.name}^FS\n`;
+        }
 
         if (gs(SK.QR_CODE, 'off') === 'on') {
             const qrData = `${fno}|${date}|${classCode}|${item.name}`;
