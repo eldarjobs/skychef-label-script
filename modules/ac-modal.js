@@ -83,7 +83,7 @@
               <div class="acf8-tabs">
                 <button class="acf8-tab active" data-tab="print">${ICO.printer} Labels</button>
                 <button class="acf8-tab" data-tab="settings">${ICO.cog} Settings</button>
-                <button class="acf8-tab" data-tab="editor">ðŸŽ¨ Editor</button>
+                <button class="acf8-tab" data-tab="editor">🎨 Editor</button>
               </div>
             </div>
             <button class="acf8-close">&times;</button>
@@ -163,7 +163,7 @@
                         <label>Print Method</label>
                         <div class="acf8-method-row">
                             <button class="acf8-method-btn${curMethod === 'network' ? ' active' : ''}" data-method="network">ðŸŒ Network</button>
-                            <button class="acf8-method-btn${curMethod === 'browser' ? ' active' : ''}" data-method="browser">ðŸ–¨ Browser</button>
+                            <button class="acf8-method-btn${curMethod === 'browser' ? ' active' : ''}" data-method="browser">🖨 Browser</button>
                         </div>
                     </div>
 
@@ -201,7 +201,7 @@
 
                     <div class="acf8-fg full" style="flex-direction:row;align-items:center;justify-content:space-between;border-top:1px dashed #e5e7eb;padding-top:10px;margin-top:2px;">
                         <label style="text-transform:none;font-size:12px;color:#374151;font-weight:600;cursor:pointer;" for="acf8-qr-toggle">
-                            ðŸ“· ZPL Label QR Code (ramp scan)
+                            📷 ZPL Label QR Code (ramp scan)
                         </label>
                         <label class="acf8-toggle">
                             <input type="checkbox" id="acf8-qr-toggle" ${gs(SK.QR_CODE, 'off') === 'on' ? 'checked' : ''}>
@@ -313,7 +313,7 @@
             <span class="acf8-ftr-status" id="acf8-ftr-status"></span>
             <div class="acf8-ftr-right">
               <button class="acf8-btn acf8-btn-cancel" id="acf8-btn-cancel">Cancel</button>
-              <button class="acf8-btn" id="acf8-btn-zpl" style="background:#7c3aed;color:#fff;" title="Show ZPL code for online testing">ðŸ“‹ ZPL</button>
+              <button class="acf8-btn" id="acf8-btn-zpl" style="background:#7c3aed;color:#fff;" title="Show ZPL code for online testing">📋 ZPL</button>
               <button class="acf8-btn acf8-btn-print" id="acf8-btn-action">Print</button>
             </div>
           </div>
@@ -586,7 +586,7 @@
                 }
             }
 
-            if (!zplListConsole.length) { toast('ZPL label yoxdur', 'error'); return; }
+            if (!zplListConsole.length) { toast('No ZPL labels', 'error'); return; }
 
             const allZpl = zplListConsole.join('\n');
             console.log('[ZPL Output]', allZpl);
@@ -598,11 +598,11 @@
             <div style="background:#1e1e2e;border-radius:12px;width:640px;max-width:96vw;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);font-family:'Courier New',monospace;">
               <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #333;">
                 <div style="display:flex;align-items:center;gap:8px;">
-                  <span style="font-size:15px;font-weight:700;color:#a78bfa;">ðŸ“‹ ZPL Console</span>
+                  <span style="font-size:15px;font-weight:700;color:#a78bfa;">📋 ZPL Console</span>
                   <span style="font-size:11px;color:#6b7280;">${zplListConsole.length} label</span>
                 </div>
                 <div style="display:flex;gap:6px;">
-                  <button id="acf8-zpl-copy" style="padding:5px 12px;background:#7c3aed;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;">ðŸ“‹ Copy</button>
+                  <button id="acf8-zpl-copy" style="padding:5px 12px;background:#7c3aed;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;">📋 Copy</button>
                   <button id="acf8-zpl-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#9ca3af;line-height:1;">Ã—</button>
                 </div>
               </div>
@@ -932,7 +932,7 @@
 
             const printType = overlay.querySelector('#acf8-sel-printtype').value;
             if (!printType) {
-                toast('Print Type seÃ§ilmÉ™lidir!', 'error');
+                toast('Please select Print Type!', 'error');
                 return;
             }
             if (!paxData.length) {

@@ -1,4 +1,4 @@
-﻿// ac-dom.js — DOM injection: row print buttons, batch print, header columns
+// ac-dom.js â€” DOM injection: row print buttons, batch print, header columns
 // Part of AeroChef Paxload Label Script
 
 (function () {
@@ -57,7 +57,7 @@
             const thPrint = document.createElement('th');
             thPrint.scope = 'col';
             thPrint.style.cssText = 'width:1%;text-align:center;padding:4px;';
-            thPrint.innerHTML = '<span style="color:#1a73e8;font-size:15px;" title="Print Labels">ðŸ·</span>';
+            thPrint.innerHTML = '<span style="color:#1a73e8;font-size:15px;" title="Print Labels">🖨</span>';
             headerRow.insertBefore(thPrint, last);
 
             const thCb = document.createElement('th');
@@ -87,7 +87,7 @@
             printTd.style.cssText = 'text-align:center;vertical-align:middle;padding:2px 4px;width:1%;';
 
             if (!editBtn) {
-                printTd.innerHTML = '<span style="color:#d1d5db;">â€”</span>';
+                printTd.innerHTML = '<span style="color:#d1d5db;">Ã¢â‚¬â€</span>';
                 row.insertBefore(printTd, lastTd);
                 const cbTdBlank = document.createElement('td');
                 cbTdBlank.style.cssText = 'text-align:center;vertical-align:middle;padding:2px 4px;width:1%;';
@@ -183,7 +183,7 @@
                 <div style="display:flex;flex-direction:column;gap:4px;">
                   <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Aircraft Config</label>
                   <select id="acf8-bm-ac" style="padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;color:#374151;">
-                    ${Object.entries(acCfgs).map(([k, c]) => `<option value="${k}"${k === curAcKey ? ' selected' : ''}>${k} â€“ ${c.label}</option>`).join('')}
+                    ${Object.entries(acCfgs).map(([k, c]) => `<option value="${k}"${k === curAcKey ? ' selected' : ''}>${k} Ã¢â‚¬â€œ ${c.label}</option>`).join('')}
                   </select>
                 </div>
 
@@ -197,7 +197,7 @@
                     <div style="display:flex;flex-direction:column;gap:4px;flex:1;">
                       <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Print Method</label>
                       <div style="display:flex;gap:6px;">
-                        <button class="acf8-bm-meth${curMethod === 'network' ? ' acf8-bm-active' : ''}" data-m="network" style="flex:1;padding:5px;border-radius:6px;font-size:11px;font-weight:600;border:1.5px solid ${curMethod === 'network' ? '#2563eb' : '#e5e7eb'};background:${curMethod === 'network' ? '#eff6ff' : '#fff'};color:${curMethod === 'network' ? '#2563eb' : '#6b7280'};cursor:pointer;">ðŸŒ Network</button>
+                        <button class="acf8-bm-meth${curMethod === 'network' ? ' acf8-bm-active' : ''}" data-m="network" style="flex:1;padding:5px;border-radius:6px;font-size:11px;font-weight:600;border:1.5px solid ${curMethod === 'network' ? '#2563eb' : '#e5e7eb'};background:${curMethod === 'network' ? '#eff6ff' : '#fff'};color:${curMethod === 'network' ? '#2563eb' : '#6b7280'};cursor:pointer;">🌐 Network</button>
                         <button class="acf8-bm-meth${curMethod === 'browser' ? ' acf8-bm-active' : ''}" data-m="browser" style="flex:1;padding:5px;border-radius:6px;font-size:11px;font-weight:600;border:1.5px solid ${curMethod === 'browser' ? '#2563eb' : '#e5e7eb'};background:${curMethod === 'browser' ? '#eff6ff' : '#fff'};color:${curMethod === 'browser' ? '#2563eb' : '#6b7280'};cursor:pointer;">ðŸ–¨ Browser</button>
                       </div>
                     </div>
@@ -211,7 +211,7 @@
                 </div>
 
                 <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px dashed #e5e7eb;padding-top:10px;">
-                  <label style="font-size:11px;font-weight:600;color:#374151;cursor:pointer;" for="acf8-bm-qr">ðŸ“· ZPL Label-dÉ™ QR Kod</label>
+                  <label style="font-size:11px;font-weight:600;color:#374151;cursor:pointer;" for="acf8-bm-qr">ðŸ“· ZPL Label QR Code</label>
                   <label class="acf8-toggle">
                     <input type="checkbox" id="acf8-bm-qr" ${gs(SK.QR_CODE, 'off') === 'on' ? 'checked' : ''}>
                     <span class="acf8-toggle-slider"></span>
@@ -274,7 +274,7 @@
 
                 let fetched = 0;
                 for (const { editBtn, printBtn, flightData } of selected) {
-                    statusEl.textContent = `â ³ Loading PAX: ${fetched + 1} / ${selected.length}`;
+                    statusEl.textContent = `Ã¢ Â³ Loading PAX: ${fetched + 1} / ${selected.length}`;
                     try {
                         const origClass = printBtn.className;
                         printBtn.classList.add('loading');
@@ -332,7 +332,7 @@
             </html>`);
 
                     pw.document.close();
-                    toast(`âœ“ Browser print opened for ${selected.length} flights`, 'success');
+                    toast(`Ã¢Å“â€œ Browser print opened for ${selected.length} flights`, 'success');
                     closeModal();
                     selectedRows.clear();
                     batchBtn.disabled = false;
@@ -371,7 +371,7 @@
                         if (sent2 + fail2 >= zplList.length) {
                             batchBtn.disabled = false;
                             updateBatchBtn();
-                            toast(`âœ“ ${sent2}/${zplList.length} labels sent to ZT411`, 'success');
+                            toast(`Ã¢Å“â€œ ${sent2}/${zplList.length} labels sent to ZT411`, 'success');
                             selectedRows.clear();
                             closeModal();
                             return;
