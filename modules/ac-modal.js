@@ -30,8 +30,6 @@
     const _dateFmt = AC._dateFmt.bind(AC);
     const getPrintClasses = AC.getPrintClasses.bind(AC);
     const sendZplToZebra = AC.sendZplToZebra.bind(AC);
-    const exportSettings = AC.exportSettings.bind(AC);
-    const importSettings = AC.importSettings.bind(AC);
     /* ============================================
        14. PRINT MODAL
     ============================================ */
@@ -522,9 +520,9 @@
             };
         }
 
-        overlay.querySelector('#acf8-export-btn')?.addEventListener('click', exportSettings);
+        overlay.querySelector('#acf8-export-btn')?.addEventListener('click', () => AC.exportSettings());
         overlay.querySelector('#acf8-import-file')?.addEventListener('change', e => {
-            if (e.target.files[0]) importSettings(e.target.files[0]);
+            if (e.target.files[0]) AC.importSettings(e.target.files[0]);
         });
 
         // â”€â”€ Design slider live-preview wiring â”€â”€
