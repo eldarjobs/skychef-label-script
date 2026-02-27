@@ -88,6 +88,14 @@
             const frame2Conf = getEl(SK.EL_FRAME2, { x: 2, y: 165, w: 224, h: 65, bw: 2, fs: 0, visible: false });
             const frame3Conf = getEl(SK.EL_FRAME3, { x: 2, y: 4, w: 224, h: 226, bw: 2, fs: 0, visible: false });
 
+            const cust1Conf = getEl('acf9_el_cust1', { x: 20, y: 20, w: 100, h: 30, fs: 16, visible: false });
+            const cust2Conf = getEl('acf9_el_cust2', { x: 20, y: 60, w: 100, h: 30, fs: 16, visible: false });
+            const cust3Conf = getEl('acf9_el_cust3', { x: 20, y: 100, w: 100, h: 30, fs: 16, visible: false });
+            const frame4Conf = getEl('acf9_el_frame4', { x: 10, y: 10, w: 50, h: 50, bw: 2, visible: false });
+            const frame5Conf = getEl('acf9_el_frame5', { x: 60, y: 10, w: 50, h: 50, bw: 2, visible: false });
+            const frame6Conf = getEl('acf9_el_frame6', { x: 110, y: 10, w: 50, h: 50, bw: 2, visible: false });
+            const bcConf = getEl('acf9_el_bc', { x: 10, y: 120, w: 180, h: 40, visible: false });
+
             const pct = (val, max) => ((val / max) * 100).toFixed(2) + '%';
             const wVal = isPreview ? '168px' : `${userW}mm`;
             const hVal = isPreview ? '246px' : `${userH}mm`;
