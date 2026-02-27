@@ -30,6 +30,8 @@
     const _dateFmt = AC._dateFmt.bind(AC);
     const getPrintClasses = AC.getPrintClasses.bind(AC);
     const sendZplToZebra = AC.sendZplToZebra.bind(AC);
+    const exportSettings = AC.exportSettings.bind(AC);
+    const importSettings = AC.importSettings.bind(AC);
     /* ============================================
        14. PRINT MODAL
     ============================================ */
