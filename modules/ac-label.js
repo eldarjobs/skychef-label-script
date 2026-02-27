@@ -1,0 +1,258 @@
+// ac-label.js — ZPL generation, label HTML builder, preview renderer, network print
+// Part of AeroChef Paxload Label Script
+
+(function () {
+    'use strict';
+    const AC = window.AeroChef = window.AeroChef || {};
+
+    const mm2dots = mm => Math.round(mm * 203 / 25.4);
+    AC.mm2dots = mm2dots;
+
+    AC.getLabelDims = function () {
+        const { gs, SK } = AC;
+        const w = parseFloat(gs(SK.LABEL_W_MM, '57')) || 57;
+        const h = parseFloat(gs(SK.LABEL_H_MM, '83')) || 83;
+        return { LW: mm2dots(w), LH: mm2dots(h) };
+    };
+
+    /* ── Logo → Z64 GRF Cache ── */
+    let _logoGRF = null;
+
+    AC.preloadLogoGRF = function () {
+        const { SK, getLabelDims } = AC;
+        const logoUrl = SK.DEFAULT_LOGO;
+        if (!logoUrl || typeof imageToZ64 === 'undefined') return;
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            try {
+                const { LW } = getLabelDims();
+                const maxW = Math.min(LW - 16, 400), maxH = 64;
+                let w = img.naturalWidth, h = img.naturalHeight;
+                const ratio = Math.min(maxW / w, maxH / h, 1);
+                w = Math.round(w * ratio); h = Math.round(h * ratio);
+                const cvs = document.createElement('canvas');
+                cvs.width = w; cvs.height = h;
+                cvs.getContext('2d').drawImage(img, 0, 0, w, h);
+                const res = imageToZ64(cvs, { black: 50, notrim: true });
+                if (res && res.z64) {
+                    _logoGRF = { z64: res.z64, length: res.length, rowlen: res.rowlen, width: w, height: h };
+                    console.log('[AeroChef] Logo GRF cached:', w + 'x' + h, 'bytes:', res.length);
+                }
+            } catch (ex) { console.warn('[AeroChef] Logo GRF failed:', ex); }
+        };
+        img.onerror = () => console.warn('[AeroChef] Logo image load error');
+        img.src = logoUrl;
+    };
+    setTimeout(() => AC.preloadLogoGRF(), 1000);
+
+    /* ── PAX SPLIT HELPERS ── */
+    AC.splitPaxAcrossLabels = function (totalPax, qty, perLabel) {
+        if (!perLabel || perLabel <= 0 || qty <= 0 || !totalPax) return Array(qty).fill(totalPax);
+        const result = [];
+        let remaining = typeof totalPax === 'number' ? totalPax : parseInt(totalPax) || 0;
+        for (let i = 0; i < qty; i++) {
+            if (i === qty - 1) { result.push(Math.max(0, remaining)); }
+            else { const chunk = Math.min(perLabel, remaining); result.push(chunk); remaining -= chunk; }
+        }
+        return result;
+    };
+
+    AC.getPaxPerLabel = () => parseInt(AC.gs(AC.SK.PAX_PER_LABEL, '0')) || 0;
+
+    AC.fmtPax = (splitVal, totalVal, perLabel) =>
+        (perLabel > 0 && totalVal > 0 && splitVal !== totalVal) ? `${splitVal}/${totalVal}` : `${splitVal}`;
+
+    /* ── BUILD CARD HTML ── */
+    AC.buildCardHTML = function (o) {
+        const { gs, SK } = AC;
+        const userW = parseFloat(gs(SK.LABEL_W_MM, '57')) || 57;
+        const userH = parseFloat(gs(SK.LABEL_H_MM, '83')) || 83;
+        const scale = Math.min(userW / 57, userH / 83);
+        const s = base => Math.round(base * scale * 10) / 10;
+
+        const dLogoH = parseFloat(gs(SK.DESIGN_LOGO_H, '0')) || s(60);
+        const dInfoFs = parseFloat(gs(SK.DESIGN_INFO_FS, '0')) || s(16);
+        const dInfoPad = parseFloat(gs(SK.DESIGN_INFO_PAD, '0')) || s(10);
+        const dLblFs = parseFloat(gs(SK.DESIGN_LBL_FS, '0')) || s(12);
+        const dItemFs = parseFloat(gs(SK.DESIGN_ITEM_FS, '0')) || s(28);
+        const dBorder = parseFloat(gs(SK.DESIGN_BORDER, '0')) || Math.max(1, s(2.5));
+
+        const sizes = {
+            preview: { w: '168px', h: '246px', bor: '1.5px', logoH: '36px', logoM: '3px 3px 1px', infoPad: '3px 6px', infoFs: '9px', infoLh: '1.6', lblFs: '8px', itemPad: '4px 3px', itemFs: [9, 11, 14], divBor: '1px' },
+            sticker: { w: `${userW}mm`, h: `${userH}mm`, bor: `${dBorder}px`, logoH: `${dLogoH}px`, logoM: `${s(6)}px`, infoPad: `${dInfoPad}px ${Math.round(dInfoPad * 1.2)}px`, infoFs: `${dInfoFs}px`, infoLh: '2', lblFs: `${dLblFs}px`, itemPad: `${s(12)}px ${s(8)}px`, itemFs: [Math.round(dItemFs * 0.46), Math.round(dItemFs * 0.61), Math.round(dItemFs)], divBor: `${dBorder}px` },
+            thermal: { w: '80mm', h: 'auto', minH: '60mm', bor: '1.5px', logoH: '40px', logoM: '4px', infoPad: '6px 8px', infoFs: '13px', infoLh: '1.7', lblFs: '10px', itemPad: '8px 5px', itemFs: [11, 14, 20], divBor: '2px' },
+            a4: { w: '100%', h: '100%', bor: '1.5px', logoH: '18%', logoM: '0', infoPad: '5px 8px', infoFs: '12px', infoLh: '1.65', lblFs: '10px', itemPad: '5px 4px', itemFs: [11, 14, 17], divBor: '1.5px' },
+        };
+        const sz = sizes[o.size] || sizes.sticker;
+        const bg = o.isRed ? '#cc1f1f' : '#fff';
+        const clr = o.isRed ? '#fff' : '#000';
+        const bor = o.isRed ? '#991b1b' : '#000';
+        const div = o.isRed ? 'rgba(255,255,255,.35)' : '#000';
+        const nl = (o.itemName || '').length;
+        const nfs = nl > 18 ? sz.itemFs[0] + 'px' : nl > 12 ? sz.itemFs[1] + 'px' : sz.itemFs[2] + 'px';
+        const logoUrl = SK.DEFAULT_LOGO;
+        const logoHtml = logoUrl
+            ? `<img src="${logoUrl}" style="width:100%;height:100%;object-fit:contain;display:block;" onerror="this.style.display='none'">`
+            : `<div style="font-size:10px;font-weight:900;">AZERBAIJAN<br><span style="font-size:8px;letter-spacing:2px;">&#8210; AIRLINES &#8210;</span></div>`;
+
+        return `<div style="width:${sz.w};${sz.h !== 'auto' ? 'height:' + sz.h + ';' : ''}${sz.minH ? 'min-height:' + sz.minH + ';' : ''}border:${sz.bor} solid ${bor};border-radius:4px;overflow:hidden;font-family:'Courier New',monospace;background:${bg};color:${clr};display:flex;flex-direction:column;box-shadow:0 2px 6px rgba(0,0,0,.12);flex-shrink:0;page-break-inside:avoid;">
+          <div style="border-bottom:${sz.divBor} solid ${bor};margin:${sz.logoM};flex-shrink:0;overflow:hidden;height:${sz.logoH};display:flex;align-items:center;justify-content:center;padding:2px 4px;">${logoHtml}</div>
+          <div style="padding:${sz.infoPad};font-size:${sz.infoFs};line-height:${sz.infoLh};flex-shrink:0;border-bottom:${sz.divBor} solid ${div};font-weight:700;">
+            <div><b style="font-size:${sz.lblFs};">Date:</b> ${o.date}</div>
+            <div><b style="font-size:${sz.lblFs};">Flt:</b>  ${o.fno}</div>
+            <div>${o.route}</div>
+            <div style="font-weight:900;">${o.cls} ${o.paxDisplay}</div>
+          </div>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:${sz.itemPad};text-align:center;border-top:${sz.divBor} solid ${div};">
+            <span style="font-size:${nfs};font-weight:900;font-style:italic;line-height:1.15;">${o.itemName}</span>
+          </div>
+        </div>`;
+    };
+
+    AC.getPrintClasses = function (paxData) {
+        const { gs, SK } = AC;
+        const allowed = gs(SK.PRINT_CLASSES, 'BC,EC').split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+        if (paxData && paxData.length > 0) {
+            const filtered = paxData.filter(p => allowed.includes(p.class.toUpperCase()) && (p.value || 0) > 0);
+            const result = filtered.length ? filtered : paxData.filter(p => (p.value || 0) > 0);
+            if (result.length > 0) return result.map(p => p.class);
+        }
+        return ['BC', 'EC'];
+    };
+
+    AC._dateFmt = function (raw) {
+        if (!raw) return '________';
+        const p = raw.split(/[-\/\s]+/);
+        return p.length === 3 ? `${p[0]} / ${p[1]} / ${p[2]}` : raw;
+    };
+
+    /* ── BUILD ZPL ── */
+    AC.buildItemLabelZPL = function (flight, item, classCode, paxCount, totalPax) {
+        const { getPaxPerLabel, fmtPax, getLabelDims, gs, SK, _dateFmt } = AC;
+        const perLabel = getPaxPerLabel();
+        const paxDisplay = fmtPax(paxCount, totalPax || paxCount, perLabel);
+        const { LW, LH } = getLabelDims();
+        const route = flight.route || '';
+        const isRed = (item.bgColor || 'white') === 'red';
+        const FR = isRed ? '^FR' : '';
+        const date = _dateFmt(flight.date);
+        const fno = flight.flightNo || '-';
+        const nameLen = (item.name || '').length;
+        const nameFz = nameLen > 18 ? 34 : nameLen > 12 ? 42 : 50;
+
+        let z = `^XA\n^CI28\n^PW${LW}\n^LL${LH}\n^LH0,0\n`;
+        if (isRed) z += `^FO0,0^GB${LW},${LH},${LH}^FS\n`;
+
+        if (_logoGRF) {
+            const logoX = Math.round((LW - _logoGRF.width) / 2);
+            const logoY = Math.round((72 - _logoGRF.height) / 2) + 4;
+            z += `^FO4,4^GB${LW - 8},72,2^FS\n`;
+            z += `^FO${logoX},${logoY}${FR}^GFA,${_logoGRF.length},${_logoGRF.length},${_logoGRF.rowlen},${_logoGRF.z64}^FS\n`;
+        } else {
+            z += `^FO4,4^GB${LW - 8},72,2^FS\n`;
+            z += `^FO50,9^A0N,24,24${FR}^FDAZERBAIJAN^FS\n`;
+            z += `^FO110,36${FR}^A0N,18,18^FD- AIRLINES -^FS\n`;
+        }
+
+        z += `^FO4,79^GB${LW - 8},2,2^FS\n`;
+        z += `^FO8,88${FR}^A0N,17,17^FDDate: ${date}^FS\n`;
+        z += `^FO8,110${FR}^A0N,17,17^FDFlight No. : ${fno}^FS\n`;
+        z += `^FO8,132${FR}^A0N,17,17^FD${route}^FS\n`;
+        z += `^FO8,152${FR}^A0N,17,17^FD${classCode} ${paxDisplay} -^FS\n`;
+
+        const sepY = LH - 83, nameY = LH - 68;
+        z += `^FO4,${sepY}^GB${LW - 8},2,2^FS\n`;
+        z += `^FO8,${nameY}^FI${FR}^A0N,${nameFz},${nameFz}^FD${item.name}^FS\n`;
+
+        if (gs(SK.QR_CODE, 'off') === 'on') {
+            const qrData = `${fno}|${date}|${classCode}|${item.name}`;
+            z += `^FO${LW - 110},${LH - 110}^BQN,2,3^FDMM,${qrData}^FS\n`;
+        }
+        z += `^XZ\n`;
+        return z;
+    };
+
+    /* ── PREVIEW RENDERER ── */
+    AC.renderLocalPreview = function (previewBox, flight, paxData, galley, _unused, acItems) {
+        const { _dateFmt, getPrintClasses, getPaxPerLabel, splitPaxAcrossLabels, fmtPax, buildCardHTML } = AC;
+        const route = flight.route || '';
+        const date = _dateFmt(flight.date);
+        const fno = flight.flightNo || '-';
+        const printCls = getPrintClasses(paxData);
+        const allItems = (acItems && acItems.length) ? acItems : [{ name: '(no items)', bgColor: 'white', _qty: 1 }];
+        const labels = [];
+        const perLabel = getPaxPerLabel();
+        printCls.forEach(cls => {
+            const paxCount = paxData.find(p => p.class === cls)?.value ?? 0;
+            allItems.forEach(item => {
+                const manualQty = item._qty ?? 1;
+                if (manualQty <= 0) return;
+                const qty = (perLabel > 0 && paxCount > 0) ? Math.ceil(paxCount / perLabel) : manualQty;
+                const paxSplit = splitPaxAcrossLabels(paxCount, qty, perLabel);
+                for (let q = 0; q < qty; q++) labels.push({ cls, paxCount: paxSplit[q], totalPax: paxCount, item });
+            });
+        });
+        if (!labels.length) {
+            previewBox.innerHTML = '<span style="color:#9ca3af;font-size:11px;">Seçilmiş siniflər üçün label yoxdur</span>';
+            return;
+        }
+        let cur = 0;
+        function buildCard(lbl) {
+            return buildCardHTML({ date, fno, route, cls: lbl.cls, paxDisplay: fmtPax(lbl.paxCount, lbl.totalPax, perLabel), itemName: lbl.item.name, isRed: (lbl.item.bgColor || 'white') === 'red', size: 'preview' });
+        }
+        function render() {
+            previewBox.innerHTML = '';
+            previewBox.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;gap:8px;background:#f1f5f9;border-radius:6px;';
+            const cardWrap = document.createElement('div');
+            cardWrap.innerHTML = buildCard(labels[cur]);
+            previewBox.appendChild(cardWrap);
+            const nav = document.createElement('div');
+            nav.style.cssText = 'display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;color:#1e3a8a;';
+            nav.innerHTML = `<button id="acf8-prev-lbl" style="width:28px;height:28px;border:1.5px solid #1e3a8a;border-radius:6px;background:#fff;cursor:pointer;font-size:16px;color:#1e3a8a;line-height:1;">&#8249;</button><span style="min-width:68px;text-align:center;">${cur + 1} &nbsp;/&nbsp; ${labels.length}</span><button id="acf8-next-lbl" style="width:28px;height:28px;border:1.5px solid #1e3a8a;border-radius:6px;background:#fff;cursor:pointer;font-size:16px;color:#1e3a8a;line-height:1;">&#8250;</button>`;
+            previewBox.appendChild(nav);
+            const info = document.createElement('div');
+            info.style.cssText = 'font-size:9px;color:#64748b;text-align:center;letter-spacing:.3px;';
+            info.textContent = `${labels[cur].cls} • ${labels[cur].item.name}`;
+            previewBox.appendChild(info);
+            previewBox.querySelector('#acf8-prev-lbl').onclick = () => { cur = (cur - 1 + labels.length) % labels.length; render(); };
+            previewBox.querySelector('#acf8-next-lbl').onclick = () => { cur = (cur + 1) % labels.length; render(); };
+        }
+        render();
+    };
+
+    /* ── NETWORK PRINT (ZEBRA) ── */
+    AC.sendZplToZebra = function (ip, zpl, onOk, onErr) {
+        GM_xmlhttpRequest({
+            method: 'POST', url: `http://${ip}:9100`, data: zpl,
+            headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, timeout: 8000,
+            onload: r => r.status < 400 ? onOk() : onErr(`HTTP ${r.status}`),
+            onerror: () => onErr('Network error – printer offline?'),
+            ontimeout: () => onErr('Timeout'),
+        });
+    };
+
+    /* ── BATCH BROWSER CARDS ── */
+    AC.buildBatchBrowserCards = function (flight, paxData, acItems, acItemQtys) {
+        const { _dateFmt, getPrintClasses, getPaxPerLabel, splitPaxAcrossLabels, fmtPax, buildCardHTML } = AC;
+        const route = flight.route || '', date = _dateFmt(flight.date), fno = flight.flightNo || '-';
+        const classes = getPrintClasses(paxData);
+        let html = '';
+        const perLabel = getPaxPerLabel();
+        for (const cls of classes) {
+            const paxCount = paxData.find(p => p.class === cls)?.value ?? 0;
+            for (let i = 0; i < acItems.length; i++) {
+                const item = acItems[i];
+                const manualQty = (acItemQtys && acItemQtys[i] != null) ? acItemQtys[i] : 1;
+                const qty = (perLabel > 0 && paxCount > 0) ? Math.ceil(paxCount / perLabel) : manualQty;
+                if (qty < 1) continue;
+                const paxSplit = splitPaxAcrossLabels(paxCount, qty, perLabel);
+                for (let c = 0; c < qty; c++) {
+                    html += buildCardHTML({ date, fno, route, cls, paxDisplay: fmtPax(paxSplit[c], paxCount, perLabel), itemName: item.name, isRed: (item.bgColor || 'white') === 'red', size: 'sticker' });
+                }
+            }
+        }
+        return html;
+    };
+
+})();
