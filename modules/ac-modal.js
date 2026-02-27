@@ -157,7 +157,7 @@
 
           <div class="acf8-panel" id="acf8-panel-settings" style="padding:10px 16px;">
             <div class="acf8-set-section">
-                <div class="acf8-set-header">BAZÄ° AYARLAR & PRÄ°NTER <span>â–¼</span></div>
+                <div class="acf8-set-header">BASIC SETTINGS & PRINTER <span>â–¼</span></div>
                 <div class="acf8-set-content" style="display:grid; grid-template-columns: 1fr 1fr;">
                     <div class="acf8-fg">
                         <label>Print Method</label>
@@ -186,22 +186,22 @@
 
                     <div class="acf8-fg full" style="margin-top:4px;">
                         <label style="display:flex;align-items:center;justify-content:space-between;">
-                            <span>Print Classes <span style="text-transform:none;font-weight:400;color:#9ca3af;">(Ã‡ap olunacaq siniflÉ™r)</span></span>
+                            <span>Print Classes <span style="text-transform:none;font-weight:400;color:#9ca3af;">(classes to print)</span></span>
                         </label>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;padding:8px;border:1px solid #e2e8f0;border-radius:6px;background:#f8fafc;">
-                            ${classCbsHTML || '<span style="font-size:11px;color:#9ca3af;">Data yoxdur</span>'}
+                            ${classCbsHTML || '<span style="font-size:11px;color:#9ca3af;">No data</span>'}
                         </div>
                     </div>
 
                     <div class="acf8-fg" style="border-top:1px dashed #e5e7eb;padding-top:8px;margin-top:2px;">
-                        <label>Pax Per Label <span style="text-transform:none;font-weight:400;color:#9ca3af;">(bÃ¶lmÉ™ Ã¼Ã§Ã¼n, 0 = bÃ¶lmÉ™ yoxdur)</span></label>
+                        <label>Pax Per Label <span style="text-transform:none;font-weight:400;color:#9ca3af;">(pax per section, 0 = no sections)</span></label>
                         <input type="number" id="acf8-pax-per-label" value="${gs(SK.PAX_PER_LABEL, '0')}" min="0" max="500" placeholder="0" class="acf8-input" style="width:100px;">
-                        <div style="font-size:9px;color:#9ca3af;margin-top:2px;">MÉ™s: 40 â†’ EC 120 = 3 etiket: 40/40/40</div>
+                        <div style="font-size:9px;color:#9ca3af;margin-top:2px;">E.g.: 40 â†’ EC 120 = 3 labels: 40/40/40</div>
                     </div>
 
                     <div class="acf8-fg full" style="flex-direction:row;align-items:center;justify-content:space-between;border-top:1px dashed #e5e7eb;padding-top:10px;margin-top:2px;">
                         <label style="text-transform:none;font-size:12px;color:#374151;font-weight:600;cursor:pointer;" for="acf8-qr-toggle">
-                            ðŸ“· ZPL Label-dÉ™ QR Kod (ramp scan)
+                            ðŸ“· ZPL Label QR Code (ramp scan)
                         </label>
                         <label class="acf8-toggle">
                             <input type="checkbox" id="acf8-qr-toggle" ${gs(SK.QR_CODE, 'off') === 'on' ? 'checked' : ''}>
@@ -212,7 +212,7 @@
             </div>
 
             <div class="acf8-set-section">
-                <div class="acf8-set-header">GALLEY SÄ°YAHISI <span>â–¼</span></div>
+                <div class="acf8-set-header">GALLEY LIST <span>â–¼</span></div>
                 <div class="acf8-set-content full" style="display:block;">
                     <div id="acf8-galley-list" class="acf8-galley-list"></div>
                     <div class="acf8-galley-add" style="display:flex;gap:5px;">
@@ -244,15 +244,15 @@
             </div>
 
             <div class="acf8-set-section">
-                <div class="acf8-set-header">LABEL DÄ°ZAYN <span style="font-weight:400;color:#9ca3af;font-size:9px;margin-left:4px;">(yazÄ± Ã¶lÃ§Ã¼sÃ¼, logo, haÅŸiyÉ™)</span> <span>â–¼</span></div>
+                <div class="acf8-set-header">LABEL DESIGN <span style="font-weight:400;color:#9ca3af;font-size:9px;margin-left:4px;">(font sizes, logo, border)</span> <span>â–¼</span></div>
                 <div class="acf8-set-content full" style="display:block;">
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div class="acf8-fg">
-                            <label>Logo HÃ¼ndÃ¼rlÃ¼yÃ¼ (px) <span id="acf8-d-logo-v" style="color:#2563eb;">${gs(SK.DESIGN_LOGO_H, '0') || 'Auto'}</span></label>
+                            <label>Logo Height (px) <span id="acf8-d-logo-v" style="color:#2563eb;">${gs(SK.DESIGN_LOGO_H, '0') || 'Auto'}</span></label>
                             <input type="range" id="acf8-d-logo" min="10" max="120" value="${gs(SK.DESIGN_LOGO_H, '0') || 60}" style="width:100%;accent-color:#2563eb;">
                         </div>
                         <div class="acf8-fg">
-                            <label>Info YazÄ± (px) <span id="acf8-d-info-v" style="color:#2563eb;">${gs(SK.DESIGN_INFO_FS, '0') || 'Auto'}</span></label>
+                            <label>Info Font (px) <span id="acf8-d-info-v" style="color:#2563eb;">${gs(SK.DESIGN_INFO_FS, '0') || 'Auto'}</span></label>
                             <input type="range" id="acf8-d-info" min="6" max="30" value="${gs(SK.DESIGN_INFO_FS, '0') || 16}" style="width:100%;accent-color:#2563eb;">
                         </div>
                         <div class="acf8-fg">
@@ -260,15 +260,15 @@
                             <input type="range" id="acf8-d-pad" min="1" max="25" value="${gs(SK.DESIGN_INFO_PAD, '0') || 10}" style="width:100%;accent-color:#2563eb;">
                         </div>
                         <div class="acf8-fg">
-                            <label>BaÅŸlÄ±q YazÄ± (px) <span id="acf8-d-lbl-v" style="color:#2563eb;">${gs(SK.DESIGN_LBL_FS, '0') || 'Auto'}</span></label>
+                            <label>Header Font (px) <span id="acf8-d-lbl-v" style="color:#2563eb;">${gs(SK.DESIGN_LBL_FS, '0') || 'Auto'}</span></label>
                             <input type="range" id="acf8-d-lbl" min="4" max="24" value="${gs(SK.DESIGN_LBL_FS, '0') || 12}" style="width:100%;accent-color:#2563eb;">
                         </div>
                         <div class="acf8-fg">
-                            <label>Item YazÄ± (px) <span id="acf8-d-item-v" style="color:#2563eb;">${gs(SK.DESIGN_ITEM_FS, '0') || 'Auto'}</span></label>
+                            <label>Item Font (px) <span id="acf8-d-item-v" style="color:#2563eb;">${gs(SK.DESIGN_ITEM_FS, '0') || 'Auto'}</span></label>
                             <input type="range" id="acf8-d-item" min="8" max="60" value="${gs(SK.DESIGN_ITEM_FS, '0') || 28}" style="width:100%;accent-color:#2563eb;">
                         </div>
                         <div class="acf8-fg">
-                            <label>HaÅŸiyÉ™ (px) <span id="acf8-d-bor-v" style="color:#2563eb;">${gs(SK.DESIGN_BORDER, '0') || 'Auto'}</span></label>
+                            <label>Border (px) <span id="acf8-d-bor-v" style="color:#2563eb;">${gs(SK.DESIGN_BORDER, '0') || 'Auto'}</span></label>
                             <input type="range" id="acf8-d-bor" min="0" max="6" step="0.5" value="${gs(SK.DESIGN_BORDER, '0') || 2.5}" style="width:100%;accent-color:#2563eb;">
                         </div>
                     </div>
@@ -296,7 +296,7 @@
               <div style="flex:0 0 180px;display:flex;flex-direction:column;gap:6px;">
                 <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Element Properties</div>
                 <div id="acf8-ed-props" style="flex:1;border:1px solid #e5e7eb;border-radius:6px;background:#f8fafc;padding:8px;font-size:11px;overflow-y:auto;">
-                  <div style="color:#9ca3af;text-align:center;padding:20px 0;">Element seÃ§in</div>
+                  <div style="color:#9ca3af;text-align:center;padding:20px 0;">Select an element</div>
                 </div>
                 <div style="display:flex;flex-direction:column;gap:4px;">
                   <button id="acf8-ed-reset" style="padding:5px;background:#ef4444;color:#fff;border:none;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;">â†º Reset All Positions</button>
@@ -443,7 +443,7 @@
                 const name = nameI.value.trim();
                 const unit = unitI.value.trim() || 'pcs';
                 if (!name) {
-                    toast('Item adÄ± daxil edin', 'error');
+                    toast('Please enter item name', 'error');
                     return;
                 }
                 acItems.push({ name, bgColor: 'white' });
@@ -453,7 +453,7 @@
                 renderAcItemsList();
                 renderItemQtys();
                 schedulePreview();
-                toast(`âž• ${name} É™lavÉ™ edildi`, 'success');
+                toast(`âž• ${name} added`, 'success');
             };
         }
 
@@ -496,7 +496,7 @@
                 const qtyI = overlay.querySelector('#acf8-custom-qty');
                 const name = (nameI.value || '').trim();
                 if (!name) {
-                    toast('Custom item adÄ± daxil edin', 'error');
+                    toast('Please enter custom item name', 'error');
                     return;
                 }
                 const qty = Math.max(1, parseInt(qtyI.value) || 1);
@@ -556,14 +556,14 @@
                 if (vSpan) vSpan.textContent = 'Auto';
             });
             schedulePreview();
-            toast('Dizayn ayarlarÄ± sÄ±fÄ±rlandÄ± (Auto)', 'success');
+            toast('Design settings reset to Auto', 'success');
         });
 
         // â”€â”€ ZPL Preview Console â”€â”€
         overlay.querySelector('#acf8-btn-zpl')?.addEventListener('click', () => {
             const printType = overlay.querySelector('#acf8-sel-printtype').value;
-            if (!printType) { toast('Print Type seÃ§ilmÉ™lidir!', 'error'); return; }
-            if (!paxData.length) { toast('Pax data yoxdur', 'error'); return; }
+            if (!printType) { toast('Please select Print Type!', 'error'); return; }
+            if (!paxData.length) { toast('No pax data available', 'error'); return; }
 
             const printCls_zpl = getPrintClasses(paxData);
             const zplListConsole = [];
@@ -609,7 +609,7 @@
               <pre id="acf8-zpl-code" style="flex:1;overflow:auto;padding:12px 16px;font-size:11px;color:#e0e0e0;white-space:pre-wrap;word-break:break-all;line-height:1.5;margin:0;">${allZpl.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
               <div style="padding:8px 16px;border-top:1px solid #333;display:flex;align-items:center;justify-content:space-between;">
                 <span style="font-size:10px;color:#6b7280;">Test: <a href="http://labelary.com/viewer.html" target="_blank" style="color:#7c3aed;text-decoration:underline;">labelary.com/viewer</a></span>
-                <span style="font-size:10px;color:#6b7280;">console.log-a da yazÄ±ldÄ±</span>
+                <span style="font-size:10px;color:#6b7280;">also written to console.log</span>
               </div>
             </div>`;
             document.body.appendChild(zplOverlay);
@@ -618,14 +618,14 @@
             zplOverlay.onclick = e => { if (e.target === zplOverlay) zplOverlay.remove(); };
             zplOverlay.querySelector('#acf8-zpl-copy').onclick = () => {
                 navigator.clipboard.writeText(allZpl).then(() => {
-                    toast('ZPL kopyalandÄ± âœ”', 'success');
+                    toast('ZPL copied âœ”', 'success');
                 }).catch(() => {
                     // Fallback
                     const ta = document.createElement('textarea');
                     ta.value = allZpl; ta.style.cssText = 'position:fixed;left:-9999px;';
                     document.body.appendChild(ta); ta.select(); document.execCommand('copy');
                     ta.remove();
-                    toast('ZPL kopyalandÄ± âœ”', 'success');
+                    toast('ZPL copied âœ”', 'success');
                 });
             };
         });
@@ -794,7 +794,7 @@
         function renderEditorProps() {
             if (!edProps) return;
             if (!edSelectedId) {
-                edProps.innerHTML = '<div style="color:#9ca3af;text-align:center;padding:20px 8px;font-size:11px;">Label canvas-da<br>element se\u00e7in</div>';
+                edProps.innerHTML = '<div style="color:#9ca3af;text-align:center;padding:20px 8px;font-size:11px;">Select an element<br>on the label canvas</div>';
                 return;
             }
             const elDef = EDITOR_ELEMENTS.find(e => e.id === edSelectedId);
@@ -837,7 +837,7 @@
             edSelectedId = null;
             renderEditorCanvas();
             renderEditorProps();
-            toast('Editor pozisiyalar\u0131 s\u0131f\u0131rland\u0131', 'success');
+            toast('Editor positions reset', 'success');
         });
 
         overlay.querySelector('#acf8-ed-export')?.addEventListener('click', () => {
@@ -848,7 +848,7 @@
             a.href = URL.createObjectURL(blob);
             a.download = `label_template_${new Date().toISOString().slice(0, 10)}.json`;
             a.click(); URL.revokeObjectURL(a.href);
-            toast('Template saxlan\u0131ld\u0131 \u2714', 'success');
+            toast('Template saved \u2714', 'success');
         });
 
         overlay.querySelector('#acf8-ed-import')?.addEventListener('change', e => {
@@ -863,8 +863,8 @@
                     });
                     renderEditorCanvas();
                     renderEditorProps();
-                    toast('Template y\u00fckl\u0259ndi \u2714', 'success');
-                } catch (_) { toast('Template format x\u0259tas\u0131', 'error'); }
+                    toast('Template loaded \u2714', 'success');
+                } catch (_) { toast('Template format error', 'error'); }
             };
             reader.readAsText(file);
             e.target.value = '';
@@ -936,7 +936,7 @@
                 return;
             }
             if (!paxData.length) {
-                toast('Pax data yoxdur', 'error');
+                toast('No pax data available', 'error');
                 return;
             }
 
@@ -1012,7 +1012,7 @@
                 <div class="grid">${a4Cards}</div></body></html>`);
                 pwA4.document.close();
                 close();
-                toast('A4 Label print aÃ§Ä±ldÄ±', 'success');
+                toast('A4 Label print opened', 'success');
                 return;
             }
 
@@ -1061,7 +1061,7 @@
                 <div class="wrap">${thermalCards}</div></body></html>`);
                 pwTh.document.close();
                 close();
-                toast('Thermal 80mm print aÃ§Ä±ldÄ±', 'success');
+                toast('Thermal 80mm print opened', 'success');
                 return;
             }
 
@@ -1110,12 +1110,12 @@
                 <div class="wrap">${cards2}</div></body></html>`);
                 pw2.document.close();
                 close();
-                toast('Browser print aÃ§Ä±ldÄ±', 'success');
+                toast('Browser print opened', 'success');
                 return;
             }
 
             if (!IP_REGEX.test(ip)) {
-                toast('ÆvvÉ™lcÉ™ Settings-dÉ™ Printer IP daxil edin', 'error');
+                toast('Please enter Printer IP in Settings first', 'error');
                 return;
             }
 
@@ -1147,7 +1147,7 @@
             }
 
             if (!zplList.length) {
-                toast('GÃ¶ndÉ™rilÉ™cÉ™k label yoxdur', 'error');
+                toast('No labels to send', 'error');
                 return;
             }
 
@@ -1159,16 +1159,16 @@
                 if (sent + failed >= zplList.length) {
                     actionBtn.disabled = false;
                     if (failed === 0) {
-                        toast(`âœ“ ${sent}/${zplList.length} label ZT411-É™ gÃ¶ndÉ™rildi (${ip})`, 'success');
+                        toast(`âœ“ ${sent}/${zplList.length} labels sent to ZT411 (${ip})`, 'success');
                         close();
                     } else {
-                        ftrStatus.textContent = `${sent} ok, ${failed} xÉ™ta`;
-                        toast(`${failed} label gÃ¶ndÉ™rilmÉ™di`, 'error');
+                        ftrStatus.textContent = `${sent} ok, ${failed} failed`;
+                        toast(`${failed} label(s) failed`, 'error');
                     }
                     return;
                 }
                 const idx = sent + failed;
-                ftrStatus.textContent = `GÃ¶ndÉ™rilir: ${idx + 1} / ${zplList.length}â€¦`;
+                ftrStatus.textContent = `Sending: ${idx + 1} / ${zplList.length}...`;
                 sendZplToZebra(ip, zplList[idx],
                     () => { sent++; sendNext(); },
                     (err) => { failed++; console.warn('ZPL err:', err); sendNext(); }

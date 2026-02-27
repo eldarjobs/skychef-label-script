@@ -194,7 +194,7 @@
             });
         });
         if (!labels.length) {
-            previewBox.innerHTML = '<span style="color:#9ca3af;font-size:11px;">Seçilmiş siniflər üçün label yoxdur</span>';
+            previewBox.innerHTML = '<span style="color:#9ca3af;font-size:11px;">No labels for the selected classes</span>';
             return;
         }
         let cur = 0;

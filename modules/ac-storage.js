@@ -69,9 +69,9 @@
             try {
                 const data = JSON.parse(e.target.result);
                 Object.entries(data).forEach(([k, v]) => ss(k, v));
-                toast(`✓ ${Object.keys(data).length} ayar import edildi — səhifəni yeniləyin`, 'success', 5000);
+                toast(`✓ ${Object.keys(data).length} settings imported — please reload the page`, 'success', 5000);
             } catch {
-                toast('Import xətası: JSON formatı düzgün deyil', 'error');
+                toast('Import error: invalid JSON format', 'error');
             }
         };
         reader.readAsText(file);

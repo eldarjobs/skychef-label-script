@@ -171,12 +171,12 @@
               <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #e5e7eb;">
                 <div>
                   <div style="font-size:15px;font-weight:700;color:#111;">ðŸ–¨ Batch Print</div>
-                  <div style="font-size:11px;color:#6b7280;margin-top:2px;">${selected.length} uÃ§uÅŸ seÃ§ilib</div>
+                  <div style="font-size:11px;color:#6b7280;margin-top:2px;">${selected.length} flights selected</div>
                 </div>
                 <button id="acf8-bm-close" style="background:none;border:none;font-size:22px;cursor:pointer;color:#9ca3af;line-height:1;">&times;</button>
               </div>
               <div style="padding:12px 18px;border-bottom:1px solid #e5e7eb;">
-                <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">SeÃ§ilmiÅŸ uÃ§uÅŸlar</div>
+                <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Selected flights</div>
                 <div style="display:flex;flex-wrap:wrap;gap:5px;">${flightChips}</div>
               </div>
               <div style="padding:14px 18px;display:flex;flex-direction:column;gap:12px;">
@@ -204,7 +204,7 @@
                 </div>
 
                 <div style="display:flex;flex-direction:column;gap:4px;">
-                  <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Print Classes (Toplu Ã‡ap)</label>
+                  <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Print Classes</label>
                   <div style="display:flex;gap:8px;flex-wrap:wrap;padding:8px;border:1px solid #e2e8f0;border-radius:6px;background:#f8fafc;">
                     ${batchClassHTML}
                   </div>
@@ -220,8 +220,8 @@
                 <div id="acf8-bm-status" style="font-size:11px;color:#6b7280;min-height:16px;"></div>
               </div>
               <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid #e5e7eb;">
-                <button id="acf8-bm-cancel" style="padding:7px 16px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;font-size:12px;cursor:pointer;color:#6b7280;font-weight:600;">Ä°ptal</button>
-                <button id="acf8-bm-start" style="padding:7px 18px;border:none;border-radius:6px;background:#1a73e8;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Ã‡ap baÅŸlat (${selected.length} uÃ§uÅŸ)</button>
+                <button id="acf8-bm-cancel" style="padding:7px 16px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;font-size:12px;cursor:pointer;color:#6b7280;font-weight:600;">Cancel</button>
+                <button id="acf8-bm-start" style="padding:7px 18px;border:none;border-radius:6px;background:#1a73e8;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Start Print (${selected.length} flights)</button>
               </div>
             </div>`;
             document.body.appendChild(bModal);
@@ -255,7 +255,7 @@
             bModal.querySelector('#acf8-bm-start').onclick = async () => {
                 const ip = gs(SK.PRINTER_IP, '');
                 if (bmMethod === 'network' && !IP_REGEX.test(ip)) {
-                    toast('Settings-dÉ™ Printer IP tÉ™yin edin', 'error');
+                    toast('Please set Printer IP in Settings', 'error');
                     return;
                 }
 
@@ -274,7 +274,7 @@
 
                 let fetched = 0;
                 for (const { editBtn, printBtn, flightData } of selected) {
-                    statusEl.textContent = `â³ PAX yÃ¼klÉ™nir: ${fetched + 1} / ${selected.length}`;
+                    statusEl.textContent = `â ³ Loading PAX: ${fetched + 1} / ${selected.length}`;
                     try {
                         const origClass = printBtn.className;
                         printBtn.classList.add('loading');
@@ -288,7 +288,7 @@
                     fetched++;
                 }
 
-                statusEl.textContent = 'ðŸ–¨ GÃ¶ndÉ™rilirâ€¦';
+                statusEl.textContent = 'ðŸ–¨ Sending...';
 
                 if (bmMethod === 'browser') {
                     const pw = window.open('', '_blank', 'width=800,height=900');
@@ -304,7 +304,7 @@
                     }
 
                     if (!hasCards) {
-                        toast('HeÃ§ bir label yaradÄ±lmadÄ±! Pax mÉ™lumatlarÄ±nÄ± yoxlayÄ±n.', 'error');
+                        toast('No labels generated! Check Pax data.', 'error');
                         startBtn.disabled = false;
                         batchBtn.disabled = false;
                         updateBatchBtn();
@@ -332,7 +332,7 @@
             </html>`);
 
                     pw.document.close();
-                    toast(`âœ“ ${selected.length} uÃ§uÅŸ Ã¼Ã§Ã¼n browser print aÃ§Ä±ldÄ±`, 'success');
+                    toast(`âœ“ Browser print opened for ${selected.length} flights`, 'success');
                     closeModal();
                     selectedRows.clear();
                     batchBtn.disabled = false;
@@ -359,7 +359,7 @@
                     }
 
                     if (!zplList.length) {
-                        toast('GÃ¶ndÉ™rilÉ™cÉ™k label yoxdur', 'error');
+                        toast('No labels to send', 'error');
                         startBtn.disabled = false;
                         batchBtn.disabled = false;
                         updateBatchBtn();
@@ -371,12 +371,12 @@
                         if (sent2 + fail2 >= zplList.length) {
                             batchBtn.disabled = false;
                             updateBatchBtn();
-                            toast(`âœ“ ${sent2}/${zplList.length} label ZT411-É™ gÃ¶ndÉ™rildi`, 'success');
+                            toast(`âœ“ ${sent2}/${zplList.length} labels sent to ZT411`, 'success');
                             selectedRows.clear();
                             closeModal();
                             return;
                         }
-                        statusEl.textContent = `ðŸ–¨ ${sent2 + fail2 + 1} / ${zplList.length} gÃ¶ndÉ™rilirâ€¦`;
+                        statusEl.textContent = `ðŸ–¨ Sending ${sent2 + fail2 + 1} / ${zplList.length}...`;
                         sendZplToZebra(ip, zplList[sent2 + fail2],
                             () => { sent2++; batchSendNext(); },
                             () => { fail2++; batchSendNext(); });
