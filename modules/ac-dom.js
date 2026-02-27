@@ -14,6 +14,22 @@
     const getGalleys = AC.getGalleys.bind(AC);
     const buildBatchBrowserCards = AC.buildBatchBrowserCards.bind(AC);
     const buildItemLabelZPL = AC.buildItemLabelZPL.bind(AC);
+// ac-dom.js â€” DOM injection: row print buttons, batch print, header columns
+// Part of AeroChef Paxload Label Script
+
+(function () {
+    'use strict';
+    const AC = window.AeroChef = window.AeroChef || {};
+    const SK = AC.SK;
+    const gs = AC.gs.bind(AC);
+    const ss = AC.ss.bind(AC);
+    const toast = (...a) => AC.toast(...a);
+    const ICO = AC.ICO;
+    const CLASS_COLORS = AC.CLASS_COLORS;
+    const getAcConfigs = AC.getAcConfigs.bind(AC);
+    const getGalleys = AC.getGalleys.bind(AC);
+    const buildBatchBrowserCards = AC.buildBatchBrowserCards.bind(AC);
+    const buildItemLabelZPL = AC.buildItemLabelZPL.bind(AC);
     const splitPaxAcrossLabels = AC.splitPaxAcrossLabels.bind(AC);
     const getPaxPerLabel = AC.getPaxPerLabel.bind(AC);
     const getPrintClasses = AC.getPrintClasses.bind(AC);
@@ -21,7 +37,6 @@
     const fetchAndShowPax = AC.fetchAndShowPax.bind(AC);
     const fetchPaxForFlight = AC.fetchPaxForFlight.bind(AC);
     const IP_REGEX = AC.IP_REGEX;
-    }
 
     /* ============================================
        15. MAIN - BATCH PRINT FIXED
@@ -388,5 +403,4 @@
 
     }, 2000);
 
-})();
 })();
