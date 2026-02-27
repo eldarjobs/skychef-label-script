@@ -1,4 +1,4 @@
-﻿// ac-modal.js â€” Print modal (showPrintModal + visual editor + ZPL console)
+// ac-modal.js â€” Print modal (showPrintModal + visual editor + ZPL console)
 // Part of AeroChef Paxload Label Script
 
 (function () {
@@ -157,12 +157,12 @@
 
           <div class="acf8-panel" id="acf8-panel-settings" style="padding:10px 16px;">
             <div class="acf8-set-section">
-                <div class="acf8-set-header">BASIC SETTINGS & PRINTER <span>â–¼</span></div>
+                <div class="acf8-set-header">BASIC SETTINGS & PRINTER <span>▼</span></div>
                 <div class="acf8-set-content" style="display:grid; grid-template-columns: 1fr 1fr;">
                     <div class="acf8-fg">
                         <label>Print Method</label>
                         <div class="acf8-method-row">
-                            <button class="acf8-method-btn${curMethod === 'network' ? ' active' : ''}" data-method="network">ðŸŒ Network</button>
+                            <button class="acf8-method-btn${curMethod === 'network' ? ' active' : ''}" data-method="network">🌐 Network</button>
                             <button class="acf8-method-btn${curMethod === 'browser' ? ' active' : ''}" data-method="browser">🖨 Browser</button>
                         </div>
                     </div>
@@ -212,7 +212,7 @@
             </div>
 
             <div class="acf8-set-section">
-                <div class="acf8-set-header">GALLEY LIST <span>â–¼</span></div>
+                <div class="acf8-set-header">GALLEY LIST <span>▼</span></div>
                 <div class="acf8-set-content full" style="display:block;">
                     <div id="acf8-galley-list" class="acf8-galley-list"></div>
                     <div class="acf8-galley-add" style="display:flex;gap:5px;">
@@ -228,11 +228,11 @@
                         AIRCRAFT ITEMS CONFIG
                         <span id="acf8-ac-cfg-key" style="background:#1e3a8a;color:#fff;padding:2px 8px;border-radius:6px;font-size:10px;">${acCfg.key || 'â€”'}</span>
                     </div>
-                    <span>â–¼</span>
+                    <span>▼</span>
                 </div>
                 <div class="acf8-set-content full" style="display:block;">
                     <select id="acf8-ac-type-sel" class="acf8-input" style="width:100%; margin-bottom:8px;">
-                        ${Object.entries(getAcConfigs()).map(([k, c]) => `<option value="${k}"${k === acCfg.key ? ' selected' : ''}>${k} â€“ ${c.label}</option>`).join('')}
+                        ${Object.entries(getAcConfigs()).map(([k, c]) => `<option value="${k}"${k === acCfg.key ? ' selected' : ''}>${k} – ${c.label}</option>`).join('')}
                     </select>
                     <div id="acf8-ac-items-list"></div>
                     <div style="display:flex; gap:4px; margin-top:6px;">
@@ -244,7 +244,7 @@
             </div>
 
             <div class="acf8-set-section">
-                <div class="acf8-set-header">LABEL DESIGN <span style="font-weight:400;color:#9ca3af;font-size:9px;margin-left:4px;">(font sizes, logo, border)</span> <span>â–¼</span></div>
+                <div class="acf8-set-header">LABEL DESIGN <span style="font-weight:400;color:#9ca3af;font-size:9px;margin-left:4px;">(font sizes, logo, border)</span> <span>▼</span></div>
                 <div class="acf8-set-content full" style="display:block;">
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div class="acf8-fg">
@@ -272,15 +272,15 @@
                             <input type="range" id="acf8-d-bor" min="0" max="6" step="0.5" value="${gs(SK.DESIGN_BORDER, '0') || 2.5}" style="width:100%;accent-color:#2563eb;">
                         </div>
                     </div>
-                    <button id="acf8-d-reset" style="margin-top:8px;padding:5px 14px;background:#ef4444;color:#fff;border:none;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;">â†º Reset to Auto</button>
+                    <button id="acf8-d-reset" style="margin-top:8px;padding:5px 14px;background:#ef4444;color:#fff;border:none;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;">↺ Reset to Auto</button>
                 </div>
             </div>
 
             <div class="acf8-set-section">
-                <div class="acf8-set-header">DATA MANAGEMENT <span>â–¼</span></div>
+                <div class="acf8-set-header">DATA MANAGEMENT <span>▼</span></div>
                 <div class="acf8-set-content">
-                     <button id="acf8-export-btn" style="padding:7px;background:#0f766e;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer;font-weight:bold;width:100%;">â¬‡ Export JSON</button>
-                     <label for="acf8-import-file" style="padding:7px;background:#4f46e5;color:#fff;border-radius:4px;font-size:11px;cursor:pointer;text-align:center;display:block;font-weight:bold;width:100%;">â¬† Import JSON
+                     <button id="acf8-export-btn" style="padding:7px;background:#0f766e;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer;font-weight:bold;width:100%;">⬇ Export JSON</button>
+                     <label for="acf8-import-file" style="padding:7px;background:#4f46e5;color:#fff;border-radius:4px;font-size:11px;cursor:pointer;text-align:center;display:block;font-weight:bold;width:100%;">⬆ Import JSON
                          <input type="file" id="acf8-import-file" accept=".json" style="display:none;">
                      </label>
                 </div>
@@ -299,7 +299,7 @@
                   <div style="color:#9ca3af;text-align:center;padding:20px 0;">Select an element</div>
                 </div>
                 <div style="display:flex;flex-direction:column;gap:4px;">
-                  <button id="acf8-ed-reset" style="padding:5px;background:#ef4444;color:#fff;border:none;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;">â†º Reset All Positions</button>
+                  <button id="acf8-ed-reset" style="padding:5px;background:#ef4444;color:#fff;border:none;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;">↺ Reset All Positions</button>
                   <button id="acf8-ed-export" style="padding:5px;background:#0f766e;color:#fff;border:none;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;">Save Template</button>
                   <label style="padding:5px;background:#4f46e5;color:#fff;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;text-align:center;">Load Template
                     <input type="file" id="acf8-ed-import" accept=".json" style="display:none;">
@@ -336,7 +336,7 @@
                 const content = header.nextElementSibling;
                 const isHidden = content.style.display === 'none';
                 content.style.display = isHidden ? (content.classList.contains('full') ? 'block' : 'grid') : 'none';
-                header.querySelector('span:last-child').textContent = isHidden ? 'â–¼' : 'â–²';
+                header.querySelector('span:last-child').textContent = isHidden ? '▼' : '▲';
             };
         });
 
@@ -693,6 +693,9 @@
             { id: 'info', label: 'Info (Date/Flt)', key: SK.EL_INFO, color: '#2563eb', defaults: { x: 8, y: 80, w: 210, h: 80, fs: 16, visible: true } },
             { id: 'sep2', label: 'Bottom Separator', key: SK.EL_SEP2, color: '#f59e0b', defaults: { x: 4, y: 165, w: 220, h: 3, fs: 0, visible: true } },
             { id: 'item', label: 'Item Name', key: SK.EL_ITEM, color: '#dc2626', defaults: { x: 8, y: 170, w: 210, h: 60, fs: 28, visible: true } },
+            { id: 'frame1', label: 'Box / Line 1', key: SK.EL_FRAME1, color: '#10b981', defaults: { x: 2, y: 70, w: 224, h: 90, bw: 2, fs: 0, visible: false } },
+            { id: 'frame2', label: 'Box / Line 2', key: SK.EL_FRAME2, color: '#10b981', defaults: { x: 2, y: 165, w: 224, h: 65, bw: 2, fs: 0, visible: false } },
+            { id: 'frame3', label: 'Box / Line 3', key: SK.EL_FRAME3, color: '#10b981', defaults: { x: 2, y: 4, w: 224, h: 226, bw: 2, fs: 0, visible: false } },
         ];
 
         function getEl(key, defaults) {
@@ -728,18 +731,25 @@
                 const sw = Math.round(props.w * scale), sh = Math.max(2, Math.round(props.h * scale));
                 const isSelected = edSelectedId === elDef.id;
 
+                let bgRule = `background:${elDef.color}20;`;
+                let borRule = `border:${isSelected ? '2px solid ' + elDef.color : '1.5px dashed ' + elDef.color + 'aa'};`;
+                if (elDef.id.startsWith('frame') && props.bw > 0) {
+                    const bwt = Math.max(1, Math.round(props.bw * scale));
+                    borRule = `border:${bwt}px solid ${elDef.color}${isSelected ? '' : '80'};`;
+                    bgRule = `background:transparent;`;
+                }
+
                 const el = document.createElement('div');
                 el.dataset.elId = elDef.id;
-                el.title = `${elDef.label} â€” click to select, drag to move`;
+                el.title = `${elDef.label} — click to select, drag to move`;
                 el.style.cssText =
                     `position:absolute;left:${sx}px;top:${sy}px;width:${sw}px;height:${sh}px;` +
-                    `background:${elDef.color}20;` +
-                    `border:${isSelected ? '2px solid ' + elDef.color : '1.5px dashed ' + elDef.color + 'aa'};` +
+                    bgRule + borRule +
                     `border-radius:2px;cursor:move;display:flex;align-items:center;justify-content:center;` +
                     `font-size:${Math.max(7, Math.round(10 * scale))}px;font-weight:700;color:${elDef.color};` +
                     `overflow:hidden;user-select:none;opacity:${props.visible ? '1' : '0.25'};` +
                     `z-index:${isSelected ? 10 : 1};` +
-                    `${isSelected ? 'box-shadow:0 0 0 3px ' + elDef.color + '40;' : ''}`;
+                    `${isSelected && !elDef.id.startsWith('frame') ? 'box-shadow:0 0 0 3px ' + elDef.color + '40;' : ''}`;
                 el.textContent = elDef.label;
 
                 el.addEventListener('mousedown', ev => {
@@ -807,12 +817,14 @@
                 `<input type="number" data-prop="${prop}" value="${props[prop] ?? 0}" min="${min}" max="${max}" step="${step}" ` +
                 `style="width:58px;padding:2px 5px;border:1px solid #d1d5db;border-radius:4px;font-size:11px;text-align:right;"></div>`;
 
-            const hasFontSize = elDef.id !== 'sep1' && elDef.id !== 'sep2';
+            const hasFontSize = elDef.id !== 'sep1' && elDef.id !== 'sep2' && !elDef.id.startsWith('frame');
+            const isShape = elDef.id.startsWith('frame');
             edProps.innerHTML =
                 `<div style="font-weight:700;font-size:12px;color:${elDef.color};padding-bottom:5px;margin-bottom:7px;border-bottom:2px solid ${elDef.color};">${elDef.label}</div>` +
                 mkRow('X', 'x', 0, 2000) + mkRow('Y', 'y', 0, 2000) +
-                mkRow('W', 'w', 5, 2000) + mkRow('H', 'h', 2, 1000) +
+                mkRow('W', 'w', 5, 2000) + mkRow('H', 'h', 2, 2000) +
                 (hasFontSize ? mkRow('Font', 'fs', 4, 80) : '') +
+                (isShape ? mkRow('Border W.', 'bw', 1, 40) : '') +
                 `<div style="display:flex;align-items:center;gap:6px;padding-top:6px;border-top:1px dashed #e5e7eb;margin-top:6px;">` +
                 `<input type="checkbox" id="acf8-ep-vis" ${props.visible ? 'checked' : ''} style="width:14px;height:14px;accent-color:${elDef.color};cursor:pointer;">` +
                 `<label for="acf8-ep-vis" style="font-size:11px;cursor:pointer;color:#374151;">Visible</label></div>`;
@@ -988,7 +1000,7 @@
                 }
 
                 const pwA4 = window.open('', '_blank', 'width=850,height=1000');
-                pwA4.document.write(`<!DOCTYPE html><html><head><title>A4 Labels â€“ ${flightData.flightNo}</title>
+                pwA4.document.write(`<!DOCTYPE html><html><head><title>A4 Labels – ${flightData.flightNo}</title>
                 <style>
                     @page { size: A4 portrait; margin: 4mm 5mm; }
                     *{margin:0;padding:0;box-sizing:border-box;}
@@ -1008,7 +1020,7 @@
                     }
                 </style></head><body>
                 <div class="np"><button onclick="window.print()" style="padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">&#128424; Print A4</button>
-                <span style="margin-left:10px;font-size:12px;color:#6b7280;">${cardCount} label â€“ ${Math.ceil(cardCount / 16)} page</span></div>
+                <span style="margin-left:10px;font-size:12px;color:#6b7280;">${cardCount} label – ${Math.ceil(cardCount / 16)} page</span></div>
                 <div class="grid">${a4Cards}</div></body></html>`);
                 pwA4.document.close();
                 close();

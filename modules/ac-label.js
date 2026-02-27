@@ -84,6 +84,9 @@
             const infoConf = getEl(SK.EL_INFO, { x: 8, y: 80, w: 210, h: 80, fs: 16, visible: true });
             const sep2Conf = getEl(SK.EL_SEP2, { x: 4, y: 165, w: 220, h: 3, fs: 0, visible: true });
             const itemConf = getEl(SK.EL_ITEM, { x: 8, y: 170, w: 210, h: 60, fs: 28, visible: true });
+            const frame1Conf = getEl(SK.EL_FRAME1, { x: 2, y: 70, w: 224, h: 90, bw: 2, fs: 0, visible: false });
+            const frame2Conf = getEl(SK.EL_FRAME2, { x: 2, y: 165, w: 224, h: 65, bw: 2, fs: 0, visible: false });
+            const frame3Conf = getEl(SK.EL_FRAME3, { x: 2, y: 4, w: 224, h: 226, bw: 2, fs: 0, visible: false });
 
             const pct = (val, max) => ((val / max) * 100).toFixed(2) + '%';
             const wVal = isPreview ? '168px' : `${userW}mm`;
@@ -128,6 +131,16 @@
                 if (nl > 24) fsDots *= 0.7; else if (nl > 15) fsDots *= 0.85;
                 html += `<div style="position:absolute;left:${pct(itemConf.x, LW)};top:${pct(itemConf.y, LH)};width:${pct(itemConf.w, LW)};height:${pct(itemConf.h, LH)};display:flex;align-items:center;justify-content:center;text-align:center;font-size:${fs2val(fsDots)};font-weight:900;font-style:italic;line-height:1.1;overflow:hidden;">${o.itemName}</div>`;
             }
+
+            function drawFrame(conf) {
+                if (!conf.visible) return '';
+                const bwPx = isPreview ? `${conf.bw * (168 / (parseFloat(userW) || 57))}px` : `${conf.bw / 8}mm`;
+                return `<div style="position:absolute;left:${pct(conf.x, LW)};top:${pct(conf.y, LH)};width:${pct(conf.w, LW)};height:${pct(conf.h, LH)};border:${bwPx} solid ${bor};box-sizing:border-box;"></div>`;
+            }
+
+            html += drawFrame(frame1Conf);
+            html += drawFrame(frame2Conf);
+            html += drawFrame(frame3Conf);
 
             html += `</div>`;
             return html;
@@ -212,6 +225,9 @@
         const infoProps = getEl(SK.EL_INFO, { x: 8, y: 80, w: 210, h: 80, fs: 16, visible: true });
         const sep2Props = getEl(SK.EL_SEP2, { x: 4, y: 165, w: 220, h: 3, fs: 0, visible: true });
         const itemProps = getEl(SK.EL_ITEM, { x: 8, y: 170, w: 210, h: 60, fs: 28, visible: true });
+        const frame1Props = getEl(SK.EL_FRAME1, { x: 2, y: 70, w: 224, h: 90, bw: 2, fs: 0, visible: false });
+        const frame2Props = getEl(SK.EL_FRAME2, { x: 2, y: 165, w: 224, h: 65, bw: 2, fs: 0, visible: false });
+        const frame3Props = getEl(SK.EL_FRAME3, { x: 2, y: 4, w: 224, h: 226, bw: 2, fs: 0, visible: false });
 
         let z = `^XA\n^CI28\n^PW${LW}\n^LL${LH}\n^LH0,0\n`;
         if (isRed) z += `^FO0,0^GB${LW},${LH},${LH}^FS\n`;
@@ -257,6 +273,9 @@
             z += `^FO${itemProps.x},${itemProps.y}^FI${FR}^A0N,${Math.round(fs)},${Math.round(fs)}^FD${item.name}^FS\n`;
         }
 
+        if (frame1Props.visible) z += `^FO${frame1Props.x},${frame1Props.y}^GB${frame1Props.w},${frame1Props.h},${frame1Props.bw}^FS\n`;
+        if (frame2Props.visible) z += `^FO${frame2Props.x},${frame2Props.y}^GB${frame2Props.w},${frame2Props.h},${frame2Props.bw}^FS\n`;
+        if (frame3Props.visible) z += `^FO${frame3Props.x},${frame3Props.y}^GB${frame3Props.w},${frame3Props.h},${frame3Props.bw}^FS\n`;
         if (gs(SK.QR_CODE, 'off') === 'on') {
             const qrData = `${fno}|${date}|${classCode}|${item.name}`;
             z += `^FO${LW - 110},${LH - 110}^BQN,2,3^FDMM,${qrData}^FS\n`;

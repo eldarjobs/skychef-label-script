@@ -36,6 +36,9 @@
         EL_ITEM: 'acf9_el_item',
         EL_SEP1: 'acf9_el_sep1',
         EL_SEP2: 'acf9_el_sep2',
+        EL_FRAME1: 'acf9_el_frame1',
+        EL_FRAME2: 'acf9_el_frame2',
+        EL_FRAME3: 'acf9_el_frame3',
     };
 
     /* ── 2. STORAGE HELPERS ── */
