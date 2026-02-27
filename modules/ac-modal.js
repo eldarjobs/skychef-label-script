@@ -288,6 +288,12 @@
           </div>
 
           <div class="acf8-panel" id="acf8-panel-editor" style="padding:10px 14px;">
+            <div style="display:flex;align-items:center;gap:8px;padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid #e5e7eb;">
+                <span style="font-size:11px;font-weight:700;color:#4b5563;">TEMPLATE:</span>
+                <select id="acf8-ed-tpl-sel" style="flex:1;padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:11px;font-weight:600;"></select>
+                <button id="acf8-ed-tpl-save" style="padding:4px 10px;background:#2563eb;color:#fff;border:none;border-radius:4px;font-size:10px;font-weight:bold;cursor:pointer;">Save As...</button>
+                <button id="acf8-ed-tpl-del" style="padding:4px 10px;background:#ef4444;color:#fff;border:none;border-radius:4px;font-size:10px;font-weight:bold;cursor:pointer;">Delete</button>
+            </div>
             <div style="display:flex;gap:12px;flex:1;min-height:0;">
               <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
                 <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Label Canvas <span style="font-weight:400;color:#9ca3af;">(click to select, drag to move)</span></div>
@@ -827,6 +833,44 @@
             const uh = parseFloat(gs(SK.LABEL_H_MM, '83')) || 83;
             badge.textContent = `${uw}\u00d7${uh}mm \u2502 ${LW}\u00d7${LH}dots \u2502 ${scale.toFixed(2)}x`;
             edCanvas.appendChild(badge);
+
+            // Handle Keyboard Shortcuts for selected element (only if canvas is in focus / active)
+            edCanvas.tabIndex = 0; // Make focusable
+            edCanvas.style.outline = 'none';
+            edCanvas.focus();
+
+            edCanvas.onkeydown = (e) => {
+                if (!edSelectedId) return;
+                const elDef = EDITOR_ELEMENTS.find(x => x.id === edSelectedId);
+                if (!elDef) return;
+
+                const props = getEl(elDef.key, elDef.defaults);
+                let changed = false;
+
+                if (e.key === 'ArrowUp') { props.y -= 1; changed = true; }
+                if (e.key === 'ArrowDown') { props.y += 1; changed = true; }
+                if (e.key === 'ArrowLeft') { props.x -= 1; changed = true; }
+                if (e.key === 'ArrowRight') { props.x += 1; changed = true; }
+                if (e.key === 'Delete' || e.key === 'Backspace') { props.visible = false; changed = true; }
+
+                if (changed) {
+                    e.preventDefault();
+                    setEl(elDef.key, props);
+                    if (e.key === 'Delete' || e.key === 'Backspace') {
+                        renderEditorCanvas();
+                        renderEditorProps();
+                    } else {
+                        // instant translate
+                        const div = edCanvas.querySelector(`[data-el-id="${edSelectedId}"]`);
+                        if (div) {
+                            div.style.left = Math.round(props.x * scale) + 'px';
+                            div.style.top = Math.round(props.y * scale) + 'px';
+                        }
+                        renderEditorProps();
+                    }
+                    schedulePreview();
+                }
+            };
         }
 
         function renderEditorProps() {
@@ -848,20 +892,34 @@
             const isLogo = elDef.id === 'logo';
             const hasFontSize = elDef.id !== 'sep1' && elDef.id !== 'sep2' && !elDef.id.startsWith('frame') && !isLogo;
             const isShape = elDef.id.startsWith('frame') || isLogo;
+
+            const mkNb = (lbl, prop, min, max, step = 1) =>
+                `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;width:48%;">` +
+                `<span style="color:#374151;font-weight:600;font-size:10px;">${lbl}</span>` +
+                `<input type="number" data-prop="${prop}" value="${props[prop] ?? 0}" min="${min}" max="${max}" step="${step}" style="width:48px;padding:2px;border:1px solid #d1d5db;border-radius:4px;font-size:11px;text-align:right;"></div>`;
+
             edProps.innerHTML =
                 `<div style="font-weight:700;font-size:12px;color:${elDef.color};padding-bottom:5px;margin-bottom:7px;border-bottom:2px solid ${elDef.color};">${elDef.label}</div>` +
-                mkRow('X', 'x', -500, 2000) + mkRow('Y', 'y', -500, 2000) +
-                mkRow('W', 'w', 5, 2000) + mkRow('H', 'h', 2, 2000) +
-                (hasFontSize ? mkRow('Font', 'fs', 4, 80) : '') +
-                (isShape ? mkRow('Border W.', 'bw', 0, 40) : '') +
-                `<div style="display:flex;align-items:center;gap:6px;padding-top:6px;border-top:1px dashed #e5e7eb;margin-top:6px;">` +
-                `<input type="checkbox" id="acf8-ep-vis" ${props.visible ? 'checked' : ''} style="width:14px;height:14px;accent-color:${elDef.color};cursor:pointer;">` +
-                `<label for="acf8-ep-vis" style="font-size:11px;cursor:pointer;color:#374151;">Visible</label></div>`;
+                `<div style="display:flex;flex-wrap:wrap;justify-content:space-between;">` +
+                mkNb('X', 'x', -500, 2000) + mkNb('Y', 'y', -500, 2000) +
+                mkNb('W', 'w', 5, 2000) + mkNb('H', 'h', 2, 2000) +
+                (hasFontSize ? mkNb('Font', 'fs', 4, 80) : '') +
+                (isShape ? mkNb('Brd.W', 'bw', 0, 40) + mkNb('Round', 'r', 0, 8) : '') +
+                `</div>` +
+                `<div style="display:flex;align-items:center;gap:12px;padding-top:6px;border-top:1px dashed #e5e7eb;margin-top:6px;">` +
+                `<label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;"><input type="checkbox" id="acf8-ep-vis" ${props.visible ? 'checked' : ''} style="accent-color:${elDef.color};"> Visible</label>` +
+                (isShape ? `<label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;"><input type="checkbox" data-prop="rv" ${props.rv ? 'checked' : ''} style="accent-color:${elDef.color};"> Fill</label>` : '') +
+                `</div>` +
+                (elDef.id.startsWith('cust') ? `<div style="margin-top:8px;"><div style="font-size:10px;font-weight:600;margin-bottom:2px;color:#374151;">Custom Text (Vars: {DATE},{FLIGHT},{PAX},{ROUTE})</div><input type="text" data-prop="txt" value="${props.txt || ''}" style="width:100%;padding:3px;border:1px solid #d1d5db;border-radius:4px;font-size:11px;"></div>` : ``);
 
             edProps.querySelectorAll('input[data-prop]').forEach(inp => {
-                inp.addEventListener('input', () => {
+                const isCb = inp.type === 'checkbox';
+                const isTxt = inp.type === 'text';
+                inp.addEventListener(isCb || isTxt ? 'change' : 'input', () => {
                     const p = inp.dataset.prop;
-                    props[p] = parseFloat(inp.value) || 0;
+                    if (isCb) props[p] = inp.checked;
+                    else if (isTxt) props[p] = inp.value;
+                    else props[p] = parseFloat(inp.value) || 0;
                     setEl(elDef.key, props);
 
                     // Instantly update the HTML element visually without a hard re-render
@@ -885,6 +943,87 @@
                 schedulePreview();
             });
         }
+
+        // --- Multi-Template Handling ---
+        const TPL_KEY = 'acf8-templates';
+        function getTemplates() {
+            try { return JSON.parse(gs(TPL_KEY, '[]')) || []; } catch { return []; }
+        }
+        function saveTemplates(tpls) { ss(TPL_KEY, JSON.stringify(tpls)); }
+
+        const selTpl = overlay.querySelector('#acf8-ed-tpl-sel');
+        function renderTplDropdown() {
+            if (!selTpl) return;
+            const tpls = getTemplates();
+            selTpl.innerHTML = `<option value="">-- Layout: Default --</option>` +
+                tpls.map((t, i) => `<option value="${i}">${t.name}</option>`).join('');
+            const activeId = gs('acf8-active-tpl', '');
+            if (activeId !== '') selTpl.value = activeId;
+        }
+        renderTplDropdown();
+
+        if (selTpl) {
+            selTpl.addEventListener('change', e => {
+                const idx = e.target.value;
+                ss('acf8-active-tpl', idx);
+                if (idx === '') {
+                    // Reset to nothing
+                    EDITOR_ELEMENTS.forEach(el => ss(el.key, ''));
+                } else {
+                    const tpls = getTemplates();
+                    const t = tpls[idx];
+                    if (t && t.data) {
+                        EDITOR_ELEMENTS.forEach(el => {
+                            if (t.data[el.id]) setEl(el.key, { ...el.defaults, ...t.data[el.id] });
+                        });
+                    }
+                }
+                edSelectedId = null;
+                renderEditorCanvas();
+                renderEditorProps();
+                schedulePreview();
+            });
+        }
+
+        overlay.querySelector('#acf8-ed-tpl-save')?.addEventListener('click', () => {
+            const name = prompt('Enter a name for this Custom Label Layout Template:');
+            if (!name || !name.trim()) return;
+            const tplData = {};
+            EDITOR_ELEMENTS.forEach(el => { tplData[el.id] = getEl(el.key, el.defaults); });
+            const tpls = getTemplates();
+            // check if name exists, map over it or push new
+            const eI = tpls.findIndex(t => t.name.toLowerCase() === name.trim().toLowerCase());
+            if (eI >= 0) {
+                if (!confirm(`Template "${name}" already exists. Overwrite?`)) return;
+                tpls[eI].data = tplData;
+                ss('acf8-active-tpl', eI.toString());
+            } else {
+                tpls.push({ name: name.trim(), data: tplData });
+                ss('acf8-active-tpl', (tpls.length - 1).toString());
+            }
+            saveTemplates(tpls);
+            renderTplDropdown();
+            toast(`Saved Template: ${name.trim()}`, 'success');
+        });
+
+        overlay.querySelector('#acf8-ed-tpl-del')?.addEventListener('click', () => {
+            if (!selTpl || selTpl.value === '') return;
+            const tpls = getTemplates();
+            const idx = parseInt(selTpl.value);
+            if (confirm(`Are you sure you want to delete template "${tpls[idx].name}"?`)) {
+                tpls.splice(idx, 1);
+                saveTemplates(tpls);
+                ss('acf8-active-tpl', '');
+                // load default immediately to clear memory
+                EDITOR_ELEMENTS.forEach(el => ss(el.key, ''));
+                renderTplDropdown();
+                edSelectedId = null;
+                renderEditorCanvas();
+                renderEditorProps();
+                schedulePreview();
+                toast('Template deleted', 'success');
+            }
+        });
 
         overlay.querySelector('#acf8-ed-reset')?.addEventListener('click', () => {
             EDITOR_ELEMENTS.forEach(el => ss(el.key, ''));

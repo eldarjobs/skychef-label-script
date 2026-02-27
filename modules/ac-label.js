@@ -135,19 +135,29 @@
             function drawFrame(conf) {
                 if (!conf.visible) return '';
                 const bwPx = isPreview ? `${conf.bw * (168 / (parseFloat(userW) || 57))}px` : `${conf.bw / 8}mm`;
-                return `<div style="position:absolute;left:${pct(conf.x, LW)};top:${pct(conf.y, LH)};width:${pct(conf.w, LW)};height:${pct(conf.h, LH)};border:${bwPx} solid ${bor};box-sizing:border-box;"></div>`;
+                let bgRule = '';
+                if (conf.rv) {
+                    bgRule = `background:${bor};`;
+                }
+                const bRad = conf.r && conf.r > 0 ? `border-radius:${conf.r * 2}px;` : '';
+                return `<div style="position:absolute;left:${pct(conf.x, LW)};top:${pct(conf.y, LH)};width:${pct(conf.w, LW)};height:${pct(conf.h, LH)};border:${bwPx} solid ${bor};${bgRule}${bRad}box-sizing:border-box;"></div>`;
             }
 
-            const cust1Conf = getEl('acf9_el_cust1', { x: 20, y: 20, w: 100, h: 30, fs: 16, visible: false });
-            const cust2Conf = getEl('acf9_el_cust2', { x: 20, y: 60, w: 100, h: 30, fs: 16, visible: false });
-            const cust3Conf = getEl('acf9_el_cust3', { x: 20, y: 100, w: 100, h: 30, fs: 16, visible: false });
-            const frame4Conf = getEl('acf9_el_frame4', { x: 10, y: 10, w: 50, h: 50, bw: 2, visible: false });
-            const frame5Conf = getEl('acf9_el_frame5', { x: 60, y: 10, w: 50, h: 50, bw: 2, visible: false });
-            const frame6Conf = getEl('acf9_el_frame6', { x: 110, y: 10, w: 50, h: 50, bw: 2, visible: false });
+            function fmtTxt(str) {
+                if (!str) return '';
+                return str
+                    .replace(/{DATE}/gi, o.dt)
+                    .replace(/{FLIGHT}/gi, o.fno)
+                    .replace(/{ROUTE}/gi, o.route)
+                    .replace(/{PAX}/gi, o.paxDisplay)
+                    .replace(/{ITEM}/gi, o.itemName)
+                    .replace(/{CLASS}/gi, o.cls);
+            }
 
             function drawCustomTxt(conf, defaultTxt) {
                 if (!conf.visible) return '';
-                return `<div style="position:absolute;left:${pct(conf.x, LW)};top:${pct(conf.y, LH)};width:${pct(conf.w, LW)};height:${pct(conf.h, LH)};display:flex;align-items:center;justify-content:center;text-align:center;font-size:${fs2val(conf.fs)};font-weight:700;line-height:1.1;overflow:hidden;">${defaultTxt}</div>`;
+                const txt = conf.txt ? fmtTxt(conf.txt) : defaultTxt;
+                return `<div style="position:absolute;left:${pct(conf.x, LW)};top:${pct(conf.y, LH)};width:${pct(conf.w, LW)};height:${pct(conf.h, LH)};display:flex;align-items:center;justify-content:center;text-align:center;font-size:${fs2val(conf.fs)};font-weight:700;line-height:1.1;overflow:hidden;${conf.rv ? `background:${bor};color:#fff;` : `color:${bor};`}">${txt}</div>`;
             }
 
             html += drawFrame(frame1Conf);
@@ -160,6 +170,10 @@
             html += drawCustomTxt(cust1Conf, 'Custom 1');
             html += drawCustomTxt(cust2Conf, 'Custom 2');
             html += drawCustomTxt(cust3Conf, 'Custom 3');
+
+            if (bcConf.visible) {
+                html += `<div style="position:absolute;left:${pct(bcConf.x, LW)};top:${pct(bcConf.y, LH)};width:${pct(bcConf.w, LW)};height:${pct(bcConf.h, LH)};background:repeating-linear-gradient(90deg, #000, #000 2px, transparent 2px, transparent 4px, #000 4px, #000 5px, transparent 5px, transparent 8px);border:1px solid #ccc;display:flex;align-items:flex-end;justify-content:center;font-size:8px;padding-bottom:2px;">BARCODE123</div>`;
+            }
 
             html += `</div>`;
             return html;
@@ -254,6 +268,7 @@
         const frame4Props = getEl('acf9_el_frame4', { x: 10, y: 10, w: 50, h: 50, bw: 2, visible: false });
         const frame5Props = getEl('acf9_el_frame5', { x: 60, y: 10, w: 50, h: 50, bw: 2, visible: false });
         const frame6Props = getEl('acf9_el_frame6', { x: 110, y: 10, w: 50, h: 50, bw: 2, visible: false });
+        const bcProps = getEl('acf9_el_bc', { x: 10, y: 120, w: 180, h: 40, visible: false });
 
         let z = `^XA\n^MMT\n^PW${LW}\n^LL${LH}\n^LS0\n`;
         if (gs(SK.PRINT_METHOD, 'network') === 'network') {
@@ -296,16 +311,38 @@
             z += `^FO${itemProps.x},${itemProps.y}^FI${FR}^A0N,${Math.round(fs)},${Math.round(fs)}^FD${item.name}^FS\n`;
         }
 
-        if (cust1Props.visible) z += `^FO${cust1Props.x},${cust1Props.y}^FI${FR}^A0N,${Math.round(cust1Props.fs)},${Math.round(cust1Props.fs)}^FDCustom 1^FS\n`;
-        if (cust2Props.visible) z += `^FO${cust2Props.x},${cust2Props.y}^FI${FR}^A0N,${Math.round(cust2Props.fs)},${Math.round(cust2Props.fs)}^FDCustom 2^FS\n`;
-        if (cust3Props.visible) z += `^FO${cust3Props.x},${cust3Props.y}^FI${FR}^A0N,${Math.round(cust3Props.fs)},${Math.round(cust3Props.fs)}^FDCustom 3^FS\n`;
+        function fmtZplTxt(str) {
+            if (!str) return '';
+            return str
+                .replace(/{DATE}/gi, date)
+                .replace(/{FLIGHT}/gi, fno)
+                .replace(/{ROUTE}/gi, route)
+                .replace(/{PAX}/gi, paxDisplay)
+                .replace(/{ITEM}/gi, item.name || '')
+                .replace(/{CLASS}/gi, classCode);
+        }
 
-        if (frame1Props.visible) z += `^FO${frame1Props.x},${frame1Props.y}^GB${frame1Props.w},${frame1Props.h},${frame1Props.bw}^FS\n`;
-        if (frame2Props.visible) z += `^FO${frame2Props.x},${frame2Props.y}^GB${frame2Props.w},${frame2Props.h},${frame2Props.bw}^FS\n`;
-        if (frame3Props.visible) z += `^FO${frame3Props.x},${frame3Props.y}^GB${frame3Props.w},${frame3Props.h},${frame3Props.bw}^FS\n`;
-        if (frame4Props.visible) z += `^FO${frame4Props.x},${frame4Props.y}^GB${frame4Props.w},${frame4Props.h},${frame4Props.bw}^FS\n`;
-        if (frame5Props.visible) z += `^FO${frame5Props.x},${frame5Props.y}^GB${frame5Props.w},${frame5Props.h},${frame5Props.bw}^FS\n`;
-        if (frame6Props.visible) z += `^FO${frame6Props.x},${frame6Props.y}^GB${frame6Props.w},${frame6Props.h},${frame6Props.bw}^FS\n`;
+        const zc1 = cust1Props.txt ? fmtZplTxt(cust1Props.txt) : 'Custom 1';
+        const zc2 = cust2Props.txt ? fmtZplTxt(cust2Props.txt) : 'Custom 2';
+        const zc3 = cust3Props.txt ? fmtZplTxt(cust3Props.txt) : 'Custom 3';
+
+        if (cust1Props.visible) z += `^FO${cust1Props.x},${cust1Props.y}${zfr(cust1Props)}^A0N,${Math.round(cust1Props.fs)},${Math.round(cust1Props.fs)}^FD${zc1}^FS\n`;
+        if (cust2Props.visible) z += `^FO${cust2Props.x},${cust2Props.y}${zfr(cust2Props)}^A0N,${Math.round(cust2Props.fs)},${Math.round(cust2Props.fs)}^FD${zc2}^FS\n`;
+        if (cust3Props.visible) z += `^FO${cust3Props.x},${cust3Props.y}${zfr(cust3Props)}^A0N,${Math.round(cust3Props.fs)},${Math.round(cust3Props.fs)}^FD${zc3}^FS\n`;
+
+        const zfr = (p) => p.rv ? '^FR' : '';
+        const zrn = (p) => p.r && p.r > 0 ? `,${p.r}` : '';
+
+        if (frame1Props.visible) z += `^FO${frame1Props.x},${frame1Props.y}${zfr(frame1Props)}^GB${frame1Props.w},${frame1Props.h},${frame1Props.bw},B${zrn(frame1Props)}^FS\n`;
+        if (frame2Props.visible) z += `^FO${frame2Props.x},${frame2Props.y}${zfr(frame2Props)}^GB${frame2Props.w},${frame2Props.h},${frame2Props.bw},B${zrn(frame2Props)}^FS\n`;
+        if (frame3Props.visible) z += `^FO${frame3Props.x},${frame3Props.y}${zfr(frame3Props)}^GB${frame3Props.w},${frame3Props.h},${frame3Props.bw},B${zrn(frame3Props)}^FS\n`;
+        if (frame4Props.visible) z += `^FO${frame4Props.x},${frame4Props.y}${zfr(frame4Props)}^GB${frame4Props.w},${frame4Props.h},${frame4Props.bw},B${zrn(frame4Props)}^FS\n`;
+        if (frame5Props.visible) z += `^FO${frame5Props.x},${frame5Props.y}${zfr(frame5Props)}^GB${frame5Props.w},${frame5Props.h},${frame5Props.bw},B${zrn(frame5Props)}^FS\n`;
+        if (frame6Props.visible) z += `^FO${frame6Props.x},${frame6Props.y}${zfr(frame6Props)}^GB${frame6Props.w},${frame6Props.h},${frame6Props.bw},B${zrn(frame6Props)}^FS\n`;
+
+        if (bcProps.visible) {
+            z += `^FO${bcProps.x},${bcProps.y}^BY2^BCN,${bcProps.h},Y,N,N^FD123456789^FS\n`;
+        }
 
         if (gs(SK.QR_CODE, 'off') === 'on') {
             const qrData = `${fno}|${date}|${classCode}|${item.name}`;
